@@ -18,12 +18,21 @@ out/
 
 # Data & models
 data/samples/
+data/checkpoints/
 *.h5
 *.pt
 *.pth
 *.ckpt
 *.npy
 *.npz
+*.safetensors
+*.bin
+
+# Audio files (seeded via script, not committed)
+# Kept in data/samples/ which is already ignored above
+
+# HuggingFace model cache
+huggingface_cache/
 
 # Environment
 .env
@@ -48,6 +57,16 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+.hypothesis/
+
+# Pre-commit / linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# Claude Code
+.claude/settings.local.json
 
 # Misc
 *.bak

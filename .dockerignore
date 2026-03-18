@@ -1,0 +1,14 @@
+.venv
+.git
+node_modules
+data/samples
+data/checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+__pycache__
+.next
+.pytest_cache
+.mypy_cache
+.ruff_cache
