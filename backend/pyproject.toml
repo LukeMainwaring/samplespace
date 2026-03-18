@@ -1,0 +1,53 @@
+[project]
+name = "samplespace"
+version = "0.1.0"
+description = "Multi-modal AI-powered tool for music producers to discover and match audio samples"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "alembic>=1.18.4",
+  "asyncpg>=0.31.0",
+  "fastapi[standard]>=0.135.1",
+  "librosa>=0.10.2",
+  "music21>=9.3.0",
+  "pgvector>=0.4.2",
+  "psycopg[binary,pool]>=3.3.3",
+  "pydantic-ai>=1.67.0",
+  "pydantic>=2.12.5",
+  "sqlalchemy[mypy]>=2.0.48",
+  "torch>=2.7.0",
+  "torchaudio>=2.7.0",
+  "transformers>=4.52.0",
+  "uvicorn>=0.41.0",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.19.1",
+  "pre-commit>=4.5.1",
+  "pytest>=9.0.2",
+  "ruff>=0.15.5",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "main: marks tests for main demo examples",
+    "additional: marks tests for additional demo examples",
+]
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["pgvector.*", "librosa.*", "music21.*", "transformers.*", "torchaudio.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["I", "F401"]
+
+[tool.uv]
+default-groups = ["dev"]
