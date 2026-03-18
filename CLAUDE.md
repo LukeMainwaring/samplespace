@@ -59,7 +59,7 @@ See `.claude/rules/backend/code-conventions.md` for code style and conventions.
 
 ### Frontend (`frontend/`)
 
-Next.js 15 with App Router.
+Next.js 16 with App Router.
 
 -   **`app/page.tsx`**: Main sample browser page
 -   **`app/api/chat/route.ts`**: Proxy route that forwards chat requests to backend agent

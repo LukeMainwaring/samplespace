@@ -1,0 +1,43 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/next"],
+  "files": {
+    "includes": [
+      "**/*",
+      "!.next",
+      "!api/generated",
+      "!api/scripts",
+      "!components/ui",
+      "!lib/utils.ts"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noUnknownAtRules": "off",
+        "noConsole": "off"
+      },
+      "style": {
+        "noMagicNumbers": "off"
+      },
+      "nursery": {
+        "noUnnecessaryConditions": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "useSimplifiedLogicExpression": "off"
+      }
+    }
+  }
+}

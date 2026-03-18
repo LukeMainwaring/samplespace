@@ -17,7 +17,7 @@ The current Music Sample Assistant is a 3+ year old project (React 17, Flask, Te
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Frontend | Next.js 15 (App Router) + Tailwind + shadcn/ui | Matches Neurocache. Modern, fast to build. |
+| Frontend | Next.js 16 (App Router) + Tailwind + shadcn/ui | Matches Neurocache. Modern, fast to build. |
 | Frontend linting | Biome via Ultracite | Matches Neurocache. Fast, consistent. |
 | Frontend data | TanStack Query + OpenAPI client gen | Type-safe generated client from backend OpenAPI. Same pattern as Neurocache. |
 | Backend | FastAPI + Pydantic v2 (Python 3.13) | Type-safe, fast, auto-generates OpenAPI. |
@@ -160,7 +160,7 @@ samplespace/
 - Monorepo directory structure (`backend/`, `frontend/`, `docs/`, `scripts/`, `data/`)
 - Backend: FastAPI scaffold with app factory + lifespan, Pydantic Settings (`core/config.py`), async SQLAlchemy + Postgres, `dependencies/` for DI
 - Alembic migration for `samples` table (id, filename, key, bpm, duration, type, clap_embedding vector(512), cnn_embedding vector(128), created_at)
-- Frontend: Next.js 15 scaffold with App Router, Tailwind, shadcn/ui, Biome/Ultracite, basic layout
+- Frontend: Next.js 16 scaffold with App Router, Tailwind, shadcn/ui, Biome/Ultracite, basic layout
 - Frontend: OpenAPI client gen setup (`openapi-ts.config.ts`, `api/client.ts`, TanStack Query provider)
 - Docker Compose: Postgres (pgvector), backend, frontend
 - `docs/` directory with downloaded Pydantic AI and Vercel AI SDK UI docs
