@@ -229,7 +229,7 @@ Suggested (2 bullets):
 - `docker compose up` starts everything (Postgres, backend, frontend)
 - `python scripts/seed.py` populates the database with samples
 - `python scripts/embed_samples.py` generates CLAP embeddings
-- Browse samples at `localhost:3000`, play audio, filter by key/BPM
+- Browse samples at `localhost:3002`, play audio, filter by key/BPM
 - Search "bright synth lead" and get semantically relevant results
 - Click a sample, see CNN-recommended similar samples
 - Open chat, ask "find me something that complements this bass line in A minor" — agent calls multiple tools and returns ranked results

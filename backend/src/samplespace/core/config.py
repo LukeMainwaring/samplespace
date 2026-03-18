@@ -12,7 +12,7 @@ class ApiSettings(BaseSettings):
 
     API_PREFIX: str = "/api"
     ALLOWED_ORIGINS: dict[str, list[str]] = {
-        "development": ["http://localhost:3000"],
+        "development": ["http://localhost:3002"],
         "production": [],
     }
 

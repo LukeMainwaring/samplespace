@@ -1,6 +1,6 @@
 import fs from "fs";
 
-const DEFAULT_API_URL = "http://localhost:8000/api/openapi.json";
+const DEFAULT_API_URL = "http://localhost:8002/api/openapi.json";
 const OUTPUT_PATH = "./api/scripts/outputs/openapi.json";
 
 async function fetchOpenApiSpec(url) {
