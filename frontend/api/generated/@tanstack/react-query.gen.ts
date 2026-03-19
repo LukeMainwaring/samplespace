@@ -4,8 +4,30 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, getSample, getSimilarSamples, listSamples, type Options, searchSamples } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse } from '../types.gen';
+import { dbHealthCheck, getSample, getSimilarSamples, listSamples, type Options, searchSamples, streamChat } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
+
+/**
+ * Stream Chat
+ *
+ * Sample assistant streaming endpoint.
+ *
+ * Uses VercelAIAdapter to handle parsing, agent execution, and streaming
+ * in Vercel AI SDK protocol format.
+ */
+export const streamChatMutation = (options?: Partial<Options<StreamChatData>>): UseMutationOptions<unknown, AxiosError<DefaultError>, Options<StreamChatData>> => {
+    const mutationOptions: UseMutationOptions<unknown, AxiosError<DefaultError>, Options<StreamChatData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await streamChat({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseURL' | 'body' | 'headers' | 'path' | 'query'> & {

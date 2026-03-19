@@ -5,6 +5,26 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/agent/chat": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Stream Chat",
+        "description": "Sample assistant streaming endpoint.\n\nUses VercelAIAdapter to handle parsing, agent execution, and streaming\nin Vercel AI SDK protocol format.",
+        "operationId": "streamChat",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health/db": {
       "get": {
         "tags": [

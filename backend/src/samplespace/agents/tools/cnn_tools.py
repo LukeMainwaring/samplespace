@@ -1,0 +1,54 @@
+"""CNN similarity tool for the sample assistant agent."""
+
+import logging
+
+from pydantic_ai import Agent, RunContext
+
+from samplespace.agents.deps import AgentDeps
+from samplespace.schemas.sample import SampleSchema
+from samplespace.services import sample as sample_service
+
+logger = logging.getLogger(__name__)
+
+
+async def find_similar_samples(ctx: RunContext[AgentDeps], sample_id: str) -> str:
+    """Find samples that sound similar to a given sample using CNN embeddings.
+
+    Use this tool when the user has a specific sample and wants to find others
+    that are sonically similar, e.g., "find something similar to this kick" or
+    "what sounds like this pad?".
+
+    Args:
+        sample_id: The ID of the sample to find similar matches for.
+    """
+    try:
+        results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=8)
+        if not results:
+            return "No similar samples found. The sample may not have a CNN embedding yet."
+
+        source = await sample_service.get_sample_by_id(ctx.deps.db, sample_id)
+        source_name = source.filename if source else sample_id
+        return _format_results(results, source_name)
+    except Exception:
+        logger.exception("Error in CNN similarity search")
+        return "An error occurred while finding similar samples."
+
+
+def _format_results(results: list[SampleSchema], source_name: str) -> str:
+    lines = [f'Found {len(results)} samples similar to "{source_name}":\n']
+    for i, s in enumerate(results, 1):
+        parts = [f"{i}. **{s.filename}**"]
+        if s.sample_type:
+            parts.append(f"type={s.sample_type}")
+        if s.key:
+            parts.append(f"key={s.key}")
+        if s.bpm and s.bpm > 0:
+            parts.append(f"bpm={s.bpm}")
+        parts.append(f"id={s.id}")
+        lines.append(" | ".join(parts))
+    return "\n".join(lines)
+
+
+def register_cnn_tools(agent: Agent[AgentDeps, str]) -> None:
+    """Register CNN similarity tools with the agent."""
+    agent.tool(find_similar_samples)

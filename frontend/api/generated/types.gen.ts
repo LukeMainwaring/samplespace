@@ -150,6 +150,20 @@ export type ValidationError = {
     };
 };
 
+export type StreamChatData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agent/chat';
+};
+
+export type StreamChatResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type DbHealthCheckData = {
     body?: never;
     path?: never;

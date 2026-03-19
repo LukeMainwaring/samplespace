@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -17,6 +17,20 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: Record<string, unknown>;
 };
+
+/**
+ * Stream Chat
+ *
+ * Sample assistant streaming endpoint.
+ *
+ * Uses VercelAIAdapter to handle parsing, agent execution, and streaming
+ * in Vercel AI SDK protocol format.
+ */
+export const streamChat = <ThrowOnError extends boolean = false>(options?: Options<StreamChatData, ThrowOnError>) => (options?.client ?? client).post<StreamChatResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/agent/chat',
+    ...options
+});
 
 /**
  * Db Health Check
