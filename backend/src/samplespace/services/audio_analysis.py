@@ -5,10 +5,12 @@ import logging
 import librosa
 import numpy as np
 
+from samplespace.schemas.audio import AudioMetadata
+
 logger = logging.getLogger(__name__)
 
 
-def analyze_audio(file_path: str) -> dict[str, float | str | None]:
+def analyze_audio(file_path: str) -> AudioMetadata:
     """Analyze an audio file and extract key metadata.
 
     Returns dict with keys: key, bpm, duration.
@@ -28,11 +30,7 @@ def analyze_audio(file_path: str) -> dict[str, float | str | None]:
 
     logger.info(f"Analyzed {file_path}: key={key}, bpm={bpm}, duration={duration:.1f}s")
 
-    return {
-        "key": key,
-        "bpm": bpm,
-        "duration": round(duration, 2),
-    }
+    return AudioMetadata(key=key, bpm=bpm, duration=round(duration, 2))
 
 
 def _detect_key(y: np.ndarray, sr: int) -> str | None:

@@ -6,6 +6,7 @@ from fastapi.routing import APIRouter
 
 from samplespace.dependencies.clap import ClapModelsDep
 from samplespace.dependencies.db import AsyncPostgresSessionDep
+from samplespace.models.sample import AudioFileNotFound, SampleNotFound
 from samplespace.schemas.sample import SampleListResponse, SampleSchema, SampleSearchRequest
 from samplespace.services import embedding as embedding_service
 from samplespace.services import sample as sample_service
@@ -58,7 +59,7 @@ async def get_sample(
     sample = await sample_service.get_sample_by_id(db, sample_id)
 
     if sample is None:
-        raise HTTPException(status_code=404, detail="Sample not found")
+        raise SampleNotFound()
 
     return SampleSchema.model_validate(sample)
 
@@ -72,7 +73,7 @@ async def get_similar_samples(
     """Find similar samples using CNN embedding nearest neighbors."""
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if sample is None:
-        raise HTTPException(status_code=404, detail="Sample not found")
+        raise SampleNotFound()
 
     return await sample_service.find_similar_by_cnn(db, sample_id=sample_id, limit=limit)
 
@@ -90,7 +91,7 @@ async def get_sample_audio(
 
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if sample is None:
-        raise HTTPException(status_code=404, detail="Sample not found")
+        raise SampleNotFound()
 
     # Check in type subdirectory first, then root
     file_path = None
@@ -105,7 +106,7 @@ async def get_sample_audio(
             file_path = candidate
 
     if file_path is None:
-        raise HTTPException(status_code=404, detail="Audio file not found")
+        raise AudioFileNotFound()
 
     return FileResponse(
         path=str(file_path),

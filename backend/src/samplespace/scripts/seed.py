@@ -92,17 +92,17 @@ def seed_database(samples: list[tuple[Path, str | None]]) -> int:
             sample = Sample(
                 id=str(uuid.uuid4()),
                 filename=filename,
-                key=metadata["key"],
-                bpm=metadata["bpm"],
-                duration=metadata["duration"],
+                key=metadata.key,
+                bpm=metadata.bpm,
+                duration=metadata.duration,
                 sample_type=sample_type,
             )
             session.add(sample)
             inserted += 1
             logger.info(
                 f"  Inserted: {filename} "
-                f"(key={metadata['key']}, bpm={metadata['bpm']}, "
-                f"duration={metadata['duration']:.1f}s, type={sample_type})"
+                f"(key={metadata.key}, bpm={metadata.bpm}, "
+                f"duration={metadata.duration:.1f}s, type={sample_type})"
             )
 
         session.commit()

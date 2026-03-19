@@ -2,13 +2,13 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from samplespace.schemas.base import BaseSchema
 
 
-class SampleSchema(BaseModel):
+class SampleSchema(BaseSchema):
     """Sample response schema."""
-
-    model_config = ConfigDict(from_attributes=True)
 
     id: str
     filename: str

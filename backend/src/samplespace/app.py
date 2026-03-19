@@ -1,5 +1,6 @@
 import argparse
 import logging
+import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Awaitable, Callable
@@ -10,7 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
 from samplespace.core.config import get_settings
-from samplespace.routers.main import api_router
+from samplespace.utils.logging import RequestLogContext, setup_logging
+
+log_context_var = setup_logging()
+
+from samplespace.routers.main import api_router  # noqa: E402
 
 config = get_settings()
 
@@ -18,7 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 def generate_operation_id(route: APIRoute) -> str:
-    """Generate clean camelCase operationIds for OpenAPI spec."""
+    """Generate clean camelCase operationIds for OpenAPI spec.
+
+    Converts snake_case route names to camelCase.
+    Examples:
+        list_samples -> listSamples
+        get_sample -> getSample
+        search_samples -> searchSamples
+    """
     parts = route.name.split("_")
     return parts[0] + "".join(word.capitalize() for word in parts[1:])
 
@@ -61,6 +73,28 @@ app.add_middleware(
 
 
 app.include_router(api_router, prefix=config.API_PREFIX)
+
+
+@app.middleware("http")
+async def add_request_context(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Inject request context into ContextVar for structured logging."""
+    request_json = None
+    if request.method in {"POST", "PUT", "PATCH"}:
+        try:
+            request_json = await request.json()
+        except Exception:
+            pass
+
+    ctx = RequestLogContext(
+        request_id=uuid.uuid4(),
+        request=request,
+        request_json=request_json,
+    )
+    token = log_context_var.set(ctx)
+    try:
+        return await call_next(request)
+    finally:
+        log_context_var.reset(token)
 
 
 @app.middleware("http")

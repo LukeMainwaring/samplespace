@@ -3,8 +3,6 @@
 import logging
 import uuid
 
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.models.sample import Sample
@@ -27,9 +25,9 @@ async def create_sample(
     sample = Sample(
         id=str(uuid.uuid4()),
         filename=filename,
-        key=metadata["key"],
-        bpm=metadata["bpm"],
-        duration=metadata["duration"],
+        key=metadata.key,
+        bpm=metadata.bpm,
+        duration=metadata.duration,
         sample_type=sample_type,
     )
     db.add(sample)
@@ -46,13 +44,7 @@ async def get_samples(
     offset: int = 0,
 ) -> SampleListResponse:
     """List samples with pagination."""
-    total_result = await db.execute(select(func.count()).select_from(Sample))
-    total = total_result.scalar_one()
-
-    result = await db.execute(
-        select(Sample).order_by(Sample.created_at.desc()).limit(limit).offset(offset),
-    )
-    samples = result.scalars().all()
+    samples, total = await Sample.get_all(db, limit=limit, offset=offset)
 
     return SampleListResponse(
         samples=[SampleSchema.model_validate(s) for s in samples],
@@ -62,8 +54,7 @@ async def get_samples(
 
 async def get_sample_by_id(db: AsyncSession, sample_id: str) -> Sample | None:
     """Get a single sample by ID."""
-    result = await db.execute(select(Sample).where(Sample.id == sample_id))
-    return result.scalar_one_or_none()
+    return await Sample.get(db, sample_id)
 
 
 async def search_by_text(
@@ -80,26 +71,17 @@ async def search_by_text(
 
     Uses pgvector cosine distance for semantic similarity ranking.
     """
-    # Cosine distance: lower = more similar
-    distance = Sample.clap_embedding.cosine_distance(cast(query_embedding, Vector(512)))
+    results = await Sample.search_by_clap(
+        db,
+        query_embedding,
+        key=key,
+        bpm_min=bpm_min,
+        bpm_max=bpm_max,
+        sample_type=sample_type,
+        limit=limit,
+    )
 
-    stmt = select(Sample, cast(distance, Float).label("distance")).where(Sample.clap_embedding.is_not(None))
-
-    if key is not None:
-        stmt = stmt.where(Sample.key == key)
-    if bpm_min is not None:
-        stmt = stmt.where(Sample.bpm >= bpm_min)
-    if bpm_max is not None:
-        stmt = stmt.where(Sample.bpm <= bpm_max)
-    if sample_type is not None:
-        stmt = stmt.where(Sample.sample_type == sample_type)
-
-    stmt = stmt.order_by(distance).limit(limit)
-
-    result = await db.execute(stmt)
-    rows = result.all()
-
-    return [SampleSchema.model_validate(row.Sample) for row in rows]
+    return [SampleSchema.model_validate(s) for s in results]
 
 
 async def find_similar_by_cnn(
@@ -112,22 +94,15 @@ async def find_similar_by_cnn(
 
     Uses pgvector cosine distance on the 128-dim CNN embeddings.
     """
-    # Get the source sample's CNN embedding
-    source = await get_sample_by_id(db, sample_id)
+    source = await Sample.get(db, sample_id)
     if source is None or source.cnn_embedding is None:
         return []
 
-    distance = Sample.cnn_embedding.cosine_distance(cast(source.cnn_embedding, Vector(128)))
-
-    stmt = (
-        select(Sample, cast(distance, Float).label("distance"))
-        .where(Sample.cnn_embedding.is_not(None))
-        .where(Sample.id != sample_id)
-        .order_by(distance)
-        .limit(limit)
+    results = await Sample.find_similar_by_cnn(
+        db,
+        source.cnn_embedding,
+        exclude_id=sample_id,
+        limit=limit,
     )
 
-    result = await db.execute(stmt)
-    rows = result.all()
-
-    return [SampleSchema.model_validate(row.Sample) for row in rows]
+    return [SampleSchema.model_validate(s) for s in results]
