@@ -20,10 +20,11 @@ def analyze_audio(file_path: str) -> dict[str, float | str | None]:
 
     # BPM
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    bpm = float(np.round(tempo[0], 1)) if hasattr(tempo, "__len__") else float(np.round(tempo, 1))
+    tempo_val = float(tempo[0]) if isinstance(tempo, np.ndarray) else float(tempo)
+    bpm = round(tempo_val, 1)
 
     # Key detection via chroma features
-    key = _detect_key(y, sr)
+    key = _detect_key(y, int(sr))
 
     logger.info(f"Analyzed {file_path}: key={key}, bpm={bpm}, duration={duration:.1f}s")
 
@@ -34,7 +35,7 @@ def analyze_audio(file_path: str) -> dict[str, float | str | None]:
     }
 
 
-def _detect_key(y: np.ndarray, sr: int) -> str | None:  # type: ignore[type-arg]
+def _detect_key(y: np.ndarray, sr: int) -> str | None:
     """Detect musical key from audio using chroma features."""
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
     chroma_mean = chroma.mean(axis=1)

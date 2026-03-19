@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import Depends
 from openai import AsyncOpenAI
 
-
 _openai_client: AsyncOpenAI = AsyncOpenAI()
 
 
