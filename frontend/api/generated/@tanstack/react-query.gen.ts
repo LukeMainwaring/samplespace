@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, getSample, listSamples, type Options, searchSamples } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleData, GetSampleError, GetSampleResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse } from '../types.gen';
+import { dbHealthCheck, getSample, getSimilarSamples, listSamples, type Options, searchSamples } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseURL' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -175,4 +175,24 @@ export const getSampleOptions = (options: Options<GetSampleData>) => queryOption
         return data;
     },
     queryKey: getSampleQueryKey(options)
+});
+
+export const getSimilarSamplesQueryKey = (options: Options<GetSimilarSamplesData>) => createQueryKey('getSimilarSamples', options);
+
+/**
+ * Get Similar Samples
+ *
+ * Find similar samples using CNN embedding nearest neighbors.
+ */
+export const getSimilarSamplesOptions = (options: Options<GetSimilarSamplesData>) => queryOptions<GetSimilarSamplesResponse, AxiosError<GetSimilarSamplesError>, GetSimilarSamplesResponse, ReturnType<typeof getSimilarSamplesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getSimilarSamples({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getSimilarSamplesQueryKey(options)
 });

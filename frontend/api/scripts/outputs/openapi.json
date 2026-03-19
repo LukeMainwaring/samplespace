@@ -169,6 +169,63 @@
           }
         }
       }
+    },
+    "/api/samples/{sample_id}/similar": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Similar Samples",
+        "description": "Find similar samples using CNN embedding nearest neighbors.",
+        "operationId": "getSimilarSamples",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SampleSchema"
+                  },
+                  "title": "Response Getsimilarsamples"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

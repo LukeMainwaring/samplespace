@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, GetSampleData, GetSampleErrors, GetSampleResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -63,5 +63,16 @@ export const searchSamples = <ThrowOnError extends boolean = false>(options: Opt
 export const getSample = <ThrowOnError extends boolean = false>(options: Options<GetSampleData, ThrowOnError>) => (options.client ?? client).get<GetSampleResponses, GetSampleErrors, ThrowOnError>({
     responseType: 'json',
     url: '/api/samples/{sample_id}',
+    ...options
+});
+
+/**
+ * Get Similar Samples
+ *
+ * Find similar samples using CNN embedding nearest neighbors.
+ */
+export const getSimilarSamples = <ThrowOnError extends boolean = false>(options: Options<GetSimilarSamplesData, ThrowOnError>) => (options.client ?? client).get<GetSimilarSamplesResponses, GetSimilarSamplesErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/samples/{sample_id}/similar',
     ...options
 });

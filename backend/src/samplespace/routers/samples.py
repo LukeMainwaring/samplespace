@@ -58,3 +58,17 @@ async def get_sample(
         raise HTTPException(status_code=404, detail="Sample not found")
 
     return SampleSchema.model_validate(sample)
+
+
+@samples_router.get("/{sample_id}/similar")
+async def get_similar_samples(
+    sample_id: str,
+    db: AsyncPostgresSessionDep,
+    limit: int = 10,
+) -> list[SampleSchema]:
+    """Find similar samples using CNN embedding nearest neighbors."""
+    sample = await sample_service.get_sample_by_id(db, sample_id)
+    if sample is None:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    return await sample_service.find_similar_by_cnn(db, sample_id=sample_id, limit=limit)

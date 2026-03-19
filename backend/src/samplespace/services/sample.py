@@ -100,3 +100,34 @@ async def search_by_text(
     rows = result.all()
 
     return [SampleSchema.model_validate(row.Sample) for row in rows]
+
+
+async def find_similar_by_cnn(
+    db: AsyncSession,
+    *,
+    sample_id: str,
+    limit: int = 10,
+) -> list[SampleSchema]:
+    """Find similar samples using CNN embedding nearest neighbors.
+
+    Uses pgvector cosine distance on the 128-dim CNN embeddings.
+    """
+    # Get the source sample's CNN embedding
+    source = await get_sample_by_id(db, sample_id)
+    if source is None or source.cnn_embedding is None:
+        return []
+
+    distance = Sample.cnn_embedding.cosine_distance(cast(source.cnn_embedding, Vector(128)))
+
+    stmt = (
+        select(Sample, cast(distance, Float).label("distance"))
+        .where(Sample.cnn_embedding.is_not(None))
+        .where(Sample.id != sample_id)
+        .order_by(distance)
+        .limit(limit)
+    )
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    return [SampleSchema.model_validate(row.Sample) for row in rows]

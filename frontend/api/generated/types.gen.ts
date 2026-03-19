@@ -256,3 +256,40 @@ export type GetSampleResponses = {
 };
 
 export type GetSampleResponse = GetSampleResponses[keyof GetSampleResponses];
+
+export type GetSimilarSamplesData = {
+    body?: never;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/samples/{sample_id}/similar';
+};
+
+export type GetSimilarSamplesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSimilarSamplesError = GetSimilarSamplesErrors[keyof GetSimilarSamplesErrors];
+
+export type GetSimilarSamplesResponses = {
+    /**
+     * Response Getsimilarsamples
+     *
+     * Successful Response
+     */
+    200: Array<SampleSchema>;
+};
+
+export type GetSimilarSamplesResponse = GetSimilarSamplesResponses[keyof GetSimilarSamplesResponses];
