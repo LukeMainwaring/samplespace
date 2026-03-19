@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import HTTPException
+from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 
 from samplespace.dependencies.clap import ClapModelsDep
@@ -72,3 +75,40 @@ async def get_similar_samples(
         raise HTTPException(status_code=404, detail="Sample not found")
 
     return await sample_service.find_similar_by_cnn(db, sample_id=sample_id, limit=limit)
+
+
+@samples_router.get("/{sample_id}/audio")
+async def get_sample_audio(
+    sample_id: str,
+    db: AsyncPostgresSessionDep,
+) -> FileResponse:
+    """Stream the audio file for a sample."""
+    from samplespace.core.config import get_settings
+
+    config = get_settings()
+    samples_dir = Path(config.SAMPLES_DIR)
+
+    sample = await sample_service.get_sample_by_id(db, sample_id)
+    if sample is None:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    # Check in type subdirectory first, then root
+    file_path = None
+    if sample.sample_type:
+        candidate = samples_dir / sample.sample_type / sample.filename
+        if candidate.exists():
+            file_path = candidate
+
+    if file_path is None:
+        candidate = samples_dir / sample.filename
+        if candidate.exists():
+            file_path = candidate
+
+    if file_path is None:
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="audio/wav",
+        filename=sample.filename,
+    )

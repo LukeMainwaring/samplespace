@@ -246,6 +246,47 @@
           }
         }
       }
+    },
+    "/api/samples/{sample_id}/audio": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Sample Audio",
+        "description": "Stream the audio file for a sample.",
+        "operationId": "getSampleAudio",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, getSample, getSimilarSamples, listSamples, type Options, searchSamples, streamChat } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
+import { dbHealthCheck, getSample, getSampleAudio, getSimilarSamples, listSamples, type Options, searchSamples, streamChat } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
 
 /**
  * Stream Chat
@@ -217,4 +217,24 @@ export const getSimilarSamplesOptions = (options: Options<GetSimilarSamplesData>
         return data;
     },
     queryKey: getSimilarSamplesQueryKey(options)
+});
+
+export const getSampleAudioQueryKey = (options: Options<GetSampleAudioData>) => createQueryKey('getSampleAudio', options);
+
+/**
+ * Get Sample Audio
+ *
+ * Stream the audio file for a sample.
+ */
+export const getSampleAudioOptions = (options: Options<GetSampleAudioData>) => queryOptions<unknown, AxiosError<GetSampleAudioError>, unknown, ReturnType<typeof getSampleAudioQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getSampleAudio({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getSampleAudioQueryKey(options)
 });

@@ -307,3 +307,31 @@ export type GetSimilarSamplesResponses = {
 };
 
 export type GetSimilarSamplesResponse = GetSimilarSamplesResponses[keyof GetSimilarSamplesResponses];
+
+export type GetSampleAudioData = {
+    body?: never;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: never;
+    url: '/api/samples/{sample_id}/audio';
+};
+
+export type GetSampleAudioErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSampleAudioError = GetSampleAudioErrors[keyof GetSampleAudioErrors];
+
+export type GetSampleAudioResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
