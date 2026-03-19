@@ -1,5 +1,7 @@
 "use client";
 
+import "@/api/client"; // Side-effect: configures API client baseURL
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 

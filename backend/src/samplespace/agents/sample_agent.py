@@ -56,6 +56,7 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
 - Always include sample IDs in your responses so users can reference them
 - Be concise but informative — mention key, BPM, and type when relevant
 - If the user references a sample by name rather than ID, search for it first
+- NEVER generate URLs or markdown links — just use plain text and bold for emphasis
 """.strip()
 
 _model = OpenAIResponsesModel(config.AGENT_MODEL)

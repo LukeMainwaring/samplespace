@@ -1,10 +1,20 @@
+"use client";
+
+import { ChatPanel } from "@/components/chat-panel";
+import { SampleBrowser } from "@/components/sample-browser";
+
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold tracking-tight">SampleSpace</h1>
-      <p className="mt-4 text-lg text-muted-foreground">
-        AI-powered sample discovery for music producers
-      </p>
+    <main className="flex h-dvh">
+      {/* Chat panel — primary interaction */}
+      <div className="flex-1 border-r">
+        <ChatPanel />
+      </div>
+
+      {/* Sample browser — sidebar */}
+      <div className="hidden w-80 lg:block xl:w-96">
+        <SampleBrowser />
+      </div>
     </main>
   );
 }
