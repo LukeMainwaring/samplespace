@@ -135,11 +135,11 @@ Custom hooks in `api/hooks/` wrap the generated code with cleaner APIs.
 Audio sample files are gitignored. To populate:
 
 ```bash
-# Download and seed sample data (50-100 CC-licensed samples from Freesound)
-python scripts/seed.py
+# Seed sample data (place audio files in data/samples/, organized by subdirectory)
+cd backend && uv run python scripts/seed.py
 
 # Generate CLAP embeddings for all seeded samples
-python scripts/embed_samples.py
+cd backend && uv run python scripts/embed_samples.py
 ```
 
 Audio files are stored in `data/samples/`. The database stores metadata (key, BPM, duration, type) and embedding vectors (CLAP 512-dim, CNN 128-dim).

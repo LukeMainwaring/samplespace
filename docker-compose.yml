@@ -1,17 +1,19 @@
 services:
-  db:
+  postgres:
     image: pgvector/pgvector:pg17
     environment:
+      POSTGRES_DB: samplespace
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: samplespace
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
@@ -21,29 +23,32 @@ services:
     build:
       context: ./backend
       target: local
-    environment:
-      ENVIRONMENT: development
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: samplespace
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-      UVICORN_PORT: 8002
     ports:
       - "8002:8002"
+    environment:
+      ENVIRONMENT: development
+      UVICORN_PORT: 8002
+      POSTGRES_DB: samplespace
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    env_file:
+      - .env
     volumes:
       - ./backend/src:/app/src
       - ./backend/tests:/app/tests
       - ./data/samples:/app/data/samples
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
+    restart: unless-stopped
     networks:
       - samplespace
 
-volumes:
-  pgdata:
-
 networks:
   samplespace:
+    attachable: true
+
+volumes:
+  postgres_data:

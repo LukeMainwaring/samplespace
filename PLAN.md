@@ -227,8 +227,8 @@ Suggested (2 bullets):
 ## Verification
 
 - `docker compose up` starts everything (Postgres, backend, frontend)
-- `python scripts/seed.py` populates the database with samples
-- `python scripts/embed_samples.py` generates CLAP embeddings
+- `cd backend && uv run python scripts/seed.py` populates the database with samples
+- `cd backend && uv run python scripts/embed_samples.py` generates CLAP embeddings
 - Browse samples at `localhost:3002`, play audio, filter by key/BPM
 - Search "bright synth lead" and get semantically relevant results
 - Click a sample, see CNN-recommended similar samples

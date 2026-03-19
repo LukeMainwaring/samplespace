@@ -27,7 +27,13 @@ def generate_operation_id(route: APIRoute) -> str:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan: load heavy models at startup, clean up on shutdown."""
     logger.info("Starting SampleSpace backend...")
-    # CLAP model will be loaded here in Phase 2
+
+    from samplespace.services.embedding import load_clap_model
+
+    clap_model, clap_processor = load_clap_model()
+    app.state.clap_model = clap_model
+    app.state.clap_processor = clap_processor
+
     yield
     logger.info("Shutting down SampleSpace backend...")
 

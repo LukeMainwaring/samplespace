@@ -15,19 +15,19 @@ import sys
 import uuid
 from pathlib import Path
 
-# Add backend/src to path so we can import samplespace
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend" / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 
 from samplespace.core.config import get_settings
 from samplespace.models import Base, Sample
 from samplespace.services.audio_analysis import analyze_audio
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-SAMPLES_DIR = Path(__file__).parent.parent / "data" / "samples"
+SAMPLES_DIR = Path(__file__).parent.parent.parent / "data" / "samples"
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".aiff"}
 
 
@@ -79,10 +79,7 @@ def seed_database(samples: list[tuple[Path, str | None]]) -> int:
     inserted = 0
     with Session(engine) as session:
         # Get existing filenames to avoid duplicates
-        existing = {
-            row[0]
-            for row in session.execute(text("SELECT filename FROM samples")).fetchall()
-        }
+        existing = {row[0] for row in session.execute(text("SELECT filename FROM samples")).fetchall()}
 
         for file_path, sample_type in samples:
             filename = file_path.name
@@ -114,16 +111,12 @@ def seed_database(samples: list[tuple[Path, str | None]]) -> int:
 
         session.commit()
 
-    logger.info(
-        f"Seeded {inserted} new samples (skipped {len(samples) - inserted} duplicates)"
-    )
+    logger.info(f"Seeded {inserted} new samples (skipped {len(samples) - inserted} duplicates)")
     return inserted
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Seed the SampleSpace database with audio samples"
-    )
+    parser = argparse.ArgumentParser(description="Seed the SampleSpace database with audio samples")
     parser.add_argument(
         "--sample-type",
         type=str,
