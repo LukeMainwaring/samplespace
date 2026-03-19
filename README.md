@@ -138,7 +138,7 @@ uv run seed-db
 uv run embed-samples    # CLAP embeddings (~2 min)
 uv run embed-cnn        # CNN embeddings (after training)
 
-# Train CNN (optional — small dataset, pipeline is the point)
+# Train CNN (optional)
 PYTHONPATH=src uv run python -m samplespace.ml.train
 
 # Frontend setup
@@ -154,11 +154,11 @@ pnpm generate-client
 
 ## Design Decisions
 
-- **One backend service, not three.** The ML models load in-process — a separate service adds complexity without demonstrating anything at this scale.
+- **One backend service, not three.** The ML models load in-process — a separate inference service adds latency and operational complexity without benefit at this scale.
 - **pgvector for both embedding types.** One database for structured data + vector search. No external vector DB needed.
 - **CLAP model choice.** Switched from `larger_clap_music` to `clap-htsat-unfused` for better text-audio contrastive alignment.
-- **CNN dataset size.** 75 samples across 11 classes will overfit — the architecture and pipeline matter more than benchmark results. NSynth (300K samples) would be the scaling path.
-- **No auth.** Portfolio demo — Auth0/JWT would add friction without demonstrating new skills.
+- **CNN dataset size.** 75 samples across 11 classes — see [Roadmap](docs/ROADMAP.md) for scaling plans (NSynth, FSD50K).
+- **No auth yet.** Auth is planned but not yet implemented.
 - **Agentic RAG over static pipeline.** The agent decides which tools to call per query, enabling multi-step reasoning (analyze sample → check key → search for complement).
 
 ## Audio Pipeline

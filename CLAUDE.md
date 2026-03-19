@@ -74,7 +74,7 @@ Next.js 16 with App Router.
 
 Key patterns:
 
--   No auth (portfolio demo -- no Auth0, JWT, or access tokens)
+-   No auth currently -- planned for future
 -   Uses Vercel AI SDK's `useChat` for streaming chat
 -   Backend URL configured via `NEXT_PUBLIC_BACKEND_URL` env var
 -   TanStack Query for data fetching with automatic caching/invalidation
