@@ -1,10 +1,9 @@
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
-from sqlalchemy import func, select
 
 from samplespace.dependencies.db import AsyncPostgresSessionDep
-from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleListResponse, SampleSchema
+from samplespace.services import sample as sample_service
 
 samples_router = APIRouter(
     prefix="/samples",
@@ -19,18 +18,7 @@ async def list_samples(
     offset: int = 0,
 ) -> SampleListResponse:
     """List all samples with pagination."""
-    total_result = await db.execute(select(func.count()).select_from(Sample))
-    total = total_result.scalar_one()
-
-    result = await db.execute(
-        select(Sample).order_by(Sample.created_at.desc()).limit(limit).offset(offset),
-    )
-    samples = result.scalars().all()
-
-    return SampleListResponse(
-        samples=[SampleSchema.model_validate(s) for s in samples],
-        total=total,
-    )
+    return await sample_service.get_samples(db, limit=limit, offset=offset)
 
 
 @samples_router.get("/{sample_id}")
@@ -39,8 +27,7 @@ async def get_sample(
     db: AsyncPostgresSessionDep,
 ) -> SampleSchema:
     """Get a single sample by ID."""
-    result = await db.execute(select(Sample).where(Sample.id == sample_id))
-    sample = result.scalar_one_or_none()
+    sample = await sample_service.get_sample_by_id(db, sample_id)
 
     if sample is None:
         raise HTTPException(status_code=404, detail="Sample not found")
