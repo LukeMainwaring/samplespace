@@ -4,33 +4,27 @@ Loads the trained SampleCNN, processes each sample's audio file through
 the model, and stores the 128-dim embedding in the cnn_embedding column.
 
 Usage:
-    cd backend && uv run python scripts/embed_cnn.py
-    cd backend && uv run python scripts/embed_cnn.py --force   # re-embed all
+    uv run embed-cnn
+    uv run embed-cnn --force   # re-embed all
 """
 
 import argparse
 import logging
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from sqlalchemy import create_engine, select, update
+from sqlalchemy.orm import Session
 
 from samplespace.core.config import get_settings
 from samplespace.ml.predict import load_model, predict
 from samplespace.models.sample import Sample
-from sqlalchemy import create_engine, select, update
-from sqlalchemy.orm import Session
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-SAMPLES_DIR = Path(__file__).parent.parent.parent / "data" / "samples"
-
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate CNN embeddings for all samples"
-    )
+    parser = argparse.ArgumentParser(description="Generate CNN embeddings for all samples")
     parser.add_argument(
         "--force",
         action="store_true",
@@ -44,6 +38,7 @@ def main() -> None:
         f"@{config.POSTGRES_HOST}:{config.POSTGRES_PORT}/{config.POSTGRES_DB}"
     )
     engine = create_engine(sync_url)
+    SAMPLES_DIR = Path(config.SAMPLES_DIR)
 
     model = load_model()
 
@@ -80,11 +75,7 @@ def main() -> None:
 
             try:
                 result = predict(str(file_path), model)
-                session.execute(
-                    update(Sample)
-                    .where(Sample.id == sample.id)
-                    .values(cnn_embedding=result.embedding)
-                )
+                session.execute(update(Sample).where(Sample.id == sample.id).values(cnn_embedding=result.embedding))
                 embedded += 1
                 logger.info(
                     f"  Embedded: {sample.filename} "

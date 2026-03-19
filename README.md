@@ -87,7 +87,7 @@ samplespace/
 │   │   ├── routers/                # REST + SSE streaming endpoints
 │   │   ├── models/                 # SQLAlchemy (Sample with pgvector columns)
 │   │   └── migrations/             # Alembic
-│   ├── scripts/                    # seed.py, embed_samples.py, embed_cnn.py
+│   ├── scripts/                    # Shell scripts (migrations, Docker helpers)
 │   └── tests/
 ├── frontend/
 │   ├── app/
@@ -132,11 +132,11 @@ uv sync
 uv run pre-commit install
 
 # Seed samples (place .wav files in data/samples/ organized by type)
-uv run python scripts/seed.py
+uv run seed-db
 
 # Generate embeddings
-uv run python scripts/embed_samples.py    # CLAP embeddings (~2 min)
-uv run python scripts/embed_cnn.py        # CNN embeddings (after training)
+uv run embed-samples    # CLAP embeddings (~2 min)
+uv run embed-cnn        # CNN embeddings (after training)
 
 # Train CNN (optional — small dataset, pipeline is the point)
 PYTHONPATH=src uv run python -m samplespace.ml.train

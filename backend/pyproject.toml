@@ -1,8 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "samplespace"
 version = "0.1.0"
 description = "Multi-modal AI-powered tool for music producers to discover and match audio samples"
-readme = "README.md"
+readme = "../README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "alembic>=1.18.4",
@@ -48,6 +52,11 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["I", "F401"]
+
+[project.scripts]
+seed-db = "samplespace.scripts.seed:main"
+embed-samples = "samplespace.scripts.embed_samples:main"
+embed-cnn = "samplespace.scripts.embed_cnn:main"
 
 [tool.uv]
 default-groups = ["dev"]

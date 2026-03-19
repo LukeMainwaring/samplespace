@@ -4,16 +4,13 @@ Loads the CLAP model, reads each sample's audio file, generates a 512-dim
 embedding, and stores it in the clap_embedding column.
 
 Usage:
-    python scripts/embed_samples.py
-    python scripts/embed_samples.py --force   # re-embed samples that already have embeddings
+    uv run embed-samples
+    uv run embed-samples --force   # re-embed samples that already have embeddings
 """
 
 import argparse
 import logging
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from sqlalchemy import create_engine, select, update
 from sqlalchemy.orm import Session
@@ -24,8 +21,6 @@ from samplespace.services.embedding import embed_audio, load_clap_model
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
-
-SAMPLES_DIR = Path(__file__).parent.parent.parent / "data" / "samples"
 
 
 def main() -> None:
@@ -43,6 +38,7 @@ def main() -> None:
         f"@{config.POSTGRES_HOST}:{config.POSTGRES_PORT}/{config.POSTGRES_DB}"
     )
     engine = create_engine(sync_url)
+    SAMPLES_DIR = Path(config.SAMPLES_DIR)
 
     # Load CLAP model
     model, processor = load_clap_model()

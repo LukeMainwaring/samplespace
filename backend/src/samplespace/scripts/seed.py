@@ -5,17 +5,14 @@ and inserts into the database. Organize files in subdirectories (e.g., kick/,
 snare/, pad/) to auto-infer sample_type.
 
 Usage:
-    python scripts/seed.py                        # scan data/samples/
-    python scripts/seed.py --sample-type kick      # override sample_type for all files
+    uv run seed-db                        # scan data/samples/
+    uv run seed-db --sample-type kick      # override sample_type for all files
 """
 
 import argparse
 import logging
-import sys
 import uuid
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
@@ -26,8 +23,6 @@ from samplespace.services.audio_analysis import analyze_audio
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
-
-SAMPLES_DIR = Path(__file__).parent.parent.parent / "data" / "samples"
 AUDIO_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".aiff"}
 
 
@@ -39,6 +34,7 @@ def scan_local_samples(
     Returns list of (file_path, sample_type) tuples.
     Infers sample_type from parent directory name if files are organized in subdirectories.
     """
+    SAMPLES_DIR = Path(get_settings().SAMPLES_DIR)
     SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
     found: list[tuple[Path, str | None]] = []
 
@@ -132,7 +128,7 @@ def main() -> None:
             "No samples found. Place audio files in data/samples/ "
             "(organize in subdirectories like kick/, snare/, pad/ to auto-infer type)."
         )
-        sys.exit(0)
+        return
 
     seed_database(samples)
 
