@@ -2932,7 +2932,7 @@ dependencies = [
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
     { name = "pydantic-ai" },
-    { name = "sqlalchemy", extra = ["mypy"] },
+    { name = "sqlalchemy", extra = ["asyncio", "mypy"] },
     { name = "torch" },
     { name = "torchaudio" },
     { name = "transformers" },
@@ -2958,7 +2958,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.3.3" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-ai", specifier = ">=1.70.0" },
-    { name = "sqlalchemy", extras = ["mypy"], specifier = ">=2.0.48" },
+    { name = "sqlalchemy", extras = ["asyncio", "mypy"], specifier = ">=2.0.48" },
     { name = "torch", specifier = ">=2.10.0" },
     { name = "torchaudio", specifier = ">=2.10.0" },
     { name = "transformers", specifier = ">=5.3.0" },
@@ -3154,6 +3154,9 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+asyncio = [
+    { name = "greenlet" },
+]
 mypy = [
     { name = "mypy" },
 ]

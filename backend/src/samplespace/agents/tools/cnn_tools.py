@@ -40,10 +40,12 @@ def _format_results(results: list[SampleSchema], source_name: str) -> str:
         parts = [f"{i}. **{s.filename}**"]
         if s.sample_type:
             parts.append(f"type={s.sample_type}")
-        if s.key:
-            parts.append(f"key={s.key}")
-        if s.bpm and s.bpm > 0:
-            parts.append(f"bpm={s.bpm}")
+        parts.append("loop" if s.is_loop else "one-shot")
+        if s.is_loop:
+            if s.key:
+                parts.append(f"key={s.key}")
+            if s.bpm and s.bpm > 0:
+                parts.append(f"bpm={s.bpm}")
         parts.append(f"id={s.id}")
         lines.append(" | ".join(parts))
     return "\n".join(lines)

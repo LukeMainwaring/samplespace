@@ -7,7 +7,7 @@ from datetime import datetime
 
 from fastapi import HTTPException
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Float, String, cast, func, select
+from sqlalchemy import Boolean, DateTime, Float, String, cast, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +33,7 @@ class Sample(Base):
     bpm: Mapped[float | None]
     duration: Mapped[float | None]
     sample_type: Mapped[str | None] = mapped_column(String(50))
+    is_loop: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     clap_embedding: Mapped[list[float] | None] = mapped_column(Vector(512))
     cnn_embedding: Mapped[list[float] | None] = mapped_column(Vector(128))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -72,6 +73,7 @@ class Sample(Base):
         bpm_min: float | None = None,
         bpm_max: float | None = None,
         sample_type: str | None = None,
+        is_loop: bool | None = None,
         limit: int = 20,
     ) -> Sequence[Sample]:
         """Search samples by CLAP embedding using pgvector cosine distance."""
@@ -87,6 +89,8 @@ class Sample(Base):
             stmt = stmt.where(cls.bpm <= bpm_max)
         if sample_type is not None:
             stmt = stmt.where(cls.sample_type == sample_type)
+        if is_loop is not None:
+            stmt = stmt.where(cls.is_loop == is_loop)
 
         stmt = stmt.order_by(distance).limit(limit)
 

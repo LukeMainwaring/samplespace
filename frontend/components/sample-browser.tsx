@@ -57,6 +57,9 @@ function SampleCard({
                 {sample.sample_type}
               </span>
             )}
+            <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+              {sample.is_loop ? "loop" : "one-shot"}
+            </span>
             {sample.key && (
               <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
                 {sample.key}
@@ -86,6 +89,9 @@ function SampleCard({
 }
 
 export function SampleBrowser() {
+  const [activeCategory, setActiveCategory] = useState<
+    "all" | "one-shot" | "loop"
+  >("all");
   const [activeType, setActiveType] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -96,9 +102,12 @@ export function SampleBrowser() {
   );
 
   const samples = data?.samples ?? [];
-  const filteredSamples = activeType
-    ? samples.filter((s) => s.sample_type === activeType)
-    : samples;
+  const filteredSamples = samples.filter((s) => {
+    if (activeCategory === "one-shot" && s.is_loop) return false;
+    if (activeCategory === "loop" && !s.is_loop) return false;
+    if (activeType && s.sample_type !== activeType) return false;
+    return true;
+  });
 
   const handleTogglePlay = useCallback((sample: SampleSchema) => {
     setPlayingId((prev) => (prev === sample.id ? null : sample.id));
@@ -117,6 +126,21 @@ export function SampleBrowser() {
           {filteredSamples.length} samples
           {activeType ? ` (${activeType})` : ""}
         </p>
+      </div>
+
+      {/* Category filter */}
+      <div className="flex gap-1 border-b px-4 py-2">
+        {(["all", "one-shot", "loop"] as const).map((cat) => (
+          <Button
+            className="h-6 text-xs"
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            size="sm"
+            variant={activeCategory === cat ? "default" : "ghost"}
+          >
+            {cat === "all" ? "All" : cat === "one-shot" ? "One-shots" : "Loops"}
+          </Button>
+        ))}
       </div>
 
       {/* Type filters */}

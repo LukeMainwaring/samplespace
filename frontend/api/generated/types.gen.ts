@@ -73,6 +73,10 @@ export type SampleSchema = {
      */
     sample_type?: string | null;
     /**
+     * Is Loop
+     */
+    is_loop?: boolean;
+    /**
      * Created At
      */
     created_at: string;
@@ -114,6 +118,12 @@ export type SampleSearchRequest = {
      * Filter by sample type
      */
     sample_type?: string | null;
+    /**
+     * Is Loop
+     *
+     * Filter by loop (True) or one-shot (False)
+     */
+    is_loop?: boolean | null;
     /**
      * Limit
      *

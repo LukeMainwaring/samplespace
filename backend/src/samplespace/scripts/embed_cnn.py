@@ -9,18 +9,56 @@ Usage:
 """
 
 import argparse
+import asyncio
 import logging
-from pathlib import Path
 
-from sqlalchemy import create_engine, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy import select, update
 
-from samplespace.core.config import get_settings
-from samplespace.ml.predict import load_model, predict
+from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.sample import Sample
+from samplespace.scripts import find_audio_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+
+async def generate_embeddings(*, force: bool = False) -> None:
+    from samplespace.ml.predict import load_model, predict
+
+    model = load_model()
+
+    async with get_async_sqlalchemy_session() as db:
+        stmt = select(Sample)
+        if not force:
+            stmt = stmt.where(Sample.cnn_embedding.is_(None))
+
+        result = await db.execute(stmt)
+        samples = result.scalars().all()
+        logger.info(f"Found {len(samples)} samples to embed")
+
+        embedded = 0
+        for sample in samples:
+            file_path = find_audio_file(sample.filename, sample.sample_type)
+            if file_path is None:
+                logger.warning(f"  Audio file not found: {sample.filename}")
+                continue
+
+            try:
+                pred_result = predict(str(file_path), model)
+                await db.execute(
+                    update(Sample).where(Sample.id == sample.id).values(cnn_embedding=pred_result.embedding)
+                )
+                embedded += 1
+                logger.info(
+                    f"  Embedded: {sample.filename} "
+                    f"(predicted: {pred_result.predicted_type}, "
+                    f"confidence: {pred_result.confidence:.2%})"
+                )
+            except Exception:
+                logger.warning(f"  Failed to embed: {sample.filename}", exc_info=True)
+                continue
+
+    logger.info(f"Embedded {embedded}/{len(samples)} samples")
 
 
 def main() -> None:
@@ -32,63 +70,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    config = get_settings()
-    sync_url = (
-        f"postgresql+psycopg://{config.POSTGRES_USER}:{config.POSTGRES_PASSWORD}"
-        f"@{config.POSTGRES_HOST}:{config.POSTGRES_PORT}/{config.POSTGRES_DB}"
-    )
-    engine = create_engine(sync_url)
-    SAMPLES_DIR = Path(config.SAMPLES_DIR)
-
-    model = load_model()
-
-    with Session(engine) as session:
-        stmt = select(Sample)
-        if not args.force:
-            stmt = stmt.where(Sample.cnn_embedding.is_(None))
-
-        samples = session.execute(stmt).scalars().all()
-        logger.info(f"Found {len(samples)} samples to embed")
-
-        embedded = 0
-        for sample in samples:
-            # Find audio file
-            file_path = None
-            if sample.sample_type:
-                candidate = SAMPLES_DIR / sample.sample_type / sample.filename
-                if candidate.exists():
-                    file_path = candidate
-
-            if file_path is None:
-                candidate = SAMPLES_DIR / sample.filename
-                if candidate.exists():
-                    file_path = candidate
-
-            if file_path is None:
-                matches = list(SAMPLES_DIR.rglob(sample.filename))
-                if matches:
-                    file_path = matches[0]
-
-            if file_path is None:
-                logger.warning(f"  Audio file not found: {sample.filename}")
-                continue
-
-            try:
-                result = predict(str(file_path), model)
-                session.execute(update(Sample).where(Sample.id == sample.id).values(cnn_embedding=result.embedding))
-                embedded += 1
-                logger.info(
-                    f"  Embedded: {sample.filename} "
-                    f"(predicted: {result.predicted_type}, "
-                    f"confidence: {result.confidence:.2%})"
-                )
-            except Exception:
-                logger.warning(f"  Failed to embed: {sample.filename}", exc_info=True)
-                continue
-
-        session.commit()
-
-    logger.info(f"Embedded {embedded}/{len(samples)} samples")
+    asyncio.run(generate_embeddings(force=args.force))
 
 
 if __name__ == "__main__":

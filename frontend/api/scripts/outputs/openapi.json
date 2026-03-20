@@ -394,6 +394,11 @@
             "title": "Sample Type",
             "description": "Category of the sample (e.g., kick, snare, pad, lead)"
           },
+          "is_loop": {
+            "type": "boolean",
+            "title": "Is Loop",
+            "default": false
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -470,6 +475,18 @@
             ],
             "title": "Sample Type",
             "description": "Filter by sample type"
+          },
+          "is_loop": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Loop",
+            "description": "Filter by loop (True) or one-shot (False)"
           },
           "limit": {
             "type": "integer",
