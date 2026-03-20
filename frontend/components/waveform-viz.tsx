@@ -1,7 +1,7 @@
 "use client";
 
 import WavesurferPlayer from "@wavesurfer/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type WaveSurfer from "wavesurfer.js";
 
 function formatTime(seconds: number): string {
@@ -35,11 +35,11 @@ export function WaveformViz({
 }: WaveformVizProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const colorsRef = useRef(getThemeColors());
-
-  useEffect(() => {
-    colorsRef.current = getThemeColors();
-  }, []);
+  const [colors] = useState(() =>
+    typeof document !== "undefined"
+      ? getThemeColors()
+      : { progressColor: "#3b82f6", waveColor: "#a1a1aa" },
+  );
 
   const handleReady = useCallback(
     (ws: WaveSurfer) => {
@@ -55,17 +55,13 @@ export function WaveformViz({
     setCurrentTime(ws.getCurrentTime());
   }, []);
 
-  const handleFinish = useCallback(() => {
-    onFinish?.();
-  }, [onFinish]);
-
   return (
     <div className="w-full">
       <WavesurferPlayer
         url={audioUrl}
         height={height}
-        waveColor={colorsRef.current.waveColor}
-        progressColor={colorsRef.current.progressColor}
+        waveColor={colors.waveColor}
+        progressColor={colors.progressColor}
         barWidth={2}
         barGap={1}
         barRadius={2}
@@ -73,7 +69,7 @@ export function WaveformViz({
         interact={true}
         onReady={handleReady}
         onTimeupdate={handleTimeupdate}
-        onFinish={handleFinish}
+        onFinish={onFinish}
       />
       <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
         <span>{formatTime(currentTime)}</span>
