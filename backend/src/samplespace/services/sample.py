@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleListResponse, SampleSchema
-from samplespace.services.audio_analysis import analyze_audio
+from samplespace.services.audio_analysis import analyze_audio, infer_is_loop
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,8 @@ async def create_sample(
     sample_type: str | None = None,
 ) -> Sample:
     """Create a sample from an audio file: analyze metadata and persist."""
-    metadata = analyze_audio(file_path)
+    is_loop = infer_is_loop(file_path)
+    metadata = analyze_audio(file_path, is_loop=is_loop)
 
     sample = Sample(
         id=str(uuid.uuid4()),
@@ -29,6 +30,7 @@ async def create_sample(
         bpm=metadata.bpm,
         duration=metadata.duration,
         sample_type=sample_type,
+        is_loop=is_loop,
     )
     db.add(sample)
     await db.flush()
@@ -65,6 +67,7 @@ async def search_by_text(
     bpm_min: float | None = None,
     bpm_max: float | None = None,
     sample_type: str | None = None,
+    is_loop: bool | None = None,
     limit: int = 20,
 ) -> list[SampleSchema]:
     """Search samples by CLAP text embedding with optional metadata filters.
@@ -78,6 +81,7 @@ async def search_by_text(
         bpm_min=bpm_min,
         bpm_max=bpm_max,
         sample_type=sample_type,
+        is_loop=is_loop,
         limit=limit,
     )
 

@@ -16,6 +16,7 @@ class SampleSchema(BaseSchema):
     bpm: float | None = None
     duration: float | None = None
     sample_type: str | None = Field(None, description="Category of the sample (e.g., kick, snare, pad, lead)")
+    is_loop: bool = False
     created_at: datetime
 
 
@@ -34,4 +35,5 @@ class SampleSearchRequest(BaseModel):
     bpm_min: float | None = Field(None, description="Minimum BPM filter")
     bpm_max: float | None = Field(None, description="Maximum BPM filter")
     sample_type: str | None = Field(None, description="Filter by sample type")
+    is_loop: bool | None = Field(None, description="Filter by loop (True) or one-shot (False)")
     limit: int = Field(20, ge=1, le=100, description="Maximum number of results")

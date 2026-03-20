@@ -61,10 +61,12 @@ async def analyze_sample(ctx: RunContext[AgentDeps], sample_id: str) -> str:
         lines = [
             f"**{sample.filename}**",
             f"- Type: {sample.sample_type or 'unknown'}",
-            f"- Key: {sample.key or 'unknown'}",
-            f"- BPM: {sample.bpm or 'unknown'}",
-            f"- Duration: {sample.duration:.1f}s" if sample.duration else "- Duration: unknown",
+            f"- Category: {'loop' if sample.is_loop else 'one-shot'}",
         ]
+        if sample.is_loop:
+            lines.append(f"- Key: {sample.key or 'unknown'}")
+            lines.append(f"- BPM: {sample.bpm or 'unknown'}")
+        lines.append(f"- Duration: {sample.duration:.1f}s" if sample.duration else "- Duration: unknown")
         return "\n".join(lines)
     except Exception:
         logger.exception("Error analyzing sample")
@@ -161,10 +163,14 @@ async def suggest_complement(
         if not filtered:
             return "No complementary samples found."
 
-        lines = [f"Samples that complement **{source.filename}** (key: {source.key or 'unknown'}):\n"]
+        if source.is_loop:
+            header = f"Samples that complement **{source.filename}** (key: {source.key or 'unknown'}):\n"
+        else:
+            header = f"Samples that complement **{source.filename}** (one-shot):\n"
+        lines = [header]
         for i, s in enumerate(filtered[:8], 1):
             compat = ""
-            if source.key and s.key:
+            if source.is_loop and source.key and s.key:
                 if source.key == s.key:
                     compat = " ✓ same key"
                 elif RELATIVE_PAIRS.get(source.key) == s.key:
@@ -172,7 +178,7 @@ async def suggest_complement(
             parts = [f"{i}. **{s.filename}**"]
             if s.sample_type:
                 parts.append(f"type={s.sample_type}")
-            if s.key:
+            if s.is_loop and s.key:
                 parts.append(f"key={s.key}{compat}")
             parts.append(f"id={s.id}")
             lines.append(" | ".join(parts))

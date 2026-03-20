@@ -10,16 +10,17 @@ Usage:
 """
 
 import argparse
+import asyncio
 import logging
 import uuid
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from samplespace.core.config import get_settings
-from samplespace.models import Base, Sample
-from samplespace.services.audio_analysis import analyze_audio
+from samplespace.dependencies.db import get_async_sqlalchemy_session
+from samplespace.models.sample import Sample
+from samplespace.services.audio_analysis import analyze_audio, infer_is_loop
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -58,24 +59,13 @@ def scan_local_samples(
     return found
 
 
-def seed_database(samples: list[tuple[Path, str | None]]) -> int:
+async def seed_database(samples: list[tuple[Path, str | None]]) -> int:
     """Analyze audio files and insert sample records into the database."""
-    config = get_settings()
-    sync_url = f"postgresql+psycopg://{config.POSTGRES_USER}:{config.POSTGRES_PASSWORD}@{config.POSTGRES_HOST}:{config.POSTGRES_PORT}/{config.POSTGRES_DB}"
-
-    engine = create_engine(sync_url)
-
-    # Ensure pgvector extension exists
-    with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        conn.commit()
-
-    Base.metadata.create_all(engine)
-
     inserted = 0
-    with Session(engine) as session:
+    async with get_async_sqlalchemy_session() as db:
         # Get existing filenames to avoid duplicates
-        existing = {row[0] for row in session.execute(text("SELECT filename FROM samples")).fetchall()}
+        result = await db.execute(select(Sample.filename))
+        existing = {row[0] for row in result.all()}
 
         for file_path, sample_type in samples:
             filename = file_path.name
@@ -84,7 +74,8 @@ def seed_database(samples: list[tuple[Path, str | None]]) -> int:
                 continue
 
             try:
-                metadata = analyze_audio(str(file_path))
+                is_loop = infer_is_loop(str(file_path))
+                metadata = analyze_audio(str(file_path), is_loop=is_loop)
             except Exception:
                 logger.warning(f"  Failed to analyze: {filename}")
                 continue
@@ -96,16 +87,16 @@ def seed_database(samples: list[tuple[Path, str | None]]) -> int:
                 bpm=metadata.bpm,
                 duration=metadata.duration,
                 sample_type=sample_type,
+                is_loop=is_loop,
             )
-            session.add(sample)
+            db.add(sample)
             inserted += 1
             logger.info(
                 f"  Inserted: {filename} "
                 f"(key={metadata.key}, bpm={metadata.bpm}, "
-                f"duration={metadata.duration:.1f}s, type={sample_type})"
+                f"duration={metadata.duration:.1f}s, type={sample_type}, "
+                f"is_loop={is_loop})"
             )
-
-        session.commit()
 
     logger.info(f"Seeded {inserted} new samples (skipped {len(samples) - inserted} duplicates)")
     return inserted
@@ -130,7 +121,7 @@ def main() -> None:
         )
         return
 
-    seed_database(samples)
+    asyncio.run(seed_database(samples))
 
 
 if __name__ == "__main__":

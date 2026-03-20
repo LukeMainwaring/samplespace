@@ -41,8 +41,9 @@ class Settings(
     """Main application settings."""
 
     model_config = SettingsConfigDict(
-        env_file=str(pathlib.Path(__file__).parent.parent.parent.parent / ".env"),
+        env_file=str(pathlib.Path(__file__).parent.parent.parent.parent.parent / ".env"),
         env_ignore_empty=True,
+        extra="ignore",
     )
 
     ENVIRONMENT: Literal["development", "production"] = "development"
