@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isToolUIPart, type UIMessage } from "ai";
 import equal from "fast-deep-equal";
 import { ArrowUp, Square } from "lucide-react";
+import Image from "next/image";
 import { memo, useMemo, useRef, useState } from "react";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { Button } from "@/components/ui/button";
@@ -38,14 +39,16 @@ const PureMessage = memo(
           })}
         >
           {message.role === "assistant" && (
-            <div
+            <Image
+              alt="SampleSpace"
               className={cn(
-                "-mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold ring-1 ring-border",
+                "-mt-1 size-8 shrink-0 rounded-full ring-1 ring-border",
                 isLoading && "animate-pulse",
               )}
-            >
-              SS
-            </div>
+              height={32}
+              src="/images/samplespace-logo.png"
+              width={32}
+            />
           )}
 
           <div
@@ -173,9 +176,13 @@ export function ChatPanel() {
         >
           {messages.length === 0 && (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center text-muted-foreground">
-              <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
-                SS
-              </div>
+              <Image
+                alt="SampleSpace"
+                className="size-20 rounded-full"
+                height={64}
+                src="/images/samplespace-logo.png"
+                width={64}
+              />
               <h2 className="mt-2 text-lg font-semibold text-foreground">
                 SampleSpace
               </h2>
