@@ -20,7 +20,7 @@ from sqlalchemy import select
 from samplespace.core.config import get_settings
 from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.sample import Sample
-from samplespace.services.audio_analysis import analyze_audio, infer_is_loop
+from samplespace.services.audio_analysis import analyze_and_classify
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -74,8 +74,7 @@ async def seed_database(samples: list[tuple[Path, str | None]]) -> int:
                 continue
 
             try:
-                is_loop = infer_is_loop(str(file_path))
-                metadata = analyze_audio(str(file_path), is_loop=is_loop)
+                analysis = analyze_and_classify(str(file_path))
             except Exception:
                 logger.warning(f"  Failed to analyze: {filename}")
                 continue
@@ -83,19 +82,19 @@ async def seed_database(samples: list[tuple[Path, str | None]]) -> int:
             sample = Sample(
                 id=str(uuid.uuid4()),
                 filename=filename,
-                key=metadata.key,
-                bpm=metadata.bpm,
-                duration=metadata.duration,
+                key=analysis.metadata.key,
+                bpm=analysis.metadata.bpm,
+                duration=analysis.metadata.duration,
                 sample_type=sample_type,
-                is_loop=is_loop,
+                is_loop=analysis.is_loop,
             )
             db.add(sample)
             inserted += 1
             logger.info(
                 f"  Inserted: {filename} "
-                f"(key={metadata.key}, bpm={metadata.bpm}, "
-                f"duration={metadata.duration:.1f}s, type={sample_type}, "
-                f"is_loop={is_loop})"
+                f"(key={analysis.metadata.key}, bpm={analysis.metadata.bpm}, "
+                f"duration={analysis.metadata.duration:.1f}s, type={sample_type}, "
+                f"is_loop={analysis.is_loop})"
             )
 
     logger.info(f"Seeded {inserted} new samples (skipped {len(samples) - inserted} duplicates)")

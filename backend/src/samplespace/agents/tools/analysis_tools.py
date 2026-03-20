@@ -66,7 +66,7 @@ async def analyze_sample(ctx: RunContext[AgentDeps], sample_id: str) -> str:
         if sample.is_loop:
             lines.append(f"- Key: {sample.key or 'unknown'}")
             lines.append(f"- BPM: {sample.bpm or 'unknown'}")
-        lines.append(f"- Duration: {sample.duration:.1f}s" if sample.duration else "- Duration: unknown")
+        lines.append(f"- Duration: {sample.duration:.1f}s" if sample.duration is not None else "- Duration: unknown")
         return "\n".join(lines)
     except Exception:
         logger.exception("Error analyzing sample")

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from fastapi import HTTPException
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Float, String, cast, func, select
+from sqlalchemy import Boolean, DateTime, Float, String, cast, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,7 +33,7 @@ class Sample(Base):
     bpm: Mapped[float | None]
     duration: Mapped[float | None]
     sample_type: Mapped[str | None] = mapped_column(String(50))
-    is_loop: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_loop: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     clap_embedding: Mapped[list[float] | None] = mapped_column(Vector(512))
     cnn_embedding: Mapped[list[float] | None] = mapped_column(Vector(128))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

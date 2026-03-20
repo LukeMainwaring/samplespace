@@ -1,6 +1,8 @@
 """Audio analysis service using librosa for key, BPM, and duration extraction."""
 
 import logging
+import re
+from dataclasses import dataclass
 
 import librosa
 import numpy as np
@@ -9,31 +11,59 @@ from samplespace.schemas.audio import AudioMetadata
 
 logger = logging.getLogger(__name__)
 
-LOOP_KEYWORDS = {"loop", "loops", "looped"}
-ONE_SHOT_KEYWORDS = {"one-shot", "oneshot", "one_shot", "one shot", "hit", "hits", "single"}
+_LOOP_PATTERN = re.compile(r"\b(?:loop|loops|looped)\b", re.IGNORECASE)
+_ONE_SHOT_PATTERN = re.compile(r"\b(?:one[-_ ]?shot|oneshot|hit|hits|single)\b", re.IGNORECASE)
 
 
-def infer_is_loop(file_path: str) -> bool:
-    """Infer whether an audio file is a loop or a one-shot.
+@dataclass
+class AnalysisResult:
+    """Combined result of loop inference and audio analysis."""
 
-    Uses a tiered approach:
+    is_loop: bool
+    metadata: AudioMetadata
+
+
+def analyze_and_classify(file_path: str) -> AnalysisResult:
+    """Infer one-shot/loop classification and extract audio metadata in a single pass.
+
+    Uses a tiered approach for loop inference:
     1. Check filepath for explicit keywords (loop, one-shot, hit, etc.)
     2. Fall back to audio heuristics (duration, onset density, onset regularity)
+
+    When classified as a one-shot, skips key/BPM extraction (meaningless for single hits).
     """
-    path_lower = file_path.lower()
+    # Tier 1: Filepath keywords (word-boundary matching to avoid false positives)
+    loop_match = _LOOP_PATTERN.search(file_path)
+    if loop_match:
+        logger.info(f"Inferred is_loop=True for {file_path} (keyword: {loop_match.group()})")
+        return AnalysisResult(
+            is_loop=True,
+            metadata=_analyze_audio(file_path),
+        )
+    one_shot_match = _ONE_SHOT_PATTERN.search(file_path)
+    if one_shot_match:
+        logger.info(f"Inferred is_loop=False for {file_path} (keyword: {one_shot_match.group()})")
+        return AnalysisResult(
+            is_loop=False,
+            metadata=_analyze_duration_only(file_path),
+        )
 
-    # Tier 1: Filepath keywords
-    for keyword in LOOP_KEYWORDS:
-        if keyword in path_lower:
-            logger.info(f"Inferred is_loop=True for {file_path} (keyword: {keyword})")
-            return True
-    for keyword in ONE_SHOT_KEYWORDS:
-        if keyword in path_lower:
-            logger.info(f"Inferred is_loop=False for {file_path} (keyword: {keyword})")
-            return False
-
-    # Tier 2: Audio heuristics
+    # Tier 2: Audio heuristics (load once, reuse for analysis)
     y, sr = librosa.load(file_path, sr=22050, mono=True)
+    is_loop = _infer_from_audio(file_path, y, int(sr))
+
+    if is_loop:
+        metadata = _extract_full_metadata(file_path, y, int(sr))
+    else:
+        duration = round(float(librosa.get_duration(y=y, sr=sr)), 2)
+        metadata = AudioMetadata(key=None, bpm=None, duration=duration)
+        logger.info(f"Analyzed {file_path}: one-shot, duration={duration:.1f}s (skipped key/BPM)")
+
+    return AnalysisResult(is_loop=is_loop, metadata=metadata)
+
+
+def _infer_from_audio(file_path: str, y: np.ndarray, sr: int) -> bool:
+    """Infer one-shot/loop from audio features (tier 2 heuristic)."""
     duration = float(librosa.get_duration(y=y, sr=sr))
     onsets = librosa.onset.onset_detect(y=y, sr=sr)
     num_onsets = len(onsets)
@@ -47,7 +77,7 @@ def infer_is_loop(file_path: str) -> bool:
     if num_onsets >= 4:
         onset_times = librosa.frames_to_time(onsets, sr=sr)
         intervals = np.diff(onset_times)
-        if len(intervals) > 0 and np.mean(intervals) > 0:
+        if np.mean(intervals) > 0:
             cv = float(np.std(intervals) / np.mean(intervals))
             has_regular_rhythm = cv < 0.25
 
@@ -62,30 +92,31 @@ def infer_is_loop(file_path: str) -> bool:
     return result
 
 
-def analyze_audio(file_path: str, *, is_loop: bool = True) -> AudioMetadata:
-    """Analyze an audio file and extract key metadata.
-
-    When is_loop is False, only computes duration (key/BPM are meaningless for one-shots).
-    """
+def _analyze_audio(file_path: str) -> AudioMetadata:
+    """Full audio analysis (key, BPM, duration) — loads file from disk."""
     y, sr = librosa.load(file_path, sr=22050, mono=True)
+    return _extract_full_metadata(file_path, y, int(sr))
 
-    # Duration (always computed)
+
+def _analyze_duration_only(file_path: str) -> AudioMetadata:
+    """Duration-only analysis for one-shots — loads file from disk."""
+    y, sr = librosa.load(file_path, sr=22050, mono=True)
+    duration = round(float(librosa.get_duration(y=y, sr=sr)), 2)
+    logger.info(f"Analyzed {file_path}: one-shot, duration={duration:.1f}s (skipped key/BPM)")
+    return AudioMetadata(key=None, bpm=None, duration=duration)
+
+
+def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetadata:
+    """Extract key, BPM, and duration from already-loaded audio."""
     duration = float(librosa.get_duration(y=y, sr=sr))
 
-    if not is_loop:
-        logger.info(f"Analyzed {file_path}: one-shot, duration={duration:.1f}s (skipped key/BPM)")
-        return AudioMetadata(key=None, bpm=None, duration=round(duration, 2))
-
-    # BPM
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
     tempo_val = float(tempo[0]) if isinstance(tempo, np.ndarray) else float(tempo)
     bpm = round(tempo_val, 1)
 
-    # Key detection via chroma features
-    key = _detect_key(y, int(sr))
+    key = _detect_key(y, sr)
 
     logger.info(f"Analyzed {file_path}: key={key}, bpm={bpm}, duration={duration:.1f}s")
-
     return AudioMetadata(key=key, bpm=bpm, duration=round(duration, 2))
 
 

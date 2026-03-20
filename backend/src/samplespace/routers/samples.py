@@ -46,6 +46,7 @@ async def search_samples(
         bpm_min=body.bpm_min,
         bpm_max=body.bpm_max,
         sample_type=body.sample_type,
+        is_loop=body.is_loop,
         limit=body.limit,
     )
 

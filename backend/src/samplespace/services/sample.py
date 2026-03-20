@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleListResponse, SampleSchema
-from samplespace.services.audio_analysis import analyze_audio, infer_is_loop
+from samplespace.services.audio_analysis import analyze_and_classify
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +20,16 @@ async def create_sample(
     sample_type: str | None = None,
 ) -> Sample:
     """Create a sample from an audio file: analyze metadata and persist."""
-    is_loop = infer_is_loop(file_path)
-    metadata = analyze_audio(file_path, is_loop=is_loop)
+    result = analyze_and_classify(file_path)
 
     sample = Sample(
         id=str(uuid.uuid4()),
         filename=filename,
-        key=metadata.key,
-        bpm=metadata.bpm,
-        duration=metadata.duration,
+        key=result.metadata.key,
+        bpm=result.metadata.bpm,
+        duration=result.metadata.duration,
         sample_type=sample_type,
-        is_loop=is_loop,
+        is_loop=result.is_loop,
     )
     db.add(sample)
     await db.flush()
