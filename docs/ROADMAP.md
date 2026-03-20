@@ -4,15 +4,6 @@ Remaining features and improvements for SampleSpace.
 
 ## UI Features
 
-### Waveform Visualization
-
-Add wavesurfer.js waveform rendering to the sample browser and detail view.
-
-- Add `wavesurfer.js` dependency to frontend
-- Create `components/waveform-viz.tsx` — renders interactive waveform for a given audio URL
-- Integrate into sample cards (mini waveform) and detail view (full waveform with seek/zoom)
-- Use the existing `GET /api/samples/{sample_id}/audio` endpoint as the source
-
 ### Sample Detail View
 
 Dedicated view showing full metadata, similar samples, and audio visualization for a single sample.
