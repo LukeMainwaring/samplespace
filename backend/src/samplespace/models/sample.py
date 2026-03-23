@@ -30,7 +30,7 @@ class Sample(Base):
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
     filename: Mapped[str] = mapped_column(String(255))
     key: Mapped[str | None] = mapped_column(String(10))
-    bpm: Mapped[float | None]
+    bpm: Mapped[int | None]
     duration: Mapped[float | None]
     sample_type: Mapped[str | None] = mapped_column(String(50))
     is_loop: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
@@ -70,8 +70,8 @@ class Sample(Base):
         query_embedding: list[float],
         *,
         key: str | None = None,
-        bpm_min: float | None = None,
-        bpm_max: float | None = None,
+        bpm_min: int | None = None,
+        bpm_max: int | None = None,
         sample_type: str | None = None,
         is_loop: bool | None = None,
         limit: int = 20,

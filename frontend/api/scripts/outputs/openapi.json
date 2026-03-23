@@ -363,7 +363,7 @@
           "bpm": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -443,7 +443,7 @@
           "bpm_min": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"
@@ -455,7 +455,7 @@
           "bpm_max": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "integer"
               },
               {
                 "type": "null"

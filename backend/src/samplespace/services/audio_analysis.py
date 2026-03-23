@@ -3,6 +3,7 @@
 import logging
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 import librosa
 import numpy as np
@@ -13,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 _LOOP_PATTERN = re.compile(r"\b(?:loop|loops|looped)\b", re.IGNORECASE)
 _ONE_SHOT_PATTERN = re.compile(r"\b(?:one[-_ ]?shot|oneshot|hit|hits|single)\b", re.IGNORECASE)
+_BPM_KEYWORD_PATTERN = re.compile(r"(\d{2,3})[\s_-]*\bbpm\b|\bbpm\b[\s_-]*(\d{2,3})", re.IGNORECASE)
+_NOTE_BEFORE_NUMBER_PATTERN = re.compile(r"[A-Ga-g][#b]?$")
 
 
 @dataclass
@@ -106,13 +109,58 @@ def _analyze_duration_only(file_path: str) -> AudioMetadata:
     return AudioMetadata(key=None, bpm=None, duration=duration)
 
 
+def _extract_bpm_from_filename(filename: str) -> int | None:
+    """Extract BPM from a sample filename using tiered heuristics.
+
+    Tier 1 (high confidence): number adjacent to "bpm" keyword (e.g., 123bpm, bpm_120).
+    Tier 2 (medium confidence): sole number in 50-200 range after filtering leading IDs,
+    out-of-range values, and note-adjacent octave numbers.
+
+    Returns None if no confident match, signaling fallback to librosa.
+    """
+    stem = Path(filename).stem
+
+    # Tier 1: explicit "bpm" keyword adjacent to a number
+    keyword_match = _BPM_KEYWORD_PATTERN.search(stem)
+    if keyword_match:
+        value = int(keyword_match.group(1) or keyword_match.group(2))
+        if 50 <= value <= 200:
+            logger.info(f"BPM={value} from filename keyword: {filename}")
+            return value
+
+    # Tier 2: positional heuristics for bare numbers
+    candidates: list[int] = []
+    for m in re.finditer(r"\d+", stem):
+        value = int(m.group())
+        if not (50 <= value <= 200):
+            continue
+        if m.start() == 0:
+            continue
+        prefix = stem[: m.start()]
+        if _NOTE_BEFORE_NUMBER_PATTERN.search(prefix):
+            continue
+        candidates.append(value)
+
+    if len(candidates) == 1:
+        logger.info(f"BPM={candidates[0]} from filename heuristic: {filename}")
+        return candidates[0]
+
+    return None
+
+
 def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetadata:
     """Extract key, BPM, and duration from already-loaded audio."""
     duration = float(librosa.get_duration(y=y, sr=sr))
 
-    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    tempo_val = float(tempo[0]) if isinstance(tempo, np.ndarray) else float(tempo)
-    bpm = round(tempo_val, 1)
+    filename = Path(file_path).name
+    filename_bpm = _extract_bpm_from_filename(filename)
+
+    if filename_bpm is not None:
+        bpm = filename_bpm
+    else:
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        tempo_val = float(tempo[0]) if isinstance(tempo, np.ndarray) else float(tempo)
+        bpm = round(tempo_val)
 
     key = _detect_key(y, sr)
 
