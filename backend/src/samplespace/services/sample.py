@@ -2,9 +2,11 @@
 
 import logging
 import uuid
+from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from samplespace.core.config import get_settings
 from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleListResponse, SampleSchema
 from samplespace.services.audio_analysis import analyze_and_classify
@@ -17,7 +19,10 @@ async def create_sample(
     *,
     filename: str,
     file_path: str,
+    relative_path: str,
+    source: str = "local",
     sample_type: str | None = None,
+    pack_name: str | None = None,
 ) -> Sample:
     """Create a sample from an audio file: analyze metadata and persist."""
     result = analyze_and_classify(file_path)
@@ -25,6 +30,9 @@ async def create_sample(
     sample = Sample(
         id=str(uuid.uuid4()),
         filename=filename,
+        relative_path=relative_path,
+        source=source,
+        pack_name=pack_name,
         key=result.metadata.key,
         bpm=result.metadata.bpm,
         duration=result.metadata.duration,
@@ -109,3 +117,24 @@ async def find_similar_by_cnn(
     )
 
     return [SampleSchema.model_validate(s) for s in results]
+
+
+def find_audio_file(sample: Sample) -> Path | None:
+    """Locate an audio file using source-aware path resolution."""
+    settings = get_settings()
+
+    if sample.source == "splice" and settings.SPLICE_DIR:
+        candidate = Path(settings.SPLICE_DIR) / sample.relative_path
+        if candidate.exists():
+            return candidate
+        return None
+
+    # Local source: resolve against SAMPLES_DIR
+    samples_dir = Path(settings.SAMPLES_DIR)
+    candidate = samples_dir / sample.relative_path
+    if candidate.exists():
+        return candidate
+
+    # Fallback: try rglob for backwards compatibility
+    matches = list(samples_dir.rglob(sample.filename))
+    return matches[0] if matches else None

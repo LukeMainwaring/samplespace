@@ -16,8 +16,8 @@ from sqlalchemy import select, update
 
 from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.sample import Sample
-from samplespace.scripts import find_audio_file
 from samplespace.services.embedding import embed_audio, load_clap_model
+from samplespace.services.sample import find_audio_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ async def generate_embeddings(*, force: bool = False) -> None:
 
         embedded = 0
         for sample in samples:
-            file_path = find_audio_file(sample.filename, sample.sample_type)
+            file_path = find_audio_file(sample)
             if file_path is None:
                 logger.warning(f"  Audio file not found: {sample.filename}")
                 continue
@@ -48,10 +48,13 @@ async def generate_embeddings(*, force: bool = False) -> None:
                 embedding = embed_audio(str(file_path), model, processor)
                 await db.execute(update(Sample).where(Sample.id == sample.id).values(clap_embedding=embedding))
                 embedded += 1
-                logger.info(f"  Embedded: {sample.filename}")
+                logger.info(f"  [{embedded}/{len(samples)}] Embedded: {sample.filename}")
             except Exception:
                 logger.warning(f"  Failed to embed: {sample.filename}", exc_info=True)
                 continue
+
+            if embedded % 50 == 0:
+                await db.commit()
 
     logger.info(f"Embedded {embedded}/{len(samples)} samples")
 

@@ -55,6 +55,7 @@ select = ["I", "F401"]
 
 [project.scripts]
 seed-db = "samplespace.scripts.seed:main"
+seed-splice = "samplespace.scripts.seed_splice:main"
 embed-samples = "samplespace.scripts.embed_samples:main"
 embed-cnn = "samplespace.scripts.embed_cnn:main"
 

@@ -1,4 +1,4 @@
-from pathlib import Path
+import mimetypes
 
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
@@ -85,32 +85,18 @@ async def get_sample_audio(
     db: AsyncPostgresSessionDep,
 ) -> FileResponse:
     """Stream the audio file for a sample."""
-    from samplespace.core.config import get_settings
-
-    config = get_settings()
-    samples_dir = Path(config.SAMPLES_DIR)
-
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if sample is None:
         raise SampleNotFound()
 
-    # Check in type subdirectory first, then root
-    file_path = None
-    if sample.sample_type:
-        candidate = samples_dir / sample.sample_type / sample.filename
-        if candidate.exists():
-            file_path = candidate
-
-    if file_path is None:
-        candidate = samples_dir / sample.filename
-        if candidate.exists():
-            file_path = candidate
-
+    file_path = sample_service.find_audio_file(sample)
     if file_path is None:
         raise AudioFileNotFound()
 
+    content_type = mimetypes.guess_type(sample.filename)[0] or "audio/wav"
+
     return FileResponse(
         path=str(file_path),
-        media_type="audio/wav",
+        media_type=content_type,
         filename=sample.filename,
     )

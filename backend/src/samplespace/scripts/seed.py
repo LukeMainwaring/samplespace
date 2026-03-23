@@ -61,15 +61,18 @@ def scan_local_samples(
 
 async def seed_database(samples: list[tuple[Path, str | None]]) -> int:
     """Analyze audio files and insert sample records into the database."""
+    samples_dir = Path(get_settings().SAMPLES_DIR)
     inserted = 0
     async with get_async_sqlalchemy_session() as db:
-        # Get existing filenames to avoid duplicates
-        result = await db.execute(select(Sample.filename))
+        # Get existing relative_paths for local source to avoid duplicates
+        result = await db.execute(select(Sample.relative_path).where(Sample.source == "local"))
         existing = {row[0] for row in result.all()}
 
         for file_path, sample_type in samples:
             filename = file_path.name
-            if filename in existing:
+            relative_path = str(file_path.relative_to(samples_dir))
+
+            if relative_path in existing:
                 logger.info(f"  Skipping duplicate: {filename}")
                 continue
 
@@ -82,6 +85,8 @@ async def seed_database(samples: list[tuple[Path, str | None]]) -> int:
             sample = Sample(
                 id=str(uuid.uuid4()),
                 filename=filename,
+                relative_path=relative_path,
+                source="local",
                 key=analysis.metadata.key,
                 bpm=analysis.metadata.bpm,
                 duration=analysis.metadata.duration,

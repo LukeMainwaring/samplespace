@@ -55,6 +55,14 @@ export type SampleSchema = {
      */
     filename: string;
     /**
+     * Source
+     */
+    source?: string;
+    /**
+     * Pack Name
+     */
+    pack_name?: string | null;
+    /**
      * Key
      */
     key?: string | null;
