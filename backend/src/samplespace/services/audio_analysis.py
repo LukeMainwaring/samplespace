@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 _LOOP_PATTERN = re.compile(r"\b(?:loop|loops|looped)\b", re.IGNORECASE)
 _ONE_SHOT_PATTERN = re.compile(r"\b(?:one[-_ ]?shot|oneshot|hit|hits|single)\b", re.IGNORECASE)
-_BPM_KEYWORD_PATTERN = re.compile(r"(\d{2,3})[\s_-]*bpm|bpm[\s_-]*(\d{2,3})", re.IGNORECASE)
+_BPM_KEYWORD_PATTERN = re.compile(r"(\d{2,3})[\s_-]*\bbpm\b|\bbpm\b[\s_-]*(\d{2,3})", re.IGNORECASE)
 _NOTE_BEFORE_NUMBER_PATTERN = re.compile(r"[A-Ga-g][#b]?$")
 
 
@@ -109,7 +109,7 @@ def _analyze_duration_only(file_path: str) -> AudioMetadata:
     return AudioMetadata(key=None, bpm=None, duration=duration)
 
 
-def _extract_bpm_from_filename(filename: str) -> float | None:
+def _extract_bpm_from_filename(filename: str) -> int | None:
     """Extract BPM from a sample filename using tiered heuristics.
 
     Tier 1 (high confidence): number adjacent to "bpm" keyword (e.g., 123bpm, bpm_120).
@@ -126,7 +126,7 @@ def _extract_bpm_from_filename(filename: str) -> float | None:
         value = int(keyword_match.group(1) or keyword_match.group(2))
         if 50 <= value <= 200:
             logger.info(f"BPM={value} from filename keyword: {filename}")
-            return float(value)
+            return value
 
     # Tier 2: positional heuristics for bare numbers
     candidates: list[int] = []
@@ -143,7 +143,7 @@ def _extract_bpm_from_filename(filename: str) -> float | None:
 
     if len(candidates) == 1:
         logger.info(f"BPM={candidates[0]} from filename heuristic: {filename}")
-        return float(candidates[0])
+        return candidates[0]
 
     return None
 
@@ -160,7 +160,7 @@ def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetad
     else:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         tempo_val = float(tempo[0]) if isinstance(tempo, np.ndarray) else float(tempo)
-        bpm = round(tempo_val, 1)
+        bpm = round(tempo_val)
 
     key = _detect_key(y, sr)
 
