@@ -12,6 +12,8 @@ class SampleSchema(BaseSchema):
 
     id: str
     filename: str
+    source: str = "local"
+    pack_name: str | None = None
     key: str | None = None
     bpm: int | None = None
     duration: float | None = None

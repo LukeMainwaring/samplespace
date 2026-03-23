@@ -38,8 +38,8 @@ async def generate_embeddings(*, force: bool = False) -> None:
         logger.info(f"Found {len(samples)} samples to embed")
 
         embedded = 0
-        for sample in samples:
-            file_path = find_audio_file(sample.filename, sample.sample_type)
+        for i, sample in enumerate(samples):
+            file_path = find_audio_file(sample)
             if file_path is None:
                 logger.warning(f"  Audio file not found: {sample.filename}")
                 continue
@@ -48,10 +48,13 @@ async def generate_embeddings(*, force: bool = False) -> None:
                 embedding = embed_audio(str(file_path), model, processor)
                 await db.execute(update(Sample).where(Sample.id == sample.id).values(clap_embedding=embedding))
                 embedded += 1
-                logger.info(f"  Embedded: {sample.filename}")
+                logger.info(f"  [{embedded}/{len(samples)}] Embedded: {sample.filename}")
             except Exception:
                 logger.warning(f"  Failed to embed: {sample.filename}", exc_info=True)
                 continue
+
+            if embedded % 50 == 0:
+                await db.commit()
 
     logger.info(f"Embedded {embedded}/{len(samples)} samples")
 

@@ -48,6 +48,7 @@ class Settings(
 
     ENVIRONMENT: Literal["development", "production"] = "development"
     SAMPLES_DIR: str = str(pathlib.Path(__file__).parent.parent.parent.parent.parent / "data" / "samples")
+    SPLICE_DIR: str | None = None
 
     def is_production(self) -> bool:
         """Check if running in production environment."""

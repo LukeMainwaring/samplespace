@@ -17,7 +17,10 @@ async def create_sample(
     *,
     filename: str,
     file_path: str,
+    relative_path: str,
+    source: str = "local",
     sample_type: str | None = None,
+    pack_name: str | None = None,
 ) -> Sample:
     """Create a sample from an audio file: analyze metadata and persist."""
     result = analyze_and_classify(file_path)
@@ -25,6 +28,9 @@ async def create_sample(
     sample = Sample(
         id=str(uuid.uuid4()),
         filename=filename,
+        relative_path=relative_path,
+        source=source,
+        pack_name=pack_name,
         key=result.metadata.key,
         bpm=result.metadata.bpm,
         duration=result.metadata.duration,

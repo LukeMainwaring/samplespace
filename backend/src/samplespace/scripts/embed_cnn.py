@@ -38,7 +38,7 @@ async def generate_embeddings(*, force: bool = False) -> None:
 
         embedded = 0
         for sample in samples:
-            file_path = find_audio_file(sample.filename, sample.sample_type)
+            file_path = find_audio_file(sample)
             if file_path is None:
                 logger.warning(f"  Audio file not found: {sample.filename}")
                 continue
@@ -50,13 +50,16 @@ async def generate_embeddings(*, force: bool = False) -> None:
                 )
                 embedded += 1
                 logger.info(
-                    f"  Embedded: {sample.filename} "
+                    f"  [{embedded}/{len(samples)}] Embedded: {sample.filename} "
                     f"(predicted: {pred_result.predicted_type}, "
                     f"confidence: {pred_result.confidence:.2%})"
                 )
             except Exception:
                 logger.warning(f"  Failed to embed: {sample.filename}", exc_info=True)
                 continue
+
+            if embedded % 50 == 0:
+                await db.commit()
 
     logger.info(f"Embedded {embedded}/{len(samples)} samples")
 

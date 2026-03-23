@@ -3,20 +3,25 @@
 from pathlib import Path
 
 from samplespace.core.config import get_settings
+from samplespace.models.sample import Sample
 
 
-def find_audio_file(filename: str, sample_type: str | None) -> Path | None:
-    """Locate an audio file by checking type subdirectory, root, then rglob."""
-    samples_dir = Path(get_settings().SAMPLES_DIR)
+def find_audio_file(sample: Sample) -> Path | None:
+    """Locate an audio file using source-aware path resolution."""
+    settings = get_settings()
 
-    if sample_type:
-        candidate = samples_dir / sample_type / filename
+    if sample.source == "splice" and settings.SPLICE_DIR:
+        candidate = Path(settings.SPLICE_DIR) / sample.relative_path
         if candidate.exists():
             return candidate
+        return None
 
-    candidate = samples_dir / filename
+    # Local source: resolve against SAMPLES_DIR
+    samples_dir = Path(settings.SAMPLES_DIR)
+    candidate = samples_dir / sample.relative_path
     if candidate.exists():
         return candidate
 
-    matches = list(samples_dir.rglob(filename))
+    # Fallback: try rglob for backwards compatibility
+    matches = list(samples_dir.rglob(sample.filename))
     return matches[0] if matches else None

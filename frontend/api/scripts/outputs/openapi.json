@@ -349,6 +349,22 @@
             "type": "string",
             "title": "Filename"
           },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "local"
+          },
+          "pack_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Name"
+          },
           "key": {
             "anyOf": [
               {

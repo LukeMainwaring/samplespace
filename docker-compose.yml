@@ -34,12 +34,14 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       SAMPLES_DIR: /app/data/samples
+      SPLICE_DIR: ${SPLICE_DIR:+/app/splice}
     env_file:
       - .env
     volumes:
       - ./backend/src:/app/src
       - ./backend/tests:/app/tests
       - ./data/samples:/app/data/samples
+      - ${SPLICE_DIR:-/dev/null}:/app/splice:ro
     depends_on:
       postgres:
         condition: service_healthy
