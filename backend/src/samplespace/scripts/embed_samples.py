@@ -16,8 +16,8 @@ from sqlalchemy import select, update
 
 from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.sample import Sample
-from samplespace.scripts import find_audio_file
 from samplespace.services.embedding import embed_audio, load_clap_model
+from samplespace.services.sample import find_audio_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ async def generate_embeddings(*, force: bool = False) -> None:
         logger.info(f"Found {len(samples)} samples to embed")
 
         embedded = 0
-        for i, sample in enumerate(samples):
+        for sample in samples:
             file_path = find_audio_file(sample)
             if file_path is None:
                 logger.warning(f"  Audio file not found: {sample.filename}")

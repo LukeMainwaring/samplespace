@@ -16,7 +16,7 @@ from sqlalchemy import select, update
 
 from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.sample import Sample
-from samplespace.scripts import find_audio_file
+from samplespace.services.sample import find_audio_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)

@@ -33,15 +33,19 @@ def infer_sample_type_from_path(relative_path: str) -> str | None:
     """Infer sample_type by scanning path segments for known keywords.
 
     Scans from deepest to shallowest directory to prefer the most specific match.
+    Splits directory names on underscores and checks segment membership to avoid
+    false positives from substring matching (e.g., "pad" inside "padding").
     """
     parts = PurePosixPath(relative_path).parts[:-1]  # exclude filename
     for part in reversed(parts):
         normalized = part.lower().replace("-", "_").replace(" ", "_")
+        # Exact directory name match
         if normalized in _KEYWORD_TO_TYPE:
             return _KEYWORD_TO_TYPE[normalized]
-        # Check if any keyword is a substring of the directory name
+        # Split into segments and check membership
+        segments = set(normalized.split("_"))
         for kw, sample_type in _KEYWORD_TO_TYPE.items():
-            if kw in normalized:
+            if kw in segments:
                 return sample_type
     return None
 
