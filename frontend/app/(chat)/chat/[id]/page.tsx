@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useThreadMessages } from "@/api/hooks/threads";
 import { ChatPanel } from "@/components/chat-panel";
+import { DataStreamHandler } from "@/components/data-stream-handler";
 
 export default function Page() {
   const { id } = useParams<{ id: string }>();
@@ -12,5 +13,10 @@ export default function Page() {
     return <div className="flex h-dvh" />;
   }
 
-  return <ChatPanel id={id} initialMessages={initialMessages ?? []} />;
+  return (
+    <>
+      <ChatPanel autoResume id={id} initialMessages={initialMessages ?? []} />
+      <DataStreamHandler />
+    </>
+  );
 }

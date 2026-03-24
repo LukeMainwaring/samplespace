@@ -6,12 +6,16 @@ import { DefaultChatTransport, isToolUIPart, type UIMessage } from "ai";
 import equal from "fast-deep-equal";
 import { ArrowUp, Square } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { listThreadsQueryKey } from "@/api/generated/@tanstack/react-query.gen";
+import { useAutoResume } from "@/hooks/use-auto-resume";
+import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { BouncingDots } from "./bouncing-dots";
 import { ChatHeader } from "./chat-header";
+import { useDataStream } from "./data-stream-provider";
 import {
   PromptInput,
   PromptInputSubmit,
@@ -140,15 +144,19 @@ PureMessage.displayName = "PureMessage";
 export function ChatPanel({
   id,
   initialMessages,
+  autoResume = false,
 }: {
   id: string;
-  initialMessages: UIMessage[];
+  initialMessages: ChatMessage[];
+  autoResume?: boolean;
 }) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { setDataStream } = useDataStream();
 
   const transport = useMemo(
     () =>
@@ -158,18 +166,39 @@ export function ChatPanel({
     [],
   );
 
-  const { messages, setMessages, sendMessage, status, stop } = useChat({
-    id,
-    transport,
-    messages: initialMessages,
-    experimental_throttle: 100,
-    onFinish: () => {
-      queryClient.invalidateQueries({ queryKey: listThreadsQueryKey() });
-    },
-    onError: (error) => {
-      console.error("Chat error:", error);
-    },
+  const { messages, setMessages, sendMessage, status, stop, resumeStream } =
+    useChat<ChatMessage>({
+      id,
+      transport,
+      messages: initialMessages,
+      experimental_throttle: 100,
+      onData: (dataPart) => {
+        setDataStream((ds) => (ds ? [...ds, dataPart] : []));
+      },
+      onFinish: () => {
+        queryClient.invalidateQueries({ queryKey: listThreadsQueryKey() });
+      },
+      onError: (error) => {
+        console.error("Chat error:", error);
+      },
+    });
+
+  useAutoResume({
+    autoResume,
+    initialMessages,
+    resumeStream,
+    setMessages,
   });
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      router.refresh();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [router]);
 
   const isStreaming = status === "streaming" || status === "submitted";
 

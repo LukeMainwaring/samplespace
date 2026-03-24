@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import { ChatPanel } from "@/components/chat-panel";
+import { DataStreamHandler } from "@/components/data-stream-handler";
 
 export default function Page() {
   return (
@@ -13,5 +14,10 @@ export default function Page() {
 async function NewChatPage() {
   await headers(); // opt into dynamic rendering
   const id = crypto.randomUUID();
-  return <ChatPanel id={id} initialMessages={[]} key={id} />;
+  return (
+    <>
+      <ChatPanel autoResume={false} id={id} initialMessages={[]} key={id} />
+      <DataStreamHandler />
+    </>
+  );
 }

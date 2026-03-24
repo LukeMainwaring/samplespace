@@ -1,10 +1,11 @@
 "use client";
 
-import { Library, Plus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PlusIcon } from "@/components/icons";
 import { SidebarHistory } from "@/components/sidebar-history";
+import { SidebarUserNav } from "@/components/sidebar-user-nav";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -12,8 +13,6 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -55,7 +54,7 @@ export function AppSidebar() {
                   type="button"
                   variant="ghost"
                 >
-                  <Plus size={16} />
+                  <PlusIcon />
                 </Button>
               </TooltipTrigger>
               <TooltipContent align="end" className="hidden md:block">
@@ -69,16 +68,7 @@ export function AppSidebar() {
         <SidebarHistory />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/samples" onClick={() => setOpenMobile(false)}>
-                <Library size={16} />
-                <span>Sample Library</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <SidebarUserNav />
       </SidebarFooter>
     </Sidebar>
   );
