@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { ChatPanel } from "@/components/chat-panel";
+import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 
 export default function Page() {
@@ -16,7 +16,7 @@ async function NewChatPage() {
   const id = crypto.randomUUID();
   return (
     <>
-      <ChatPanel autoResume={false} id={id} initialMessages={[]} key={id} />
+      <Chat autoResume={false} id={id} initialMessages={[]} key={id} />
       <DataStreamHandler />
     </>
   );
