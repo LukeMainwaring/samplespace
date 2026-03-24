@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useThreadMessages } from "@/api/hooks/threads";
-import { ChatPanel } from "@/components/chat-panel";
+import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 
 export default function Page() {
@@ -15,7 +15,7 @@ export default function Page() {
 
   return (
     <>
-      <ChatPanel autoResume id={id} initialMessages={initialMessages ?? []} />
+      <Chat autoResume id={id} initialMessages={initialMessages ?? []} />
       <DataStreamHandler />
     </>
   );

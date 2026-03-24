@@ -63,7 +63,11 @@ Next.js 16 with App Router.
 
 -   **`app/page.tsx`**: Main sample browser page
 -   **`app/api/chat/route.ts`**: Proxy route that forwards chat requests to backend agent
--   **`components/chat-panel.tsx`**: Chat component using `@ai-sdk/react` useChat hook; fetches and passes song context to header
+-   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` useChat hook; fetches and passes song context to header
+-   **`components/messages.tsx`**: Message list container with smart scroll behavior (MutationObserver/ResizeObserver-based auto-scroll, scroll-to-bottom button)
+-   **`components/message.tsx`**: Individual message rendering (`PreviewMessage`) and loading state (`RiffingMessage`)
+-   **`components/multimodal-input.tsx`**: Chat input with local storage persistence, auto-focus, and memoization
+-   **`components/greeting.tsx`**: Animated empty state with Framer Motion fade-in
 -   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe) as pills
 -   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters
 -   **`components/audio-player.tsx`**: Audio playback controls

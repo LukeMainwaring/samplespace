@@ -94,10 +94,14 @@ samplespace/
 │   │   ├── page.tsx                # Split layout: chat + sample browser
 │   │   └── api/chat/route.ts       # Proxy to backend agent
 │   ├── components/
-│   │   ├── chat-panel.tsx          # useChat + streaming + tool transparency
+│   │   ├── chat.tsx                # Chat orchestrator (useChat + song context)
+│   │   ├── messages.tsx            # Message list with smart scroll
+│   │   ├── message.tsx             # Message rendering + RiffingMessage loading state
+│   │   ├── multimodal-input.tsx    # Chat input with local storage persistence
+│   │   ├── greeting.tsx            # Animated empty state
 │   │   ├── song-context-badge.tsx  # Read-only song context display (key/BPM/genre/vibe)
 │   │   ├── sample-browser.tsx      # Sample grid with filters + audio playback
-│   │   └── tool-call.tsx           # Collapsible tool call display
+│   │   └── elements/              # Shared UI primitives (tool-call, response, bouncing-dots)
 │   └── api/generated/              # Auto-generated TypeScript client
 ├── data/
 │   ├── samples/                    # Audio files (gitignored)
