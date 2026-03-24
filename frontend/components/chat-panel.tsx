@@ -9,7 +9,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { listThreadsQueryKey } from "@/api/generated/@tanstack/react-query.gen";
+import {
+  getThreadMessagesQueryKey,
+  listThreadsQueryKey,
+} from "@/api/generated/@tanstack/react-query.gen";
+import { useThreadSongContext } from "@/api/hooks/threads";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
@@ -153,6 +157,7 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
+  const { data: songContext } = useThreadSongContext(id);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -177,6 +182,11 @@ export function ChatPanel({
       },
       onFinish: () => {
         queryClient.invalidateQueries({ queryKey: listThreadsQueryKey() });
+        queryClient.invalidateQueries({
+          queryKey: getThreadMessagesQueryKey({
+            path: { thread_id: id },
+          }),
+        });
       },
       onError: (error) => {
         console.error("Chat error:", error);
@@ -224,7 +234,7 @@ export function ChatPanel({
 
   return (
     <div className="flex h-dvh min-w-0 flex-col bg-background">
-      <ChatHeader />
+      <ChatHeader songContext={songContext} />
 
       {/* Messages */}
       <div className="relative flex-1">

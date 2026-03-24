@@ -141,6 +141,30 @@ export type SampleSearchRequest = {
 };
 
 /**
+ * SongContext
+ *
+ * Song context metadata for a conversation thread.
+ */
+export type SongContext = {
+    /**
+     * Key
+     */
+    key?: string | null;
+    /**
+     * Bpm
+     */
+    bpm?: number | null;
+    /**
+     * Genre
+     */
+    genre?: string | null;
+    /**
+     * Vibe
+     */
+    vibe?: string | null;
+};
+
+/**
  * ThreadDeleteResponse
  *
  * Response for successful thread delete operations.
@@ -180,6 +204,7 @@ export type ThreadMessagesResponse = {
     messages: Array<{
         [key: string]: unknown;
     }>;
+    song_context?: SongContext | null;
 };
 
 /**
@@ -228,6 +253,7 @@ export type ThreadSummary = {
      * Title
      */
     title: string | null;
+    song_context?: SongContext | null;
     /**
      * Created At
      */

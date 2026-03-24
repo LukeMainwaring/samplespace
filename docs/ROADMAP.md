@@ -2,6 +2,23 @@
 
 Remaining features and improvements for SampleSpace.
 
+## Recently Completed
+
+### Song Context (Thread-Backed)
+
+Persistent per-thread song metadata (key, BPM, genre, vibe) that the agent reads, writes, and uses to contextualize searches. See `docs/feature-brainstorm.md` Feature 1 for full details.
+
+- `set_song_context` agent tool with partial merge and get-or-create pattern
+- Dynamic system prompt injection of active context
+- CLAP search enriched with song context vibe; complement suggestions use context key as fallback
+- Frontend `SongContextBadge` in chat header with automatic refresh via TanStack Query invalidation
+
+## Upcoming Features
+
+### Pair Compatibility Scoring
+
+Multi-dimensional compatibility score between two samples (key, BPM, type complementarity, CNN distance). Next feature in the Phase 1 roadmap — see `docs/feature-brainstorm.md` Feature 2.
+
 ## UI Features
 
 ### Sample Detail View

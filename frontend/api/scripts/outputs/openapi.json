@@ -676,6 +676,57 @@
         "title": "SampleSearchRequest",
         "description": "Search request with optional filters."
       },
+      "SongContext": {
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "bpm": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bpm"
+          },
+          "genre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Genre"
+          },
+          "vibe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vibe"
+          }
+        },
+        "type": "object",
+        "title": "SongContext",
+        "description": "Song context metadata for a conversation thread."
+      },
       "ThreadDeleteResponse": {
         "properties": {
           "message": {
@@ -720,6 +771,16 @@
             },
             "type": "array",
             "title": "Messages"
+          },
+          "song_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SongContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -785,6 +846,16 @@
               }
             ],
             "title": "Title"
+          },
+          "song_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SongContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "type": "string",

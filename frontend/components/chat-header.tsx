@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { memo } from "react";
 import { useWindowSize } from "usehooks-ts";
+import type { SongContext } from "@/api/generated/types.gen";
 import { PlusIcon } from "@/components/icons";
 import { SidebarToggle } from "@/components/sidebar-toggle";
+import { SongContextBadge } from "@/components/song-context-badge";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "./ui/sidebar";
 
-function PureChatHeader() {
+function PureChatHeader({ songContext }: { songContext?: SongContext | null }) {
   const router = useRouter();
   const { open } = useSidebar();
   const { width: windowWidth } = useWindowSize();
@@ -16,6 +18,10 @@ function PureChatHeader() {
   return (
     <header className="sticky top-0 flex items-center gap-2 bg-background px-2 py-1.5 md:px-2">
       <SidebarToggle />
+
+      <div className="order-1 min-w-0 flex-1">
+        <SongContextBadge songContext={songContext} />
+      </div>
 
       {(!open || windowWidth < 768) && (
         <Button

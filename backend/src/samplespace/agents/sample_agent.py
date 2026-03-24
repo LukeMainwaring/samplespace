@@ -6,13 +6,14 @@ and audio analysis tools to help users find and combine samples.
 
 import logging
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIResponsesModel
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.analysis_tools import register_analysis_tools
 from samplespace.agents.tools.clap_tools import register_clap_tools
 from samplespace.agents.tools.cnn_tools import register_cnn_tools
+from samplespace.agents.tools.context_tools import register_context_tools
 from samplespace.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -46,8 +47,15 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
    - Combines CLAP search with key compatibility filtering
    - Best for: "find a bass that goes with this pad", "build a kit around this"
 
+6. **set_song_context**: Set or update the song context for this conversation
+   - Call when the user mentions key, BPM, genre, or vibe for their project
+   - Proactively call this when you can infer context from the conversation
+   - Only provide fields that are being set or changed — existing fields are preserved
+   - Context persists across the conversation and automatically influences searches
+
 ## Guidelines
 
+- When song context is set, use it to improve search results and recommendations
 - When the user asks for samples, use the most appropriate search tool
 - For multi-step requests like "find a lead that goes with this bass", break it down:
   1. Analyze the reference sample to get its key/BPM
@@ -79,3 +87,29 @@ sample_agent = Agent(
 register_clap_tools(sample_agent)
 register_cnn_tools(sample_agent)
 register_analysis_tools(sample_agent)
+register_context_tools(sample_agent)
+
+
+@sample_agent.system_prompt
+async def inject_song_context(ctx: RunContext[AgentDeps]) -> str:
+    """Inject active song context into the system prompt."""
+    if not ctx.deps.song_context:
+        return ""
+    sc = ctx.deps.song_context
+    parts = []
+    if sc.key:
+        parts.append(f"Key: {sc.key}")
+    if sc.bpm:
+        parts.append(f"BPM: {sc.bpm}")
+    if sc.genre:
+        parts.append(f"Genre: {sc.genre}")
+    if sc.vibe:
+        parts.append(f"Vibe: {sc.vibe}")
+    if not parts:
+        return ""
+    return (
+        "\n\n## Active Song Context\n"
+        + "\n".join(f"- {p}" for p in parts)
+        + "\n\nUse this context to inform your searches and recommendations. "
+        "The vibe is automatically appended to CLAP searches."
+    )

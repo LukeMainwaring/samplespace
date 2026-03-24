@@ -20,6 +20,7 @@ from samplespace.dependencies.db import AsyncPostgresSessionDep
 from samplespace.models.message import Message
 from samplespace.models.thread import Thread
 from samplespace.schemas.agent_type import AgentType
+from samplespace.schemas.thread import SongContext
 from samplespace.services.title_generator import generate_thread_title
 from samplespace.utils.message_serialization import extract_latest_user_text, prepare_messages_for_storage
 
@@ -45,10 +46,16 @@ async def stream_chat(
 
     clap = get_clap_models(request)
 
+    # Load existing song context for this thread
+    thread = await Thread.get(db, thread_id, AgentType.CHAT.value)
+    existing_context = SongContext.model_validate(thread.song_context) if thread and thread.song_context else None
+
     deps = AgentDeps(
         db=db,
         clap_model=clap.model,
         clap_processor=clap.processor,
+        thread_id=thread_id,
+        song_context=existing_context,
     )
 
     user_query = extract_latest_user_text(run_input.messages)

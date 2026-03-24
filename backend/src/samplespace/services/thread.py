@@ -14,13 +14,13 @@ async def list_threads(db: AsyncSession, agent_type: str) -> list[Thread]:
     return await Thread.list_all(db, agent_type)
 
 
-async def get_thread_messages(db: AsyncSession, thread_id: str, agent_type: str) -> list[dict[str, Any]]:
-    """Get all messages for a thread."""
+async def get_thread_messages(db: AsyncSession, thread_id: str, agent_type: str) -> tuple[Thread, list[dict[str, Any]]]:
+    """Get a thread and all its messages."""
     thread = await Thread.get(db, thread_id, agent_type)
     if not thread:
         raise ThreadNotFound()
     raw = await Message.get_history(db, thread_id, agent_type)
-    return dump_messages_for_frontend(raw)
+    return thread, dump_messages_for_frontend(raw)
 
 
 async def delete_thread(db: AsyncSession, thread_id: str, agent_type: str) -> None:

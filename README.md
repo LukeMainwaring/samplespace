@@ -36,12 +36,12 @@ graph TB
 
 ### How It Works
 
-1. **User asks a question** in the chat panel (e.g., _"find me a bright hi-hat"_)
-2. **Pydantic AI agent** decides which tools to call based on the query
-3. **CLAP search** encodes the text query into a 512-dim embedding, then finds nearest audio embeddings via pgvector cosine similarity
+1. **User asks a question** in the chat panel (e.g., _"I'm making a dark techno track in D minor at 130 BPM — find me a warm pad"_)
+2. **Pydantic AI agent** detects song context and persists it to the thread (key, BPM, genre, vibe survive across messages and page refreshes)
+3. **CLAP search** encodes the text query into a 512-dim embedding (enriched with song context vibe), then finds nearest audio embeddings via pgvector cosine similarity
 4. **CNN similarity** uses a custom-trained dual-head CNN to find spectrally similar samples via 128-dim embeddings
-5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples
-6. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display
+5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples, using song context key/BPM as fallback defaults
+6. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
 
 ### Why CLAP + CNN + Agent?
 
@@ -72,9 +72,9 @@ samplespace/
 │   ├── src/samplespace/
 │   │   ├── app.py                  # FastAPI app + lifespan (CLAP model loading)
 │   │   ├── agents/
-│   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt
-│   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN)
-│   │   │   └── tools/              # CLAP search, CNN similarity, music theory
+│   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic song context
+│   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)
+│   │   │   └── tools/              # CLAP search, CNN similarity, music theory, song context
 │   │   ├── ml/
 │   │   │   ├── model.py            # Dual-head CNN (classification + 128-dim embedding)
 │   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset
@@ -85,7 +85,7 @@ samplespace/
 │   │   │   ├── audio_analysis.py   # librosa key/BPM/duration extraction
 │   │   │   └── sample.py           # CRUD + pgvector search
 │   │   ├── routers/                # REST + SSE streaming endpoints
-│   │   ├── models/                 # SQLAlchemy (Sample with pgvector columns)
+│   │   ├── models/                 # SQLAlchemy (Sample with pgvector columns, Thread with song context)
 │   │   └── migrations/             # Alembic
 │   ├── scripts/                    # Shell scripts (migrations, Docker helpers)
 │   └── tests/
@@ -95,6 +95,7 @@ samplespace/
 │   │   └── api/chat/route.ts       # Proxy to backend agent
 │   ├── components/
 │   │   ├── chat-panel.tsx          # useChat + streaming + tool transparency
+│   │   ├── song-context-badge.tsx  # Read-only song context display (key/BPM/genre/vibe)
 │   │   ├── sample-browser.tsx      # Sample grid with filters + audio playback
 │   │   └── tool-call.tsx           # Collapsible tool call display
 │   └── api/generated/              # Auto-generated TypeScript client
@@ -160,6 +161,7 @@ pnpm generate-client
 - **CNN dataset size.** 75 samples across 11 classes — see [Roadmap](docs/ROADMAP.md) for scaling plans (NSynth, FSD50K).
 - **No auth yet.** Auth is planned but not yet implemented.
 - **Agentic RAG over static pipeline.** The agent decides which tools to call per query, enabling multi-step reasoning (analyze sample → check key → search for complement).
+- **Thread-backed song context.** Persistent per-thread JSONB column (not session-based) so context survives refreshes. The agent is the only mutation path — no direct-edit UI — keeping the conversational interface as the source of truth.
 
 ## Audio Pipeline
 
