@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, getSample, getSampleAudio, getSimilarSamples, listSamples, type Options, searchSamples, streamChat } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
+import { dbHealthCheck, deleteThread, getSample, getSampleAudio, getSimilarSamples, getThreadMessages, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
 
 /**
  * Stream Chat
@@ -238,3 +238,81 @@ export const getSampleAudioOptions = (options: Options<GetSampleAudioData>) => q
     },
     queryKey: getSampleAudioQueryKey(options)
 });
+
+export const listThreadsQueryKey = (options?: Options<ListThreadsData>) => createQueryKey('listThreads', options);
+
+/**
+ * List Threads
+ *
+ * List all threads.
+ */
+export const listThreadsOptions = (options?: Options<ListThreadsData>) => queryOptions<ListThreadsResponse, AxiosError<DefaultError>, ListThreadsResponse, ReturnType<typeof listThreadsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listThreads({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listThreadsQueryKey(options)
+});
+
+export const getThreadMessagesQueryKey = (options: Options<GetThreadMessagesData>) => createQueryKey('getThreadMessages', options);
+
+/**
+ * Get Thread Messages
+ *
+ * Get all messages for a specific thread.
+ */
+export const getThreadMessagesOptions = (options: Options<GetThreadMessagesData>) => queryOptions<GetThreadMessagesResponse, AxiosError<GetThreadMessagesError>, GetThreadMessagesResponse, ReturnType<typeof getThreadMessagesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getThreadMessages({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getThreadMessagesQueryKey(options)
+});
+
+/**
+ * Delete Thread
+ *
+ * Delete a thread and all its messages.
+ */
+export const deleteThreadMutation = (options?: Partial<Options<DeleteThreadData>>): UseMutationOptions<DeleteThreadResponse, AxiosError<DeleteThreadError>, Options<DeleteThreadData>> => {
+    const mutationOptions: UseMutationOptions<DeleteThreadResponse, AxiosError<DeleteThreadError>, Options<DeleteThreadData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteThread({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Rename Thread
+ *
+ * Rename a thread.
+ */
+export const renameThreadMutation = (options?: Partial<Options<RenameThreadData>>): UseMutationOptions<RenameThreadResponse, AxiosError<RenameThreadError>, Options<RenameThreadData>> => {
+    const mutationOptions: UseMutationOptions<RenameThreadResponse, AxiosError<RenameThreadError>, Options<RenameThreadData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await renameThread({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};

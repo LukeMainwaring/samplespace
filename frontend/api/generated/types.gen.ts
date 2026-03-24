@@ -141,6 +141,104 @@ export type SampleSearchRequest = {
 };
 
 /**
+ * ThreadDeleteResponse
+ *
+ * Response for successful thread delete operations.
+ */
+export type ThreadDeleteResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
+ * ThreadListResponse
+ *
+ * Response containing list of threads.
+ */
+export type ThreadListResponse = {
+    /**
+     * Threads
+     */
+    threads: Array<ThreadSummary>;
+};
+
+/**
+ * ThreadMessagesResponse
+ *
+ * Response containing thread messages.
+ */
+export type ThreadMessagesResponse = {
+    /**
+     * Thread Id
+     */
+    thread_id: string;
+    /**
+     * Messages
+     */
+    messages: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+/**
+ * ThreadRenameRequest
+ *
+ * Request to rename a thread.
+ */
+export type ThreadRenameRequest = {
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * ThreadRenameResponse
+ *
+ * Response for successful thread rename operations.
+ */
+export type ThreadRenameResponse = {
+    /**
+     * Thread Id
+     */
+    thread_id: string;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * ThreadSummary
+ *
+ * Summary of a thread for list view.
+ */
+export type ThreadSummary = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Thread Id
+     */
+    thread_id: string;
+    /**
+     * Title
+     */
+    title: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -353,3 +451,109 @@ export type GetSampleAudioResponses = {
      */
     200: unknown;
 };
+
+export type ListThreadsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/threads';
+};
+
+export type ListThreadsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadListResponse;
+};
+
+export type ListThreadsResponse = ListThreadsResponses[keyof ListThreadsResponses];
+
+export type GetThreadMessagesData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/api/threads/{thread_id}/messages';
+};
+
+export type GetThreadMessagesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetThreadMessagesError = GetThreadMessagesErrors[keyof GetThreadMessagesErrors];
+
+export type GetThreadMessagesResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadMessagesResponse;
+};
+
+export type GetThreadMessagesResponse = GetThreadMessagesResponses[keyof GetThreadMessagesResponses];
+
+export type DeleteThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/api/threads/{thread_id}';
+};
+
+export type DeleteThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteThreadError = DeleteThreadErrors[keyof DeleteThreadErrors];
+
+export type DeleteThreadResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadDeleteResponse;
+};
+
+export type DeleteThreadResponse = DeleteThreadResponses[keyof DeleteThreadResponses];
+
+export type RenameThreadData = {
+    body: ThreadRenameRequest;
+    path: {
+        /**
+         * Thread Id
+         */
+        thread_id: string;
+    };
+    query?: never;
+    url: '/api/threads/{thread_id}';
+};
+
+export type RenameThreadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RenameThreadError = RenameThreadErrors[keyof RenameThreadErrors];
+
+export type RenameThreadResponses = {
+    /**
+     * Successful Response
+     */
+    200: ThreadRenameResponse;
+};
+
+export type RenameThreadResponse = RenameThreadResponses[keyof RenameThreadResponses];

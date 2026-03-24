@@ -51,7 +51,7 @@ This is a brainstorm document — exploratory in tone but structured enough that
        +-----------------------+
 ```
 
-- **Feature 1 (Song Context)** is the foundation. No dependencies. Every other feature is more useful when it can filter/rank against the user's active song context.
+- **Feature 1 (Song Context)** is the foundation. Depends on the threads infrastructure (now implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
 - **Feature 2 (Pair Scoring)** depends on 1 — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM).
 - **Feature 3 (Audio Transformation)** depends on 1 — `match_to_context` needs a target key and BPM.
 - **Feature 4 (Sample Upload)** has a soft dependency on 1 — uploaded samples benefit from context-aware ranking, but could be built independently.
@@ -84,32 +84,58 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 ## Feature Specs
 
-### 1. Song Context / Session State
+### 1. Song Context (Thread-Backed)
 
-**What**: The user tells the agent about their song through natural conversation ("I'm working on a track in D minor at 120 BPM, kind of a dark techno vibe"). The agent persists this context across the chat session and automatically applies it when searching, scoring, and recommending.
+**What**: The user tells the agent about their song through natural conversation ("I'm working on a track in D minor at 120 BPM, kind of a dark techno vibe"). The agent persists this context to the thread record and automatically applies it when searching, scoring, and recommending. Context survives page refreshes and is unique per conversation thread.
 
 **Why**: Today every search is stateless. The user has to repeat "in D minor at 120 BPM" with every request. Song context transforms the interaction from "search engine" to "production assistant that knows your song."
 
-**Depends on**: None.
+**Depends on**: Threads & messages (implemented). Song context is stored as a JSONB column on the existing `threads` table — just a migration to add the column.
 
 #### Backend
 
-- Define a `SongContext` Pydantic model: `key: str | None`, `bpm: int | None`, `genre: str | None`, `vibe: str | None`.
-- Add agent tool `set_song_context(key?, bpm?, genre?, vibe?)` that the agent calls when the user mentions song properties. Returns confirmation string.
-- Modify the system prompt to instruct the agent to: (a) detect when the user mentions song properties and call `set_song_context`, (b) consult song context when calling search/suggest tools, (c) mention active context in responses.
-- Modify `search_by_description` and `suggest_complement` to accept optional key/bpm filters from song context when not explicitly specified.
-- Context is per-session, not persisted to DB. The frontend stores it and passes it in the request body to `/api/chat`. The backend injects it into `AgentDeps` on each request. This preserves the existing stateless architecture.
+**Data model — migration:**
+- Add `song_context: JSONB | None` column to `threads` table via Alembic migration.
+
+**Pydantic model:**
+- Define `SongContext` in `schemas/song_context.py`: `key: str | None`, `bpm: int | None`, `genre: str | None`, `vibe: str | None`.
+- Used for validation, serialization, and type safety throughout the stack.
+
+**AgentDeps — add thread context:**
+- Add `thread_id: str` and `song_context: SongContext | None` to `AgentDeps`.
+- In `routers/agent.py`, after `build_run_input()` extracts `thread_id`, load the thread's `song_context` from DB and inject it into `AgentDeps`.
+- This makes song context available to all agent tools via `ctx.deps.song_context` without extra DB queries per tool call.
+
+**Agent tool — `set_song_context`:**
+- New tool in `agents/tools/context_tools.py`.
+- Signature: `set_song_context(ctx, key?, bpm?, genre?, vibe?) -> str`.
+- Reads current context from DB (`Thread.get`), merges new values (partial update — only overwrites provided fields, preserves the rest), writes back to `thread.song_context`, flushes.
+- Also updates `ctx.deps.song_context` in-place so subsequent tool calls in the same turn see the new context without a DB re-read.
+- Returns confirmation string: "Song context updated: D minor, 120 BPM, dark techno."
+
+**System prompt changes (`sample_agent.py`):**
+- Add a dynamic system prompt (via `@sample_agent.system_prompt` decorator that reads from `ctx.deps`) that injects the active song context so the agent always knows the current state.
+- Instruct the agent to: (a) detect when the user mentions song properties and call `set_song_context`, (b) consult song context when calling search/suggest tools to filter by key/BPM, (c) mention active context in responses.
+
+**Search tool modifications:**
+- `search_by_description` (`clap_tools.py`): if `ctx.deps.song_context` has a `vibe`, append it to the CLAP query for relevance. If it has `key`/`bpm`, post-filter or re-rank results for compatibility.
+- `suggest_complement` (`analysis_tools.py`): use song context `key`/`bpm` as defaults when not explicitly specified by the user.
+
+**Thread model changes (`models/thread.py`):**
+- Add `song_context` JSONB column.
+- Add `update_song_context(db, thread_id, agent_type, context_data)` classmethod.
 
 #### Frontend
 
-- Store `songContext` in React state alongside the chat.
-- When `set_song_context` tool call appears in the streamed response, parse arguments and update frontend state.
-- Display a persistent "Song Context" badge above the chat input showing active key/BPM/genre. Allow inline editing or clearing.
-- Pass current song context in the request body to `/api/chat`.
+- Display a "Song Context" badge in the chat header showing active key/BPM/genre when set.
+- Load song context alongside thread messages — add `song_context` to `ThreadMessagesResponse` schema, or expose via thread metadata.
+- No need to pass context in the request body — the backend reads it from the thread record.
+- When `set_song_context` tool call appears in the streamed response, refresh the badge by invalidating the thread query.
 
 #### Data Model
 
-None — in-memory per session.
+- **Migration**: add `song_context JSONB` column to existing `threads` table (nullable, default NULL).
+- No new tables.
 
 #### Agent Tools
 
@@ -119,9 +145,9 @@ None — in-memory per session.
 
 #### Open Questions
 
-- Should context persist across browser sessions (localStorage)?
-- Should the agent partially update context (change BPM without clearing key)?
-- How does "vibe" interact with CLAP search — append to query string?
+- How does "vibe" interact with CLAP search — append to query string, or use as a separate re-ranking signal?
+- Should there be an explicit `clear_song_context` tool, or does the agent call `set_song_context` with all nulls?
+- Should the frontend badge be directly editable (click to change key/BPM) or only through conversation?
 
 ---
 
@@ -457,7 +483,7 @@ None initially. Kits are ephemeral (returned in chat). A `kits` table could stor
 | `pair_verdicts` | 3 | Pairing & Feedback Loop |
 | `pair_rules` | 3 | Pairing & Feedback Loop |
 
-Features 1-4 and 6 require no new tables. Song context is in-memory. Pair scoring is computed on the fly. Transformed audio is filesystem cache. Uploads use the existing `samples` table if permanent. Kits are ephemeral.
+Features 1-4 and 6 require no new tables beyond the existing `threads` and `messages` tables (already implemented). Song context is a JSONB column on the `threads` table. Pair scoring is computed on the fly. Transformed audio is filesystem cache. Uploads use the existing `samples` table if permanent. Kits are ephemeral.
 
 ### New Agent Tools
 

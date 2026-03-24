@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -100,4 +100,52 @@ export const getSampleAudio = <ThrowOnError extends boolean = false>(options: Op
     responseType: 'json',
     url: '/api/samples/{sample_id}/audio',
     ...options
+});
+
+/**
+ * List Threads
+ *
+ * List all threads.
+ */
+export const listThreads = <ThrowOnError extends boolean = false>(options?: Options<ListThreadsData, ThrowOnError>) => (options?.client ?? client).get<ListThreadsResponses, unknown, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/threads',
+    ...options
+});
+
+/**
+ * Get Thread Messages
+ *
+ * Get all messages for a specific thread.
+ */
+export const getThreadMessages = <ThrowOnError extends boolean = false>(options: Options<GetThreadMessagesData, ThrowOnError>) => (options.client ?? client).get<GetThreadMessagesResponses, GetThreadMessagesErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/threads/{thread_id}/messages',
+    ...options
+});
+
+/**
+ * Delete Thread
+ *
+ * Delete a thread and all its messages.
+ */
+export const deleteThread = <ThrowOnError extends boolean = false>(options: Options<DeleteThreadData, ThrowOnError>) => (options.client ?? client).delete<DeleteThreadResponses, DeleteThreadErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/threads/{thread_id}',
+    ...options
+});
+
+/**
+ * Rename Thread
+ *
+ * Rename a thread.
+ */
+export const renameThread = <ThrowOnError extends boolean = false>(options: Options<RenameThreadData, ThrowOnError>) => (options.client ?? client).patch<RenameThreadResponses, RenameThreadErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/threads/{thread_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
