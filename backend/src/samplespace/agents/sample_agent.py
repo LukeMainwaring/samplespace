@@ -15,6 +15,7 @@ from samplespace.agents.tools.clap_tools import register_clap_tools
 from samplespace.agents.tools.cnn_tools import register_cnn_tools
 from samplespace.agents.tools.context_tools import register_context_tools
 from samplespace.agents.tools.pair_tools import register_pair_tools
+from samplespace.agents.tools.transform_tools import register_transform_tools
 from samplespace.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,12 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
    - Use when comparing specific pairs: "will these work together?", "rate this pair"
    - Automatically skips key/BPM dimensions for one-shots
 
+8. **match_to_context**: Pitch-shift and/or time-stretch a sample to match a target key/BPM
+   - Call when a sample sounds right but is in the wrong key or BPM
+   - Falls back to song context if no explicit target provided
+   - Only works for loops (one-shots have no reference key/BPM)
+   - Handles cross-mode shifts using relative keys (e.g., minor sample + major song → targets relative minor)
+
 ## Guidelines
 
 - When song context is set, use it to improve search results and recommendations
@@ -71,6 +78,8 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
 - Be concise but informative — mention key, BPM, and type when relevant
 - If the user references a sample by name rather than ID, search for it first
 - NEVER generate URLs or markdown links — just use plain text and bold for emphasis
+- When you find a sample that's a great match but in a different key or BPM from the song context, proactively offer to transform it (e.g., "This pad is in E minor but your song is in G minor — want me to transpose it?")
+- After calling match_to_context, always include the audio player block from the tool result in your response so the user can preview the transformed audio
 
 ## One-Shots vs Loops
 
@@ -95,6 +104,7 @@ register_cnn_tools(sample_agent)
 register_analysis_tools(sample_agent)
 register_context_tools(sample_agent)
 register_pair_tools(sample_agent)
+register_transform_tools(sample_agent)
 
 
 @sample_agent.system_prompt

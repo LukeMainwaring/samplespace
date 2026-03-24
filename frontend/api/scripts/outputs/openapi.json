@@ -247,6 +247,79 @@
         }
       }
     },
+    "/api/samples/{sample_id}/audio/transformed": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Transformed Audio",
+        "description": "Serve a cached transformed audio file.\n\nThe agent tool pre-warms the cache via match_to_context. This endpoint\nis a pure file server — no on-demand transformation.",
+        "operationId": "getTransformedAudio",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Key"
+            }
+          },
+          {
+            "name": "bpm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bpm"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/samples/{sample_id}/audio": {
       "get": {
         "tags": [

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import soundfile as sf  # type: ignore[import-untyped]
+import soundfile as sf
 import torch
 import torchaudio.transforms as T
 from torch.utils.data import Dataset

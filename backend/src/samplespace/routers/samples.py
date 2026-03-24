@@ -8,6 +8,7 @@ from samplespace.dependencies.clap import ClapModelsDep
 from samplespace.dependencies.db import AsyncPostgresSessionDep
 from samplespace.models.sample import AudioFileNotFound, SampleNotFound
 from samplespace.schemas.sample import SampleListResponse, SampleSchema, SampleSearchRequest
+from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
 from samplespace.services import sample as sample_service
 
@@ -77,6 +78,31 @@ async def get_similar_samples(
         raise SampleNotFound()
 
     return await sample_service.find_similar_by_cnn(db, sample_id=sample_id, limit=limit)
+
+
+@samples_router.get("/{sample_id}/audio/transformed")
+async def get_transformed_audio(
+    sample_id: str,
+    key: str | None = None,
+    bpm: int | None = None,
+) -> FileResponse:
+    """Serve a cached transformed audio file.
+
+    The agent tool pre-warms the cache via match_to_context. This endpoint
+    is a pure file server — no on-demand transformation.
+    """
+    if key is None and bpm is None:
+        raise HTTPException(status_code=400, detail="At least one of key or bpm is required")
+
+    cached = audio_transform_service.get_cached_transform(sample_id, key, bpm)
+    if cached is None:
+        raise HTTPException(status_code=404, detail="Transformed audio not found in cache")
+
+    return FileResponse(
+        path=str(cached),
+        media_type="audio/wav",
+        filename=cached.name,
+    )
 
 
 @samples_router.get("/{sample_id}/audio")

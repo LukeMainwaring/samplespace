@@ -43,7 +43,7 @@ markers = [
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pgvector.*", "librosa.*", "music21.*", "transformers.*", "torchaudio.*"]
+module = ["pgvector.*", "librosa.*", "music21.*", "transformers.*", "torchaudio.*", "soundfile", "soundfile.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

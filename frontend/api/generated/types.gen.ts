@@ -450,6 +450,43 @@ export type GetSimilarSamplesResponses = {
 
 export type GetSimilarSamplesResponse = GetSimilarSamplesResponses[keyof GetSimilarSamplesResponses];
 
+export type GetTransformedAudioData = {
+    body?: never;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: {
+        /**
+         * Key
+         */
+        key?: string | null;
+        /**
+         * Bpm
+         */
+        bpm?: number | null;
+    };
+    url: '/api/samples/{sample_id}/audio/transformed';
+};
+
+export type GetTransformedAudioErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTransformedAudioError = GetTransformedAudioErrors[keyof GetTransformedAudioErrors];
+
+export type GetTransformedAudioResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type GetSampleAudioData = {
     body?: never;
     path: {
