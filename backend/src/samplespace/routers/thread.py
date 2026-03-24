@@ -5,7 +5,6 @@ import logging
 from fastapi import APIRouter
 
 from samplespace.dependencies.db import AsyncPostgresSessionDep
-from samplespace.models.thread import Thread
 from samplespace.schemas.agent_type import AgentType
 from samplespace.schemas.thread import (
     SongContext,
@@ -45,9 +44,8 @@ async def list_threads(db: AsyncPostgresSessionDep) -> ThreadListResponse:
 @thread_router.get("/{thread_id}/messages")
 async def get_thread_messages(db: AsyncPostgresSessionDep, thread_id: str) -> ThreadMessagesResponse:
     """Get all messages for a specific thread."""
-    frontend_messages = await thread_service.get_thread_messages(db, thread_id, AgentType.CHAT.value)
-    thread = await Thread.get(db, thread_id, AgentType.CHAT.value)
-    song_context = SongContext.model_validate(thread.song_context) if thread and thread.song_context else None
+    thread, frontend_messages = await thread_service.get_thread_messages(db, thread_id, AgentType.CHAT.value)
+    song_context = SongContext.model_validate(thread.song_context) if thread.song_context else None
     return ThreadMessagesResponse(thread_id=thread_id, messages=frontend_messages, song_context=song_context)
 
 

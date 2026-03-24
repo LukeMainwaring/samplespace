@@ -31,10 +31,12 @@ async def set_song_context(
         genre: Genre or style, e.g., "lo-fi hip hop", "techno".
         vibe: Mood/character description, e.g., "dark and atmospheric", "uplifting".
     """
-    updates = SongContext(key=key, bpm=bpm, genre=genre, vibe=vibe)
-
-    if not updates.model_dump(exclude_none=True):
+    # Only include fields the agent explicitly provided so exclude_unset works correctly.
+    # This allows clearing a field by passing None (e.g., vibe=None removes the vibe).
+    provided = {k: v for k, v in {"key": key, "bpm": bpm, "genre": genre, "vibe": vibe}.items() if v is not None}
+    if not provided:
         return "No song context fields provided. Specify at least one of: key, bpm, genre, vibe."
+    updates = SongContext.model_validate(provided)
 
     if not ctx.deps.thread_id:
         return "Cannot set song context — no active thread."

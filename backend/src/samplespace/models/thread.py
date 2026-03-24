@@ -94,14 +94,16 @@ class Thread(Base):
     ) -> SongContext:
         """Merge song context updates into the thread's existing context.
 
-        Only overwrites fields that are provided (non-None via exclude_unset). Returns the merged context.
+        Uses exclude_unset so only explicitly provided fields are overwritten.
+        Creates the thread if it doesn't exist yet (first message in a conversation).
         """
-        await cls.get_or_create(db, thread_id, agent_type)
         thread = await cls.get(db, thread_id, agent_type)
-        assert thread is not None
+        if thread is None:
+            await cls.create(db, ThreadCreateSchema(thread_id=thread_id, agent_type=AgentType(agent_type)))
+            thread = await cls.get(db, thread_id, agent_type)
+            assert thread is not None
         existing = SongContext.model_validate(thread.song_context) if thread.song_context else SongContext()
-        update_data = updates.model_dump(exclude_none=True)
-        merged = existing.model_copy(update=update_data)
+        merged = existing.model_copy(update=updates.model_dump(exclude_unset=True))
         thread.song_context = merged.model_dump(exclude_none=True)
         await db.flush()
         return merged

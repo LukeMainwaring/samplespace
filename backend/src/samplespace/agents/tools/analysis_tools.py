@@ -167,19 +167,19 @@ async def suggest_complement(
         if not filtered:
             return "No complementary samples found."
 
-        # Use source key for loops, or fall back to song context key for one-shots
-        reference_key = source.key if source.is_loop else None
+        # Use source key when available; fall back to song context key otherwise
+        reference_key = source.key
         if not reference_key and ctx.deps.song_context:
             reference_key = ctx.deps.song_context.key
 
         if source.is_loop:
             header = f"Samples that complement **{source.filename}** (key: {source.key or 'unknown'}):\n"
-        elif reference_key:
+        elif reference_key and reference_key != source.key:
             header = (
                 f"Samples that complement **{source.filename}** (one-shot, using song context key: {reference_key}):\n"
             )
         else:
-            header = f"Samples that complement **{source.filename}** (one-shot):\n"
+            header = f"Samples that complement **{source.filename}**:\n"
         lines = [header]
         for i, s in enumerate(filtered[:8], 1):
             compat = ""
