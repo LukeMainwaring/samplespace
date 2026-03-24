@@ -6,12 +6,13 @@ from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import DateTime, PrimaryKeyConstraint, delete, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
 from samplespace.models.base import Base
 from samplespace.schemas.agent_type import AgentType
-from samplespace.schemas.thread import ThreadCreateSchema, ThreadSchema
+from samplespace.schemas.thread import SongContext, ThreadCreateSchema, ThreadSchema
 
 
 class ThreadNotFound(HTTPException):
@@ -29,6 +30,7 @@ class Thread(Base):
     thread_id: Mapped[str]
     agent_type: Mapped[str]
     title: Mapped[str | None]
+    song_context: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
 
@@ -85,3 +87,21 @@ class Thread(Base):
         if thread:
             thread.title = title
             await db.flush()
+
+    @classmethod
+    async def update_song_context(
+        cls, db: AsyncSession, thread_id: str, agent_type: str, updates: SongContext
+    ) -> SongContext:
+        """Merge song context updates into the thread's existing context.
+
+        Only overwrites fields that are provided (non-None via exclude_unset). Returns the merged context.
+        """
+        await cls.get_or_create(db, thread_id, agent_type)
+        thread = await cls.get(db, thread_id, agent_type)
+        assert thread is not None
+        existing = SongContext.model_validate(thread.song_context) if thread.song_context else SongContext()
+        update_data = updates.model_dump(exclude_none=True)
+        merged = existing.model_copy(update=update_data)
+        thread.song_context = merged.model_dump(exclude_none=True)
+        await db.flush()
+        return merged

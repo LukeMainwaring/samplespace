@@ -5,8 +5,10 @@ import logging
 from fastapi import APIRouter
 
 from samplespace.dependencies.db import AsyncPostgresSessionDep
+from samplespace.models.thread import Thread
 from samplespace.schemas.agent_type import AgentType
 from samplespace.schemas.thread import (
+    SongContext,
     ThreadDeleteResponse,
     ThreadListResponse,
     ThreadMessagesResponse,
@@ -31,6 +33,7 @@ async def list_threads(db: AsyncPostgresSessionDep) -> ThreadListResponse:
                 id=thread.thread_id,
                 thread_id=thread.thread_id,
                 title=thread.title,
+                song_context=SongContext.model_validate(thread.song_context) if thread.song_context else None,
                 created_at=thread.created_at,
                 updated_at=thread.updated_at,
             )
@@ -43,7 +46,9 @@ async def list_threads(db: AsyncPostgresSessionDep) -> ThreadListResponse:
 async def get_thread_messages(db: AsyncPostgresSessionDep, thread_id: str) -> ThreadMessagesResponse:
     """Get all messages for a specific thread."""
     frontend_messages = await thread_service.get_thread_messages(db, thread_id, AgentType.CHAT.value)
-    return ThreadMessagesResponse(thread_id=thread_id, messages=frontend_messages)
+    thread = await Thread.get(db, thread_id, AgentType.CHAT.value)
+    song_context = SongContext.model_validate(thread.song_context) if thread and thread.song_context else None
+    return ThreadMessagesResponse(thread_id=thread_id, messages=frontend_messages, song_context=song_context)
 
 
 @thread_router.delete("/{thread_id}")

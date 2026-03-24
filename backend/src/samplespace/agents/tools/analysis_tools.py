@@ -148,6 +148,10 @@ async def suggest_complement(
         if desired_type:
             query = f"{desired_type} that complements {source.sample_type or 'sample'}"
 
+        # Enrich query with song context vibe for better semantic matching
+        if ctx.deps.song_context and ctx.deps.song_context.vibe:
+            query = f"{query}, {ctx.deps.song_context.vibe}"
+
         query_embedding = embed_text(query, ctx.deps.clap_model, ctx.deps.clap_processor)
 
         results = await sample_service.search_by_text(
@@ -163,17 +167,26 @@ async def suggest_complement(
         if not filtered:
             return "No complementary samples found."
 
+        # Use source key for loops, or fall back to song context key for one-shots
+        reference_key = source.key if source.is_loop else None
+        if not reference_key and ctx.deps.song_context:
+            reference_key = ctx.deps.song_context.key
+
         if source.is_loop:
             header = f"Samples that complement **{source.filename}** (key: {source.key or 'unknown'}):\n"
+        elif reference_key:
+            header = (
+                f"Samples that complement **{source.filename}** (one-shot, using song context key: {reference_key}):\n"
+            )
         else:
             header = f"Samples that complement **{source.filename}** (one-shot):\n"
         lines = [header]
         for i, s in enumerate(filtered[:8], 1):
             compat = ""
-            if source.is_loop and source.key and s.key:
-                if source.key == s.key:
+            if reference_key and s.key:
+                if reference_key == s.key:
                     compat = " ✓ same key"
-                elif RELATIVE_PAIRS.get(source.key) == s.key:
+                elif RELATIVE_PAIRS.get(reference_key) == s.key:
                     compat = " ✓ relative key"
             parts = [f"{i}. **{s.filename}**"]
             if s.sample_type:

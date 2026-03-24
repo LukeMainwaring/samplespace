@@ -10,12 +10,22 @@ from samplespace.schemas.agent_type import AgentType
 from .base import BaseSchema
 
 
+class SongContext(BaseSchema):
+    """Song context metadata for a conversation thread."""
+
+    key: str | None = None
+    bpm: int | None = None
+    genre: str | None = None
+    vibe: str | None = None
+
+
 class ThreadSchema(BaseSchema):
     """Thread schema representing a conversation thread."""
 
     thread_id: str
     agent_type: AgentType
     title: str | None = None
+    song_context: SongContext | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -33,6 +43,7 @@ class ThreadSummary(BaseSchema):
     id: str
     thread_id: str
     title: str | None
+    song_context: SongContext | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -48,6 +59,7 @@ class ThreadMessagesResponse(BaseSchema):
 
     thread_id: str
     messages: list[dict[str, Any]]
+    song_context: SongContext | None = None
 
 
 class ThreadDeleteResponse(BaseSchema):
