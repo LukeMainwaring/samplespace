@@ -51,8 +51,8 @@ This is a brainstorm document — exploratory in tone but structured enough that
        +-----------------------+
 ```
 
-- **Feature 1 (Song Context)** is the foundation (now implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
-- **Feature 2 (Pair Scoring)** depends on 1 — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM).
+- **Feature 1 (Song Context)** is the foundation (implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
+- **Feature 2 (Pair Scoring)** depends on 1 (implemented) — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM).
 - **Feature 3 (Audio Transformation)** depends on 1 — `match_to_context` needs a target key and BPM.
 - **Feature 4 (Sample Upload)** has a soft dependency on 1 — uploaded samples benefit from context-aware ranking, but could be built independently.
 - **Feature 5 (Pairing & Feedback)** depends on 2 and 3 — needs pair scoring to generate plausible pairs and benefits from transformed audio (users judge pairs that are already key/BPM-matched). Can also ingest uploaded samples from 4.
@@ -64,9 +64,9 @@ This is a brainstorm document — exploratory in tone but structured enough that
 
 ### Phase 1: Context Foundation
 
-**Features**: Song Context (1) ✅, Pair Compatibility Scoring (2)
+**Features**: Song Context (1) ✅, Pair Compatibility Scoring (2) ✅
 
-Song Context is implemented — SampleSpace is now a context-aware assistant. Pair scoring is the next step, giving the agent a new capability without heavy infrastructure. Both are backend-focused with minimal frontend changes.
+Both implemented. SampleSpace is now a context-aware assistant with multi-dimensional pair scoring. Phase 2 is next — Audio Transformation and Sample Upload can be built in parallel.
 
 ### Phase 2: Audio Pipeline
 
@@ -117,7 +117,7 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 ---
 
-### 2. Pair Compatibility Scoring
+### 2. Pair Compatibility Scoring — Implemented
 
 **What**: A multi-dimensional compatibility score between two samples, combining key compatibility (circle of fifths distance), BPM compatibility, type complementarity (kick+hihat > kick+kick), and CNN embedding distance.
 
@@ -125,39 +125,28 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 **Depends on**: Feature 1 (Song Context).
 
-#### Backend
+#### Implementation Summary
 
-- Create `services/pair_scoring.py` with `score_pair(sample_a, sample_b, song_context?) -> PairScore`.
-- `PairScore` model:
-  - `overall: float` (0-1 weighted composite)
-  - `key_score: float` (circle of fifths distance, reuse logic from `analysis_tools.py`)
-  - `bpm_score: float` (BPM difference ratio)
-  - `type_score: float` (from a type complementarity matrix)
-  - `spectral_score: float` (CNN cosine distance — inverted for complementary types, direct for similar)
-  - `explanation: str` (human-readable summary)
-- Type complementarity matrix: hardcoded dict. High scores for kick+hihat, bass+lead, pad+lead; low for kick+kick, bass+bass. Later overridable by learned rules from Feature 5.
-- CNN spectral score interpretation: for *complementary* types (kick+pad), lower cosine similarity is better (should sound different); for *similar* types (kick+kick), higher similarity is better.
-- Add agent tool `rate_pair(sample_a_id, sample_b_id)` calling `score_pair`, returning formatted multi-dimensional score.
+**Backend:**
+- Extracted music theory logic (circle of fifths, relative pairs, key distance) from `analysis_tools.py` into `services/music_theory.py` for reuse across tools and services.
+- `services/pair_scoring.py` with `score_pair(db, sample_a_id, sample_b_id) -> PairScore`. Computes four dimensions:
+  - **Key score**: circle-of-fifths distance mapped to 0-1 via `music_theory_service.key_compatibility_score()`. Only for loops with known keys.
+  - **BPM score**: ratio-based with integer-multiple normalization (halve/double into 60-180 range, so 60 and 120 BPM score as compatible). Only for loops with known BPMs.
+  - **Type score**: hardcoded `TYPE_COMPLEMENTARITY` matrix using `frozenset` keys for symmetric lookup. High for kick+hihat (0.9), low for kick+kick (0.2), default 0.5 for unknown pairs.
+  - **Spectral score**: CNN cosine distance with context-dependent interpretation — complementary types prefer spectral difference, same types prefer similarity. Uses explicit norm division for robustness.
+- Dynamic weight rebalancing: when dimensions are unavailable (one-shots skip key/BPM, missing CNN embeddings skip spectral), weights redistribute proportionally. Default weights: key 0.30, type 0.25, spectral 0.25, BPM 0.20.
+- `PairScore` and `DimensionScore` Pydantic schemas in `schemas/pair.py`. Each dimension includes value, effective weight, and explanation.
+- `rate_pair` agent tool in `agents/tools/pair_tools.py` formats the score as readable markdown.
+- Refactored `analysis_tools.py` to import from `music_theory_service` instead of inlining constants.
 
-#### Frontend
+**Frontend:** None — score returned as text in agent response.
 
-Minimal — score is returned as text in the agent's response. Later could render as a visual score card.
+#### Resolved Questions
 
-#### Data Model
-
-None. Complementarity matrix is a hardcoded dict.
-
-#### Agent Tools
-
-| Tool | Signature |
-|------|-----------|
-| `rate_pair` | `(sample_a_id, sample_b_id) -> str` |
-
-#### Open Questions
-
-- Right weights for the composite score? Start equal and tune.
-- Should `spectral_score` use CNN distance, CLAP distance, or both?
-- Should BPM score account for integer multiples (120 and 60 BPM are compatible)?
+- **Weights**: Starting at key 0.30, type 0.25, spectral 0.25, BPM 0.20. Will tune based on usage.
+- **Spectral score source**: CNN distance only. CLAP distance could be added later as a fifth dimension.
+- **BPM integer multiples**: Yes — BPMs are normalized to 60-180 range before comparison.
+- **REST endpoint**: Not added yet (agent tool only). Can add `POST /pairs/score` later when frontend needs direct access.
 
 ---
 
@@ -456,7 +445,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | Tool | Phase | Feature | Status |
 |------|-------|---------|--------|
 | `set_song_context` | 1 | Song Context | ✅ Implemented |
-| `rate_pair` | 1 | Pair Scoring | |
+| `rate_pair` | 1 | Pair Scoring | ✅ Implemented |
 | `match_to_context` | 2 | Audio Transformation |
 | `find_similar_to_upload` | 2 | Sample Upload |
 | `present_pair` | 3 | Pairing & Feedback |
@@ -476,20 +465,21 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 
 ### New Service Modules
 
-| Module | Phase | Purpose |
-|--------|-------|---------|
-| `services/pair_scoring.py` | 1 | Multi-dimensional pair compatibility scoring |
-| `services/audio_transform.py` | 2 | Pitch-shift + time-stretch with caching |
-| `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) |
-| `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction |
-| `services/kit_builder.py` | 3 | Greedy kit assembly algorithm |
+| Module | Phase | Purpose | Status |
+|--------|-------|---------|--------|
+| `services/pair_scoring.py` | 1 | Multi-dimensional pair compatibility scoring | ✅ Implemented |
+| `services/music_theory.py` | 1 | Reusable key compatibility and circle-of-fifths logic | ✅ Implemented |
+| `services/audio_transform.py` | 2 | Pitch-shift + time-stretch with caching | |
+| `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) | |
+| `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction | |
+| `services/kit_builder.py` | 3 | Greedy kit assembly algorithm | |
 
 ### New Agent Tool Modules
 
 | Module | Phase | Tools | Status |
 |--------|-------|-------|--------|
 | `agents/tools/context_tools.py` | 1 | `set_song_context` | ✅ Implemented |
-| `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` | |
+| `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` | ✅ `rate_pair` implemented |
 | `agents/tools/transform_tools.py` | 2 | `match_to_context` |
 | `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` |
 | `agents/tools/kit_tools.py` | 3 | `build_kit`, `swap_kit_sample` |

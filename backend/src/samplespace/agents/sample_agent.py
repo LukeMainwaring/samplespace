@@ -14,6 +14,7 @@ from samplespace.agents.tools.analysis_tools import register_analysis_tools
 from samplespace.agents.tools.clap_tools import register_clap_tools
 from samplespace.agents.tools.cnn_tools import register_cnn_tools
 from samplespace.agents.tools.context_tools import register_context_tools
+from samplespace.agents.tools.pair_tools import register_pair_tools
 from samplespace.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,11 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
    - Only provide fields that are being set or changed — existing fields are preserved
    - Context persists across the conversation and automatically influences searches
 
+7. **rate_pair**: Score compatibility between two specific samples
+   - Returns a composite score (0-1) with key, BPM, type, and spectral breakdowns
+   - Use when comparing specific pairs: "will these work together?", "rate this pair"
+   - Automatically skips key/BPM dimensions for one-shots
+
 ## Guidelines
 
 - When song context is set, use it to improve search results and recommendations
@@ -88,6 +94,7 @@ register_clap_tools(sample_agent)
 register_cnn_tools(sample_agent)
 register_analysis_tools(sample_agent)
 register_context_tools(sample_agent)
+register_pair_tools(sample_agent)
 
 
 @sample_agent.system_prompt
