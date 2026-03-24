@@ -1,6 +1,10 @@
 """Audio transformation service — pitch shifting and time stretching with caching."""
 
+import contextlib
 import logging
+import os
+import re
+import tempfile
 from pathlib import Path
 
 import librosa
@@ -14,22 +18,39 @@ logger = logging.getLogger(__name__)
 # librosa sample rate for loading audio
 _SR = 22050
 
+# Only allow safe characters in cache path components
+_SAFE_FILENAME_RE = re.compile(r"[^a-zA-Z0-9_-]")
 
-def _sanitize_for_filename(key: str) -> str:
-    """Sanitize a key string for use in filenames."""
-    return key.replace(" ", "_").replace("#", "sharp")
+
+def _sanitize_for_filename(value: str) -> str:
+    """Sanitize a string for safe use in filenames.
+
+    Replaces known musical characters first, then strips anything
+    that is not alphanumeric, underscore, or hyphen.
+    """
+    result = value.replace(" ", "_").replace("#", "sharp")
+    return _SAFE_FILENAME_RE.sub("", result)
 
 
 def _get_cache_path(sample_id: str, target_key: str | None, target_bpm: int | None) -> Path:
-    """Build a deterministic cache path for a transformed audio file."""
+    """Build a deterministic, safe cache path for a transformed audio file.
+
+    Raises ValueError if the resolved path escapes the cache directory.
+    """
     settings = get_settings()
-    parts = [sample_id]
+    cache_dir = Path(settings.TRANSFORM_CACHE_DIR).resolve()
+
+    parts = [_sanitize_for_filename(sample_id)]
     if target_key:
         parts.append(f"key-{_sanitize_for_filename(target_key)}")
     if target_bpm:
         parts.append(f"bpm-{target_bpm}")
     filename = "_".join(parts) + ".wav"
-    return Path(settings.TRANSFORM_CACHE_DIR) / filename
+
+    path = (cache_dir / filename).resolve()
+    if not str(path).startswith(str(cache_dir)):
+        raise ValueError("Invalid cache path")
+    return path
 
 
 def get_cached_transform(sample_id: str, target_key: str | None, target_bpm: int | None) -> Path | None:
@@ -75,6 +96,19 @@ def transform_sample(
             y = librosa.effects.time_stretch(y, rate=rate)
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    sf.write(str(cache_path), y, sr)
+
+    # Atomic write: write to temp file then rename to avoid partial reads
+    # from concurrent requests for the same transformation.
+    fd, tmp_path = tempfile.mkstemp(dir=cache_path.parent, suffix=".wav")
+    try:
+        os.close(fd)
+        sf.write(tmp_path, y, sr)
+        os.rename(tmp_path, cache_path)
+    except BaseException:
+        # Clean up temp file on any failure
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+        raise
+
     logger.info(f"Cached transform: {cache_path.name}")
     return cache_path

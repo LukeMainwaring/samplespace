@@ -123,10 +123,14 @@ def _parse_mode(key: str) -> str | None:
 
 
 def semitone_delta(from_key: str, to_key: str) -> int | None:
-    """Signed chromatic distance between two keys, preferring shorter direction.
+    """Signed chromatic distance between two key root notes, preferring shorter direction.
+
+    Computes distance based on root notes only — mode is ignored. For cross-mode
+    transformations, use compute_target_key() first to resolve the actual target.
 
     Returns a value in the range [-6, +6], or None if either key is unparseable.
-    Positive means shift up, negative means shift down.
+    Positive means shift up, negative means shift down. The tritone (6 semitones)
+    is always returned as +6 by convention.
     """
     from_root = _parse_root(from_key)
     to_root = _parse_root(to_key)

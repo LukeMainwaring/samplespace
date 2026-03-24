@@ -131,7 +131,6 @@ async def _match_to_context(
         actual_target_key if will_pitch_shift else target_key,
         target_bpm,
         skipped,
-        cache_path,
     )
 
 
@@ -146,7 +145,6 @@ def _format_result(
     url_key: str | None,
     url_bpm: int | None,
     skipped: list[str],
-    cache_path: object,
 ) -> str:
     """Format the transformation result as markdown with an audio code fence."""
     parts: list[str] = []
