@@ -20,6 +20,7 @@ const TOOL_VERBS: Record<string, string> = {
   check_key_compatibility: "Checking key compatibility",
   suggest_complement: "Finding complements",
   set_song_context: "Updating song context",
+  match_to_context: "Transforming sample",
 };
 
 function getToolVerb(name: string): string {

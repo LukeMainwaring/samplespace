@@ -70,9 +70,9 @@ Both implemented. SampleSpace is now a context-aware assistant with multi-dimens
 
 ### Phase 2: Audio Pipeline
 
-**Features**: Audio Transformation (3), Sample Upload (4)
+**Features**: Audio Transformation (3) ✅, Sample Upload (4)
 
-These add new audio I/O capabilities — transformation creates a processing pipeline (librosa pitch_shift + time_stretch) with cache management; upload adds an ingestion endpoint with on-the-fly embedding computation. Independent of each other, can be built in parallel.
+Audio Transformation is implemented. Sample Upload can be built next, independently.
 
 ### Phase 3: Learning & Assembly
 
@@ -150,51 +150,37 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 ---
 
-### 3. Real-time Audio Transformation
+### 3. Real-time Audio Transformation — Implemented
 
-**What**: An agent tool that pitch-shifts and/or time-stretches a sample to match a target key and BPM, returning a playable transformed audio file.
+**What**: An agent tool that pitch-shifts and/or time-stretches a sample to match a target key and BPM, returning a playable transformed audio file inline in the chat.
 
 **Why**: This was the core feature of the predecessor project. Finding a great pad in E minor is useless if the song is in G minor — unless the system can transpose it. This is the difference between "here are samples that might work" and "here's a sample that *does* work in your song."
 
 **Depends on**: Feature 1 (Song Context).
 
-#### Backend
+#### Implementation Summary
 
-- Create `services/audio_transform.py`:
-  - `pitch_shift(audio_path, from_key, to_key) -> Path` — `librosa.effects.pitch_shift` with semitone delta from key difference.
-  - `time_stretch(audio_path, from_bpm, to_bpm) -> Path` — `librosa.effects.time_stretch` with rate = to_bpm / from_bpm.
-  - `transform_sample(audio_path, from_key, to_key, from_bpm, to_bpm) -> Path` — applies both, writes to cache directory.
-- Cache directory: `data/transformed/`. Naming convention: `{sample_id}_{target_key}_{target_bpm}.wav` for deduplication.
-- Key-to-semitone conversion: parse key strings ("D minor" → D), compute chromatic index difference.
-- Cache eviction: LRU by access time or max directory size.
-- Add agent tool `match_to_context(sample_id, target_key?, target_bpm?)`:
-  1. Read sample's current key/BPM from DB.
-  2. Default target_key/target_bpm from song context if not provided.
-  3. Call `transform_sample`.
-  4. Return message with transformed file URL.
-- Add endpoint `GET /samples/{sample_id}/audio/transformed?key=...&bpm=...` to serve transformed files.
+**Backend:**
+- `CHROMATIC_INDEX` constant and `semitone_delta()`, `compute_target_key()` functions added to `services/music_theory.py`. `compute_target_key()` handles cross-mode shifts via relative keys — a minor sample against a major song targets the relative minor (same key signature = maximum harmonic compatibility).
+- `services/audio_transform.py`: `transform_sample()` applies `librosa.effects.pitch_shift` and/or `librosa.effects.time_stretch`, writing results to a filesystem cache (`data/transforms/`). Cache keys are deterministic: `{sample_id}_key-{sanitized_key}_bpm-{bpm}.wav`. Called via `asyncio.to_thread()` to avoid blocking the event loop.
+- `TRANSFORM_CACHE_DIR` setting in `core/config.py`. No new DB tables — cache is filesystem-only.
+- `GET /api/samples/{sample_id}/audio/transformed?key=...&bpm=...` endpoint serves cached files. Returns 404 on cache miss (the agent tool pre-warms the cache).
+- `match_to_context` agent tool in `agents/tools/transform_tools.py`. Validates sample is a loop, resolves targets from song context, handles cross-mode key resolution, runs transformation, returns markdown with an `audio` code fence containing the playback URL.
+- System prompt updated with tool documentation and proactive behavior guideline.
 
-#### Frontend
+**Frontend:**
+- `AudioBlock` component (`components/elements/audio-block.tsx`) — a Streamdown `CustomRenderer` for the `audio` code fence language. Renders `WaveformViz` inline in chat messages.
+- `Response` component updated with Streamdown `plugins` prop to register the audio renderer.
+- Tool verb: "Transforming sample" in tool call display.
 
-- Agent returns a URL for transformed audio. Chat panel renders an inline audio player for these URLs (similar to waveform-viz pattern).
-- Alternatively, tool call result includes a transformed file identifier that the frontend plays through the existing audio endpoint pattern.
+#### Resolved Questions
 
-#### Data Model
-
-- Add `TRANSFORM_CACHE_DIR` to `Settings`. No new DB tables — transformed files are ephemeral cache.
-
-#### Agent Tools
-
-| Tool | Signature |
-|------|-----------|
-| `match_to_context` | `(sample_id, target_key?, target_bpm?) -> str` |
-
-#### Open Questions
-
-- One-shots have no key/BPM. Pitch-shifting a kick by explicit request is valid, but auto-matching to song context doesn't apply.
-- librosa pitch_shift introduces artifacts at large intervals (>4 semitones). Warn the user or cap the shift?
-- Should the agent proactively offer transformation? ("This pad is in E minor but your song is in G minor — want me to transpose it?")
-- Persist transformed audio to DB or keep as filesystem-only cache?
+- **One-shots**: Tool rejects one-shots — they have no reference key/BPM for transformation.
+- **Large pitch shifts**: Transformation proceeds but the tool warns for shifts >5 semitones.
+- **Proactive behavior**: Yes — the agent suggests transformation when it finds a key/BPM mismatch with song context.
+- **Cross-mode shifts**: Uses relative keys (e.g., minor sample + major song → targets relative minor). Grounded in music theory — relative keys share the same key signature.
+- **Cache strategy**: Simple (keep all, no eviction). Can add LRU later.
+- **Persistence**: Filesystem-only cache, not persisted to DB.
 
 ---
 
@@ -446,7 +432,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 |------|-------|---------|--------|
 | `set_song_context` | 1 | Song Context | ✅ Implemented |
 | `rate_pair` | 1 | Pair Scoring | ✅ Implemented |
-| `match_to_context` | 2 | Audio Transformation |
+| `match_to_context` | 2 | Audio Transformation | ✅ Implemented |
 | `find_similar_to_upload` | 2 | Sample Upload |
 | `present_pair` | 3 | Pairing & Feedback |
 | `record_verdict` | 3 | Pairing & Feedback |
@@ -469,7 +455,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 |--------|-------|---------|--------|
 | `services/pair_scoring.py` | 1 | Multi-dimensional pair compatibility scoring | ✅ Implemented |
 | `services/music_theory.py` | 1 | Reusable key compatibility and circle-of-fifths logic | ✅ Implemented |
-| `services/audio_transform.py` | 2 | Pitch-shift + time-stretch with caching | |
+| `services/audio_transform.py` | 2 | Pitch-shift + time-stretch with caching | ✅ Implemented |
 | `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) | |
 | `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction | |
 | `services/kit_builder.py` | 3 | Greedy kit assembly algorithm | |
@@ -480,7 +466,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 |--------|-------|-------|--------|
 | `agents/tools/context_tools.py` | 1 | `set_song_context` | ✅ Implemented |
 | `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` | ✅ `rate_pair` implemented |
-| `agents/tools/transform_tools.py` | 2 | `match_to_context` |
+| `agents/tools/transform_tools.py` | 2 | `match_to_context` | ✅ Implemented |
 | `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` |
 | `agents/tools/kit_tools.py` | 3 | `build_kit`, `swap_kit_sample` |
 

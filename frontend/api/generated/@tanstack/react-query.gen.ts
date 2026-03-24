@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, deleteThread, getSample, getSampleAudio, getSimilarSamples, getThreadMessages, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
+import { dbHealthCheck, deleteThread, getSample, getSampleAudio, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
 
 /**
  * Stream Chat
@@ -217,6 +217,29 @@ export const getSimilarSamplesOptions = (options: Options<GetSimilarSamplesData>
         return data;
     },
     queryKey: getSimilarSamplesQueryKey(options)
+});
+
+export const getTransformedAudioQueryKey = (options: Options<GetTransformedAudioData>) => createQueryKey('getTransformedAudio', options);
+
+/**
+ * Get Transformed Audio
+ *
+ * Serve a cached transformed audio file.
+ *
+ * The agent tool pre-warms the cache via match_to_context. This endpoint
+ * is a pure file server — no on-demand transformation.
+ */
+export const getTransformedAudioOptions = (options: Options<GetTransformedAudioData>) => queryOptions<unknown, AxiosError<GetTransformedAudioError>, unknown, ReturnType<typeof getTransformedAudioQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getTransformedAudio({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getTransformedAudioQueryKey(options)
 });
 
 export const getSampleAudioQueryKey = (options: Options<GetSampleAudioData>) => createQueryKey('getSampleAudio', options);

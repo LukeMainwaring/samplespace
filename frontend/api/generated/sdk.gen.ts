@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -88,6 +88,20 @@ export const getSample = <ThrowOnError extends boolean = false>(options: Options
 export const getSimilarSamples = <ThrowOnError extends boolean = false>(options: Options<GetSimilarSamplesData, ThrowOnError>) => (options.client ?? client).get<GetSimilarSamplesResponses, GetSimilarSamplesErrors, ThrowOnError>({
     responseType: 'json',
     url: '/api/samples/{sample_id}/similar',
+    ...options
+});
+
+/**
+ * Get Transformed Audio
+ *
+ * Serve a cached transformed audio file.
+ *
+ * The agent tool pre-warms the cache via match_to_context. This endpoint
+ * is a pure file server — no on-demand transformation.
+ */
+export const getTransformedAudio = <ThrowOnError extends boolean = false>(options: Options<GetTransformedAudioData, ThrowOnError>) => (options.client ?? client).get<GetTransformedAudioResponses, GetTransformedAudioErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/samples/{sample_id}/audio/transformed',
     ...options
 });
 

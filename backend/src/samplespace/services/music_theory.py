@@ -1,4 +1,20 @@
-"""Music theory utilities for key compatibility scoring."""
+"""Music theory utilities for key compatibility and pitch transformation."""
+
+# Chromatic note index (C=0, C#=1, ..., B=11) for semitone calculations
+CHROMATIC_INDEX: dict[str, int] = {
+    "C": 0,
+    "C#": 1,
+    "D": 2,
+    "D#": 3,
+    "E": 4,
+    "F": 5,
+    "F#": 6,
+    "G": 7,
+    "G#": 8,
+    "A": 9,
+    "A#": 10,
+    "B": 11,
+}
 
 # Circle of fifths for key distance calculation
 CIRCLE_OF_FIFTHS = [
@@ -96,3 +112,65 @@ def key_compatibility_score(key1: str, key2: str) -> tuple[float, str]:
         label = "distant on circle of fifths"
 
     return score, f"{label} (distance {distance})"
+
+
+def _parse_mode(key: str) -> str | None:
+    """Extract the mode ('major' or 'minor') from a key string like 'C major'."""
+    parts = key.split()
+    if len(parts) == 2 and parts[1] in ("major", "minor"):
+        return parts[1]
+    return None
+
+
+def semitone_delta(from_key: str, to_key: str) -> int | None:
+    """Signed chromatic distance between two key root notes, preferring shorter direction.
+
+    Computes distance based on root notes only — mode is ignored. For cross-mode
+    transformations, use compute_target_key() first to resolve the actual target.
+
+    Returns a value in the range [-6, +6], or None if either key is unparseable.
+    Positive means shift up, negative means shift down. The tritone (6 semitones)
+    is always returned as +6 by convention.
+    """
+    from_root = _parse_root(from_key)
+    to_root = _parse_root(to_key)
+    if from_root is None or to_root is None:
+        return None
+    from_idx = CHROMATIC_INDEX[from_root]
+    to_idx = CHROMATIC_INDEX[to_root]
+    delta = (to_idx - from_idx) % 12
+    if delta > 6:
+        delta -= 12
+    return delta
+
+
+def compute_target_key(sample_key: str, song_key: str) -> str | None:
+    """Determine the best pitch-shift target for a sample given the song's key.
+
+    Same mode (minor→minor or major→major): shift root to song's root.
+        e.g. "D minor" + "G minor" song → "G minor"
+
+    Different mode: target the relative key of the song context that matches
+    the sample's mode. Relative keys share the same key signature, producing
+    maximum harmonic compatibility.
+        e.g. "D minor" + "G major" song → "E minor" (relative minor of G major)
+        e.g. "F major" + "A minor" song → "C major" (relative major of A minor)
+
+    Returns None if either key is unparseable.
+    """
+    sample_mode = _parse_mode(sample_key)
+    song_mode = _parse_mode(song_key)
+    song_root = _parse_root(song_key)
+    if sample_mode is None or song_mode is None or song_root is None:
+        return None
+
+    if sample_mode == song_mode:
+        return f"{song_root} {sample_mode}"
+
+    # Cross-mode: find the relative key of the song that matches the sample's mode
+    relative = RELATIVE_PAIRS.get(song_key)
+    if relative is not None:
+        return relative
+
+    # Fallback: parallel key (same root, sample's mode)
+    return f"{song_root} {sample_mode}"
