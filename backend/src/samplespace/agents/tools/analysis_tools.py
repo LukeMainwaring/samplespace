@@ -5,43 +5,10 @@ import logging
 from pydantic_ai import Agent, RunContext
 
 from samplespace.agents.deps import AgentDeps
+from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 
 logger = logging.getLogger(__name__)
-
-# Circle of fifths for key compatibility
-CIRCLE_OF_FIFTHS = [
-    "C",
-    "G",
-    "D",
-    "A",
-    "E",
-    "B",
-    "F#",
-    "C#",
-    "G#",
-    "D#",
-    "A#",
-    "F",
-]
-
-# Relative major/minor pairs
-RELATIVE_PAIRS = {
-    "C major": "A minor",
-    "G major": "E minor",
-    "D major": "B minor",
-    "A major": "F# minor",
-    "E major": "C# minor",
-    "B major": "G# minor",
-    "F# major": "D# minor",
-    "C# major": "A# minor",
-    "G# major": "F minor",
-    "D# major": "C minor",
-    "A# major": "G minor",
-    "F major": "D minor",
-}
-# Add reverse mappings
-RELATIVE_PAIRS.update({v: k for k, v in RELATIVE_PAIRS.items()})
 
 
 async def analyze_sample(ctx: RunContext[AgentDeps], sample_id: str) -> str:
@@ -87,38 +54,30 @@ async def check_key_compatibility(ctx: RunContext[AgentDeps], key1: str, key2: s
     if key1 == key2:
         return f"**{key1}** and **{key2}** are the same key — perfectly compatible!"
 
-    # Check relative major/minor
-    if RELATIVE_PAIRS.get(key1) == key2:
+    if music_theory_service.are_relative_pairs(key1, key2):
         return (
             f"**{key1}** and **{key2}** are relative major/minor pairs — highly compatible! They share the same notes."
         )
 
-    # Check circle of fifths proximity
-    root1 = key1.split()[0] if " " in key1 else key1
-    root2 = key2.split()[0] if " " in key2 else key2
+    distance = music_theory_service.key_distance(key1, key2)
+    if distance is None:
+        return f"Could not determine compatibility between **{key1}** and **{key2}**."
 
-    if root1 in CIRCLE_OF_FIFTHS and root2 in CIRCLE_OF_FIFTHS:
-        idx1 = CIRCLE_OF_FIFTHS.index(root1)
-        idx2 = CIRCLE_OF_FIFTHS.index(root2)
-        distance = min(abs(idx1 - idx2), 12 - abs(idx1 - idx2))
-
-        if distance <= 1:
-            return (
-                f"**{key1}** and **{key2}** are adjacent on the circle of fifths "
-                f"(distance: {distance}) — very compatible for mixing!"
-            )
-        elif distance <= 2:
-            return (
-                f"**{key1}** and **{key2}** are close on the circle of fifths "
-                f"(distance: {distance}) — generally compatible."
-            )
-        else:
-            return (
-                f"**{key1}** and **{key2}** are distant on the circle of fifths "
-                f"(distance: {distance}) — may clash. Consider pitch-shifting one."
-            )
-
-    return f"Could not determine compatibility between **{key1}** and **{key2}**."
+    if distance <= 1:
+        return (
+            f"**{key1}** and **{key2}** are adjacent on the circle of fifths "
+            f"(distance: {distance}) — very compatible for mixing!"
+        )
+    elif distance <= 2:
+        return (
+            f"**{key1}** and **{key2}** are close on the circle of fifths "
+            f"(distance: {distance}) — generally compatible."
+        )
+    else:
+        return (
+            f"**{key1}** and **{key2}** are distant on the circle of fifths "
+            f"(distance: {distance}) — may clash. Consider pitch-shifting one."
+        )
 
 
 async def suggest_complement(
@@ -186,7 +145,7 @@ async def suggest_complement(
             if reference_key and s.key:
                 if reference_key == s.key:
                     compat = " ✓ same key"
-                elif RELATIVE_PAIRS.get(reference_key) == s.key:
+                elif music_theory_service.are_relative_pairs(reference_key, s.key):
                     compat = " ✓ relative key"
             parts = [f"{i}. **{s.filename}**"]
             if s.sample_type:
