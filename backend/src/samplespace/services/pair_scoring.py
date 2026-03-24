@@ -103,20 +103,20 @@ async def score_pair(db: AsyncSession, sample_a_id: str, sample_b_id: str) -> Pa
         )
 
     _rebalance_weights(dimensions)
-    overall = sum(d.value * d.weight for d in dimensions.values())
+    overall = round(sum(d.value * d.weight for d in dimensions.values()), 2)
 
-    score = PairScore(
+    summary = _generate_summary(overall, dimensions, sample_a.filename, sample_b.filename)
+
+    return PairScore(
         sample_a_id=sample_a_id,
         sample_b_id=sample_b_id,
-        overall=round(overall, 2),
+        overall=overall,
         key_score=dimensions.get("key"),
         bpm_score=dimensions.get("bpm"),
         type_score=dimensions.get("type"),
         spectral_score=dimensions.get("spectral"),
-        summary="",  # filled below
+        summary=summary,
     )
-    score.summary = _generate_summary(score, sample_a.filename, sample_b.filename)
-    return score
 
 
 def _compute_key_score(key_a: str, key_b: str) -> DimensionScore:
@@ -178,7 +178,12 @@ def _compute_spectral_score(
     """
     arr_a = np.array(emb_a, dtype=np.float32)
     arr_b = np.array(emb_b, dtype=np.float32)
-    cosine_distance = float(1.0 - np.dot(arr_a, arr_b))
+    norm_a = float(np.linalg.norm(arr_a))
+    norm_b = float(np.linalg.norm(arr_b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        cosine_distance = 1.0
+    else:
+        cosine_distance = float(1.0 - np.dot(arr_a, arr_b) / (norm_a * norm_b))
     cosine_distance = max(0.0, min(cosine_distance, 1.0))  # clamp
 
     if types_are_complementary:
@@ -199,6 +204,8 @@ def _compute_spectral_score(
 
 def _normalize_bpm(bpm: int) -> int:
     """Normalize BPM to the 60-180 range by halving or doubling."""
+    if bpm <= 0:
+        return 0
     normalized = bpm
     while normalized > 180:
         normalized //= 2
@@ -223,27 +230,28 @@ def _rebalance_weights(dimensions: dict[str, DimensionScore]) -> None:
     """
     total_available_weight = sum(DEFAULT_WEIGHTS[k] for k in dimensions)
     for key, dim in dimensions.items():
-        dim.weight = round(DEFAULT_WEIGHTS[key] / total_available_weight, 2)
+        dim.weight = DEFAULT_WEIGHTS[key] / total_available_weight
 
 
-def _generate_summary(score: PairScore, filename_a: str, filename_b: str) -> str:
+def _generate_summary(
+    overall: float,
+    dimensions: dict[str, DimensionScore],
+    filename_a: str,
+    filename_b: str,
+) -> str:
     """Generate a human-readable summary of the pair score."""
-    if score.overall >= 0.8:
+    if overall >= 0.8:
         level = "Strong compatibility"
-    elif score.overall >= 0.6:
+    elif overall >= 0.6:
         level = "Good compatibility"
-    elif score.overall >= 0.4:
+    elif overall >= 0.4:
         level = "Moderate compatibility"
     else:
         level = "Low compatibility"
 
-    parts = [f"{level} ({score.overall})"]
+    parts = [f"{level} ({overall})"]
 
-    dimension_explanations = []
-    for dim in [score.key_score, score.bpm_score, score.type_score, score.spectral_score]:
-        if dim is not None:
-            dimension_explanations.append(dim.explanation.lower())
-
+    dimension_explanations = [dim.explanation.lower() for dim in dimensions.values()]
     if dimension_explanations:
         parts.append("; ".join(dimension_explanations))
 

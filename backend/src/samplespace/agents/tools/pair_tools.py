@@ -36,7 +36,7 @@ async def rate_pair(ctx: RunContext[AgentDeps], sample_a_id: str, sample_b_id: s
 def _format_pair_score(score: PairScore) -> str:
     """Format PairScore as human-readable text for the agent."""
     lines = [
-        f"**Compatibility: {score.overall}/1.0**",
+        f"**Compatibility: {score.overall:.2f}/1.0**",
         "",
     ]
 
