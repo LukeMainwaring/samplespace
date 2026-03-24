@@ -46,7 +46,7 @@ FastAPI Python backend using async patterns throughout.
 
 -   **`src/samplespace/app.py`**: FastAPI application entry point with CORS middleware and lifespan handler (CLAP model loading)
 -   **`src/samplespace/routers/`**: API routes by domain (samples, agent, health)
--   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, and sample analysis; `deps.py` defines shared `AgentDeps`; `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`)
+-   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, and song context management; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`)
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
 -   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management)
@@ -63,7 +63,8 @@ Next.js 16 with App Router.
 
 -   **`app/page.tsx`**: Main sample browser page
 -   **`app/api/chat/route.ts`**: Proxy route that forwards chat requests to backend agent
--   **`components/chat-panel.tsx`**: Chat component using `@ai-sdk/react` useChat hook
+-   **`components/chat-panel.tsx`**: Chat component using `@ai-sdk/react` useChat hook; fetches and passes song context to header
+-   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe) as pills
 -   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters
 -   **`components/audio-player.tsx`**: Audio playback controls
 -   **`components/waveform-viz.tsx`**: wavesurfer.js waveform rendering
@@ -84,14 +85,16 @@ Key patterns:
 
 1. Frontend `useChat` sends messages to `/api/chat` route; non-streaming calls use TanStack Query hooks from `api/hooks/`
 2. Route proxies raw request body to backend `POST /agent/chat`
-3. Backend Pydantic AI agent decides which tools to call:
-    - `search_by_description()` -- CLAP text-to-audio semantic search via pgvector
+3. Backend loads thread's `song_context` (if any) and injects it into `AgentDeps`
+4. Pydantic AI agent decides which tools to call:
+    - `search_by_description()` -- CLAP text-to-audio semantic search via pgvector (enriched with song context vibe)
     - `find_similar_samples()` -- CNN embedding nearest neighbors via pgvector
     - `check_key_compatibility()` -- circle of fifths / music theory logic
     - `analyze_sample()` -- full metadata retrieval (key, BPM, duration, type)
-    - `suggest_complement()` -- combines CNN similarity + key/BPM filtering
-4. Agent streams response back as SSE (Vercel AI SDK format)
-5. Frontend renders streamed chunks with tool-call transparency
+    - `suggest_complement()` -- combines CLAP search + key/BPM filtering (uses song context as fallback)
+    - `set_song_context()` -- persists key/BPM/genre/vibe to thread for context-aware searches
+5. Agent streams response back as SSE (Vercel AI SDK format)
+6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header
 
 ## Additional Instructions
 

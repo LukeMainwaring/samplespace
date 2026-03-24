@@ -51,7 +51,7 @@ This is a brainstorm document — exploratory in tone but structured enough that
        +-----------------------+
 ```
 
-- **Feature 1 (Song Context)** is the foundation. Depends on the threads infrastructure (now implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
+- **Feature 1 (Song Context)** is the foundation (now implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
 - **Feature 2 (Pair Scoring)** depends on 1 — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM).
 - **Feature 3 (Audio Transformation)** depends on 1 — `match_to_context` needs a target key and BPM.
 - **Feature 4 (Sample Upload)** has a soft dependency on 1 — uploaded samples benefit from context-aware ranking, but could be built independently.
@@ -64,9 +64,9 @@ This is a brainstorm document — exploratory in tone but structured enough that
 
 ### Phase 1: Context Foundation
 
-**Features**: Song Context (1), Pair Compatibility Scoring (2)
+**Features**: Song Context (1) ✅, Pair Compatibility Scoring (2)
 
-These transform SampleSpace from a stateless search engine into a context-aware assistant. Song context is the prerequisite for nearly everything else, and pair scoring gives the agent a new capability without heavy infrastructure. Both are backend-focused with minimal frontend changes.
+Song Context is implemented — SampleSpace is now a context-aware assistant. Pair scoring is the next step, giving the agent a new capability without heavy infrastructure. Both are backend-focused with minimal frontend changes.
 
 ### Phase 2: Audio Pipeline
 
@@ -84,70 +84,36 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 ## Feature Specs
 
-### 1. Song Context (Thread-Backed)
+### 1. Song Context (Thread-Backed) — Implemented
 
 **What**: The user tells the agent about their song through natural conversation ("I'm working on a track in D minor at 120 BPM, kind of a dark techno vibe"). The agent persists this context to the thread record and automatically applies it when searching, scoring, and recommending. Context survives page refreshes and is unique per conversation thread.
 
 **Why**: Today every search is stateless. The user has to repeat "in D minor at 120 BPM" with every request. Song context transforms the interaction from "search engine" to "production assistant that knows your song."
 
-**Depends on**: Threads & messages (implemented). Song context is stored as a JSONB column on the existing `threads` table — just a migration to add the column.
+**Depends on**: Threads & messages (implemented). Song context is stored as a JSONB column on the existing `threads` table.
 
-#### Backend
+#### Implementation Summary
 
-**Data model — migration:**
-- Add `song_context: JSONB | None` column to `threads` table via Alembic migration.
+**Backend:**
+- `SongContext` Pydantic schema in `schemas/thread.py` with four optional fields: `key`, `bpm`, `genre`, `vibe`. Used as the single type throughout the stack (AgentDeps, tools, routers) — no raw dicts.
+- `song_context` JSONB column on `threads` table via Alembic migration. `Thread.update_song_context()` classmethod uses get-or-create pattern (works on first message) and `model_copy(update=exclude_unset)` for partial merges.
+- `set_song_context` tool in `agents/tools/context_tools.py`. Persists to DB and updates `ctx.deps.song_context` in-place for same-turn visibility.
+- Dynamic system prompt via `@sample_agent.system_prompt` decorator injects active context so the agent always knows the current state.
+- `search_by_description` (`clap_tools.py`): appends song context vibe to CLAP query for semantic enrichment.
+- `suggest_complement` (`analysis_tools.py`): uses song context vibe in CLAP query and falls back to song context key for compatibility filtering when the source sample has no key.
+- Agent router loads song context from thread at request start and injects into `AgentDeps`.
 
-**Pydantic model:**
-- Define `SongContext` in `schemas/song_context.py`: `key: str | None`, `bpm: int | None`, `genre: str | None`, `vibe: str | None`.
-- Used for validation, serialization, and type safety throughout the stack.
+**Frontend:**
+- `SongContextBadge` component renders active context fields as pills in the chat header (read-only).
+- `useThreadSongContext` hook shares the same TanStack Query cache as `useThreadMessages` (deduped fetch).
+- `onFinish` invalidates the thread messages query to refresh the badge after `set_song_context` runs.
+- Tool verb: "Updating song context" in tool call display.
 
-**AgentDeps — add thread context:**
-- Add `thread_id: str` and `song_context: SongContext | None` to `AgentDeps`.
-- In `routers/agent.py`, after `build_run_input()` extracts `thread_id`, load the thread's `song_context` from DB and inject it into `AgentDeps`.
-- This makes song context available to all agent tools via `ctx.deps.song_context` without extra DB queries per tool call.
+#### Resolved Questions
 
-**Agent tool — `set_song_context`:**
-- New tool in `agents/tools/context_tools.py`.
-- Signature: `set_song_context(ctx, key?, bpm?, genre?, vibe?) -> str`.
-- Reads current context from DB (`Thread.get`), merges new values (partial update — only overwrites provided fields, preserves the rest), writes back to `thread.song_context`, flushes.
-- Also updates `ctx.deps.song_context` in-place so subsequent tool calls in the same turn see the new context without a DB re-read.
-- Returns confirmation string: "Song context updated: D minor, 120 BPM, dark techno."
-
-**System prompt changes (`sample_agent.py`):**
-- Add a dynamic system prompt (via `@sample_agent.system_prompt` decorator that reads from `ctx.deps`) that injects the active song context so the agent always knows the current state.
-- Instruct the agent to: (a) detect when the user mentions song properties and call `set_song_context`, (b) consult song context when calling search/suggest tools to filter by key/BPM, (c) mention active context in responses.
-
-**Search tool modifications:**
-- `search_by_description` (`clap_tools.py`): if `ctx.deps.song_context` has a `vibe`, append it to the CLAP query for relevance. If it has `key`/`bpm`, post-filter or re-rank results for compatibility.
-- `suggest_complement` (`analysis_tools.py`): use song context `key`/`bpm` as defaults when not explicitly specified by the user.
-
-**Thread model changes (`models/thread.py`):**
-- Add `song_context` JSONB column.
-- Add `update_song_context(db, thread_id, agent_type, context_data)` classmethod.
-
-#### Frontend
-
-- Display a "Song Context" badge in the chat header showing active key/BPM/genre when set.
-- Load song context alongside thread messages — add `song_context` to `ThreadMessagesResponse` schema, or expose via thread metadata.
-- No need to pass context in the request body — the backend reads it from the thread record.
-- When `set_song_context` tool call appears in the streamed response, refresh the badge by invalidating the thread query.
-
-#### Data Model
-
-- **Migration**: add `song_context JSONB` column to existing `threads` table (nullable, default NULL).
-- No new tables.
-
-#### Agent Tools
-
-| Tool | Signature |
-|------|-----------|
-| `set_song_context` | `(key?, bpm?, genre?, vibe?) -> str` |
-
-#### Open Questions
-
-- How does "vibe" interact with CLAP search — append to query string, or use as a separate re-ranking signal?
-- Should there be an explicit `clear_song_context` tool, or does the agent call `set_song_context` with all nulls?
-- Should the frontend badge be directly editable (click to change key/BPM) or only through conversation?
+- **Vibe + CLAP**: Vibe is appended to the CLAP query string (e.g., "warm pad" becomes "warm pad, dark and atmospheric"). Simple and effective.
+- **Clearing context**: No dedicated `clear_song_context` tool. The agent can update individual fields; full clearing is not yet supported but could be added later.
+- **Badge editability**: Display-only. Changes happen only through conversation, keeping the agent as the single mutation path.
 
 ---
 
@@ -487,10 +453,10 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 
 ### New Agent Tools
 
-| Tool | Phase | Feature |
-|------|-------|---------|
-| `set_song_context` | 1 | Song Context |
-| `rate_pair` | 1 | Pair Scoring |
+| Tool | Phase | Feature | Status |
+|------|-------|---------|--------|
+| `set_song_context` | 1 | Song Context | ✅ Implemented |
+| `rate_pair` | 1 | Pair Scoring | |
 | `match_to_context` | 2 | Audio Transformation |
 | `find_similar_to_upload` | 2 | Sample Upload |
 | `present_pair` | 3 | Pairing & Feedback |
@@ -520,10 +486,10 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 
 ### New Agent Tool Modules
 
-| Module | Phase | Tools |
-|--------|-------|-------|
-| `agents/tools/context_tools.py` | 1 | `set_song_context` |
-| `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` |
+| Module | Phase | Tools | Status |
+|--------|-------|-------|--------|
+| `agents/tools/context_tools.py` | 1 | `set_song_context` | ✅ Implemented |
+| `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` | |
 | `agents/tools/transform_tools.py` | 2 | `match_to_context` |
 | `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` |
 | `agents/tools/kit_tools.py` | 3 | `build_kit`, `swap_kit_sample` |
