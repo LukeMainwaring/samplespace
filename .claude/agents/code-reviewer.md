@@ -95,3 +95,4 @@ One of:
 - Be proportionate: don't nitpick clean code. If the changes look good, say so briefly
 - Focus on the diff: review what changed, not the entire codebase
 - Understand intent: read commit messages to understand what the developer was trying to do before criticizing the approach
+- Do not run compound `cd ... && git ...` for git commands in this repo. Assume you are already in the codebase.
