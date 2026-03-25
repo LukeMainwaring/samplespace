@@ -21,6 +21,8 @@ const TOOL_VERBS: Record<string, string> = {
   suggest_complement: "Finding complements",
   set_song_context: "Updating song context",
   match_to_context: "Transforming sample",
+  present_pair: "Finding a pair to evaluate",
+  record_verdict: "Recording verdict",
 };
 
 function getToolVerb(name: string): string {

@@ -76,9 +76,9 @@ Both implemented. Phase 2 is complete. Phase 3 is next — Pairing & Feedback Lo
 
 ### Phase 3: Learning & Assembly
 
-**Features**: Pairing & Feedback Loop (5), Kit Builder (6)
+**Features**: Pairing & Feedback Loop (5) ✅ (Stages 1-3), Kit Builder (6)
 
-The most complex features, building on Phase 1 and 2 infrastructure. The flywheel (5) is a data collection + offline analysis pipeline. Kit Builder (6) is the capstone that combines everything. All prerequisite features (1-4) are now implemented.
+Stages 1-3 of the flywheel (5) are implemented: pair presentation, verdict collection, and background relational feature extraction. Stages 4-6 (pattern analysis, rule extraction, rule application) are deferred until ~20+ verdicts are collected. The `pair_rules` table schema and dynamic system prompt injection are in place and ready. Kit Builder (6) is the remaining capstone feature.
 
 ---
 
@@ -218,7 +218,7 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 ---
 
-### 5. Sample Pairing & Feedback Loop
+### 5. Sample Pairing & Feedback Loop — Stages 1-3 Implemented
 
 **What**: A complete learning pipeline — the agent presents plausible sample pairs in conversation, the user gives yes/no verdicts, the system computes relational audio features on each pair, periodically analyzes verdict patterns against features, extracts heuristic rules, and feeds those rules back into recommendation logic.
 
@@ -351,6 +351,36 @@ Stage 6: Rule Application
 - Feature extraction should be async (background task) — it loads audio from disk and is CPU-bound.
 - Pairing strategy matters: random pairs have a low "yes" base rate and feel tedious. Bias toward plausible pairs so the user is refining a boundary, not rejecting obvious mismatches.
 
+#### Implementation Summary (Stages 1-3)
+
+**Backend:**
+- `pair_verdicts` and `pair_rules` tables via Alembic migration. Verdicts use canonical pair ordering (`sample_a_id < sample_b_id`), JSONB columns for `pair_score_detail` and `pair_features`.
+- `services/pair_features.py`: 6 relational audio features computed with librosa — spectral overlap (frequency IoU), onset alignment (cross-correlation), timbral contrast (MFCC distance), harmonic consonance (chroma correlation), spectral centroid gap, RMS energy ratio. All normalized to 0-1.
+- `present_pair` agent tool: finds CNN-similar candidates, scores each via `pair_scoring_service`, picks candidates near the 0.6 "interesting" range. Returns `pair-verdict` code fence with JSON payload.
+- `record_verdict` agent tool: canonicalizes pair order, snapshots `PairScore`, persists verdict, fires background feature extraction via `asyncio.create_task()` with a separate DB session.
+- Dynamic `inject_pair_rules` system prompt decorator (returns empty until stages 4-6 are built).
+
+**Frontend:**
+- `PairVerdictBlock` Streamdown renderer for `pair-verdict` code fence — side-by-side sample cards with `WaveformViz` players, metadata pills, and thumbs up/down buttons.
+- `ChatActionsProvider` React context threads `sendMessage` to nested renderers. Verdict buttons inject `[PAIR_VERDICT] approved/rejected: id_a + id_b` as chat messages.
+- Tool verbs: "Finding a pair to evaluate", "Recording verdict".
+
+#### Resolved Questions
+
+- **Proactive pairing**: No — the agent presents pairs only when asked.
+- **Feature extraction**: Async background task using `asyncio.to_thread()` for CPU-bound librosa work, independent DB session for writes.
+- **Verdict interaction**: Chat message (agent-mediated) — consistent with agent-first architecture.
+- **Feature storage**: JSONB on the verdict row (no separate table).
+- **Pair selection strategy**: Biased toward the 0.5-0.8 score range for maximum learning signal.
+
+#### Remaining (Stages 4-6)
+
+- Pattern analysis: aggregate verdicts + features, find statistical patterns per type pair.
+- Rule extraction: convert patterns into `PairRule` records with confidence scores.
+- Rule application: `inject_pair_rules` decorator is already wired up — just needs rules in the DB.
+- Management command (`uv run analyze-pairs`) to trigger stages 4-5.
+- Threshold: ~20+ verdicts per type pair before extraction is meaningful.
+
 ---
 
 ### 6. Kit Builder
@@ -407,8 +437,8 @@ None initially. Kits are ephemeral (returned in chat). A `kits` table could stor
 
 | Table | Phase | Feature |
 |-------|-------|---------|
-| `pair_verdicts` | 3 | Pairing & Feedback Loop |
-| `pair_rules` | 3 | Pairing & Feedback Loop |
+| `pair_verdicts` | 3 | Pairing & Feedback Loop | ✅ Implemented |
+| `pair_rules` | 3 | Pairing & Feedback Loop | ✅ Schema implemented (logic deferred) |
 
 Features 1-4 and 6 require no new tables beyond the existing `threads` and `messages` tables (already implemented). Song context is a JSONB column on the `threads` table. Pair scoring is computed on the fly. Transformed audio is filesystem cache. Uploads use the existing `samples` table with `source="upload"` and are stored in `data/uploads/`. Kits are ephemeral.
 
@@ -420,8 +450,8 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `rate_pair` | 1 | Pair Scoring | ✅ Implemented |
 | `match_to_context` | 2 | Audio Transformation | ✅ Implemented |
 | `find_similar_to_upload` | 2 | Sample Upload | ✅ Implemented |
-| `present_pair` | 3 | Pairing & Feedback |
-| `record_verdict` | 3 | Pairing & Feedback |
+| `present_pair` | 3 | Pairing & Feedback | ✅ Implemented |
+| `record_verdict` | 3 | Pairing & Feedback | ✅ Implemented |
 | `build_kit` | 3 | Kit Builder |
 | `swap_kit_sample` | 3 | Kit Builder |
 
@@ -442,8 +472,8 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `services/music_theory.py` | 1 | Reusable key compatibility and circle-of-fifths logic | ✅ Implemented |
 | `services/audio_transform.py` | 2 | Pitch-shift + time-stretch with caching | ✅ Implemented |
 | `services/upload.py` | 2 | WAV upload pipeline with validation and CLAP embedding | ✅ Implemented |
-| `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) | |
-| `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction | |
+| `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) | ✅ Implemented |
+| `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction | Deferred (stages 4-5) |
 | `services/kit_builder.py` | 3 | Greedy kit assembly algorithm | |
 
 ### New Agent Tool Modules
@@ -451,7 +481,8 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | Module | Phase | Tools | Status |
 |--------|-------|-------|--------|
 | `agents/tools/context_tools.py` | 1 | `set_song_context` | ✅ Implemented |
-| `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` | ✅ `rate_pair` implemented |
+| `agents/tools/pair_tools.py` | 1 | `rate_pair` | ✅ Implemented |
+| `agents/tools/verdict_tools.py` | 3 | `present_pair`, `record_verdict` | ✅ Implemented |
 | `agents/tools/transform_tools.py` | 2 | `match_to_context` | ✅ Implemented |
 | `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` | ✅ Implemented |
 | `agents/tools/kit_tools.py` | 3 | `build_kit`, `swap_kit_sample` |
