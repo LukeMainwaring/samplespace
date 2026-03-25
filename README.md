@@ -42,7 +42,8 @@ graph TB
 4. **CNN similarity** uses a custom-trained dual-head CNN to find spectrally similar samples via 128-dim embeddings
 5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples, using song context key/BPM as fallback defaults
 6. **Sample upload** lets users upload WAV files (songs, snippets) as reference tracks. The system analyzes metadata, generates CLAP embeddings, and the agent finds similar library samples via audio-to-audio cosine similarity
-7. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
+7. **Pair feedback** lets users evaluate sample pairs — the agent presents plausible pairs with side-by-side playback, collects thumbs up/down verdicts, and computes relational audio features (spectral overlap, onset alignment, timbral contrast, harmonic consonance, spectral centroid gap, RMS energy ratio) in the background
+8. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
 
 ### Why CLAP + CNN + Agent?
 
@@ -73,9 +74,9 @@ samplespace/
 │   ├── src/samplespace/
 │   │   ├── app.py                  # FastAPI app + lifespan (CLAP model loading)
 │   │   ├── agents/
-│   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic song context
+│   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic context/rules
 │   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)
-│   │   │   └── tools/              # CLAP search, CNN similarity, music theory, song context
+│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts
 │   │   ├── ml/
 │   │   │   ├── model.py            # Dual-head CNN (classification + 128-dim embedding)
 │   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset
@@ -85,9 +86,10 @@ samplespace/
 │   │   │   ├── embedding.py        # CLAP embed_audio() / embed_text()
 │   │   │   ├── audio_analysis.py   # librosa key/BPM/duration extraction
 │   │   │   ├── sample.py           # CRUD + pgvector search
+│   │   │   ├── pair_features.py    # Relational audio features for sample pairs (6 librosa metrics)
 │   │   │   └── upload.py           # WAV upload pipeline (validate, store, analyze, embed)
 │   │   ├── routers/                # REST + SSE streaming endpoints
-│   │   ├── models/                 # SQLAlchemy (Sample with pgvector columns, Thread with song context)
+│   │   ├── models/                 # SQLAlchemy (Sample, Thread, PairVerdict, PairRule)
 │   │   └── migrations/             # Alembic
 │   ├── scripts/                    # Shell scripts (migrations, Docker helpers)
 │   └── tests/
@@ -96,7 +98,7 @@ samplespace/
 │   │   ├── page.tsx                # Split layout: chat + sample browser
 │   │   └── api/chat/route.ts       # Proxy to backend agent
 │   ├── components/
-│   │   ├── chat.tsx                # Chat orchestrator (useChat + song context + upload state)
+│   │   ├── chat.tsx                # Chat orchestrator (useChat + song context + upload + verdict actions)
 │   │   ├── messages.tsx            # Message list with smart scroll
 │   │   ├── message.tsx             # Message rendering + RiffingMessage loading state
 │   │   ├── multimodal-input.tsx    # Chat input with file attachment + local storage persistence
@@ -105,7 +107,8 @@ samplespace/
 │   │   ├── sample-browser.tsx      # Sample grid with filters + audio playback
 │   │   ├── candidate-samples.tsx   # Upload page for reference tracks with CLAP similarity search
 │   │   ├── preview-attachment.tsx  # File attachment chip (loading/complete states)
-│   │   └── elements/              # Shared UI primitives (tool-call, response, bouncing-dots)
+│   │   ├── chat-actions-provider.tsx # React context for threading sendMessage to nested renderers
+│   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block)
 │   └── api/generated/              # Auto-generated TypeScript client
 ├── data/
 │   ├── uploads/                    # Uploaded reference tracks (gitignored)

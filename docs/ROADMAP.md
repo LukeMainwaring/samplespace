@@ -13,11 +13,28 @@ Persistent per-thread song metadata (key, BPM, genre, vibe) that the agent reads
 - CLAP search enriched with song context vibe; complement suggestions use context key as fallback
 - Frontend `SongContextBadge` in chat header with automatic refresh via TanStack Query invalidation
 
-## Upcoming Features
-
 ### Pair Compatibility Scoring
 
-Multi-dimensional compatibility score between two samples (key, BPM, type complementarity, CNN distance). Next feature in the Phase 1 roadmap — see `docs/feature-brainstorm.md` Feature 2.
+Multi-dimensional compatibility score between two samples (key, BPM, type complementarity, CNN distance). See `docs/feature-brainstorm.md` Feature 2.
+
+- `rate_pair` agent tool with `PairScore` schema (4 dimensions, dynamic weight rebalancing)
+- `services/pair_scoring.py` with circle-of-fifths key scoring, BPM normalization, type complementarity matrix, context-dependent spectral interpretation
+- `services/music_theory.py` extracted for reuse across tools and services
+
+### Sample Pairing & Feedback Loop (Stages 1-3)
+
+Interactive feedback loop where the agent presents sample pairs for evaluation and learns from user verdicts. See `docs/feature-brainstorm.md` Feature 5.
+
+- `present_pair` agent tool: finds complementary candidates via CNN similarity, scores them via pair scoring, picks candidates in the "interesting" range (0.5-0.8) for maximum learning signal
+- `record_verdict` agent tool: persists verdicts with pair score snapshot, fires background relational audio feature extraction
+- `services/pair_features.py`: 6 librosa-based relational features (spectral overlap, onset alignment, timbral contrast, harmonic consonance, spectral centroid gap, RMS energy ratio)
+- `pair_verdicts` and `pair_rules` database tables with Alembic migration
+- Frontend `PairVerdictBlock` Streamdown renderer with side-by-side `WaveformViz` players and thumbs up/down buttons
+- `ChatActionsProvider` React context threads `sendMessage` to nested Streamdown renderers
+- Dynamic system prompt injection for learned pair rules (returns empty until stages 4-6 are built)
+- Stages 4-6 (pattern analysis, rule extraction, rule application) deferred until ~20+ verdicts collected
+
+## Upcoming Features
 
 ## UI Features
 
