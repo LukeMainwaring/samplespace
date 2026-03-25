@@ -6,6 +6,7 @@ and audio analysis tools to help users find and combine samples.
 
 import logging
 
+import logfire
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIResponsesModel
 
@@ -18,6 +19,9 @@ from samplespace.agents.tools.pair_tools import register_pair_tools
 from samplespace.agents.tools.transform_tools import register_transform_tools
 from samplespace.agents.tools.upload_tools import register_upload_tools
 from samplespace.core.config import get_settings
+
+logfire.configure()
+logfire.instrument_pydantic_ai()
 
 logger = logging.getLogger(__name__)
 
