@@ -6,6 +6,7 @@ import {
   MoonIcon,
   SettingsIcon,
   SunIcon,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -49,6 +50,12 @@ export function SidebarUserNav() {
               <Link href="/samples">
                 <Library className="mr-2 size-4" />
                 Sample Library
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/candidates">
+                <Upload className="mr-2 size-4" />
+                Candidate Samples
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem

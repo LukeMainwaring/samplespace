@@ -54,14 +54,20 @@ class Sample(Base):
         *,
         limit: int = 50,
         offset: int = 0,
+        source: str | None = None,
     ) -> tuple[Sequence[Sample], int]:
         """List samples with pagination. Returns (samples, total_count)."""
-        total_result = await db.execute(select(func.count()).select_from(cls))
+        count_stmt = select(func.count()).select_from(cls)
+        data_stmt = select(cls).order_by(cls.created_at.desc()).limit(limit).offset(offset)
+
+        if source is not None:
+            count_stmt = count_stmt.where(cls.source == source)
+            data_stmt = data_stmt.where(cls.source == source)
+
+        total_result = await db.execute(count_stmt)
         total = total_result.scalar_one()
 
-        result = await db.execute(
-            select(cls).order_by(cls.created_at.desc()).limit(limit).offset(offset),
-        )
+        result = await db.execute(data_stmt)
         samples = result.scalars().all()
 
         return samples, total
@@ -77,6 +83,7 @@ class Sample(Base):
         bpm_max: int | None = None,
         sample_type: str | None = None,
         is_loop: bool | None = None,
+        exclude_source: str | None = None,
         limit: int = 20,
     ) -> Sequence[Sample]:
         """Search samples by CLAP embedding using pgvector cosine distance."""
@@ -94,6 +101,8 @@ class Sample(Base):
             stmt = stmt.where(cls.sample_type == sample_type)
         if is_loop is not None:
             stmt = stmt.where(cls.is_loop == is_loop)
+        if exclude_source is not None:
+            stmt = stmt.where(cls.source != exclude_source)
 
         stmt = stmt.order_by(distance).limit(limit)
 

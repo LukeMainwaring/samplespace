@@ -5,6 +5,16 @@ export type ClientOptions = {
 };
 
 /**
+ * Body_uploadSample
+ */
+export type BodyUploadSample = {
+    /**
+     * File
+     */
+    file: Blob | File;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -334,6 +344,10 @@ export type ListSamplesData = {
          * Offset
          */
         offset?: number;
+        /**
+         * Source
+         */
+        source?: string | null;
     };
     url: '/api/samples/';
 };
@@ -355,6 +369,31 @@ export type ListSamplesResponses = {
 };
 
 export type ListSamplesResponse = ListSamplesResponses[keyof ListSamplesResponses];
+
+export type UploadSampleData = {
+    body: BodyUploadSample;
+    path?: never;
+    query?: never;
+    url: '/api/samples/upload';
+};
+
+export type UploadSampleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UploadSampleError = UploadSampleErrors[keyof UploadSampleErrors];
+
+export type UploadSampleResponses = {
+    /**
+     * Successful Response
+     */
+    200: SampleSchema;
+};
+
+export type UploadSampleResponse = UploadSampleResponses[keyof UploadSampleResponses];
 
 export type SearchSamplesData = {
     body: SampleSearchRequest;

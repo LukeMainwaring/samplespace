@@ -49,6 +49,8 @@ class Settings(
     ENVIRONMENT: Literal["development", "production"] = "development"
     SAMPLES_DIR: str = str(pathlib.Path(__file__).parent.parent.parent.parent.parent / "data" / "samples")
     TRANSFORM_CACHE_DIR: str = str(pathlib.Path(__file__).parent.parent.parent.parent.parent / "data" / "transforms")
+    UPLOAD_DIR: str = str(pathlib.Path(__file__).parent.parent.parent.parent.parent / "data" / "uploads")
+    UPLOAD_MAX_SIZE_MB: int = 50
     SPLICE_DIR: str | None = None
 
     def is_production(self) -> bool:

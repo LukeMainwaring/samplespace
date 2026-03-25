@@ -1,6 +1,6 @@
 import mimetypes
 
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 
@@ -11,6 +11,7 @@ from samplespace.schemas.sample import SampleListResponse, SampleSchema, SampleS
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
 from samplespace.services import sample as sample_service
+from samplespace.services import upload as upload_service
 
 samples_router = APIRouter(
     prefix="/samples",
@@ -23,9 +24,21 @@ async def list_samples(
     db: AsyncPostgresSessionDep,
     limit: int = 50,
     offset: int = 0,
+    source: str | None = None,
 ) -> SampleListResponse:
-    """List all samples with pagination."""
-    return await sample_service.get_samples(db, limit=limit, offset=offset)
+    """List all samples with pagination. Optionally filter by source."""
+    return await sample_service.get_samples(db, limit=limit, offset=offset, source=source)
+
+
+@samples_router.post("/upload")
+async def upload_sample(
+    file: UploadFile,
+    db: AsyncPostgresSessionDep,
+    clap: ClapModelsDep,
+) -> SampleSchema:
+    """Upload a WAV file, analyze it, and generate CLAP embeddings."""
+    sample = await upload_service.process_upload(db, file, clap.model, clap.processor)
+    return SampleSchema.model_validate(sample)
 
 
 @samples_router.post("/search")

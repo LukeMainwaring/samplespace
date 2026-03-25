@@ -1,0 +1,225 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { Check, Copy, Loader2, Pause, Play, Upload } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
+import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
+import type { SampleSchema } from "@/api/generated/types.gen";
+import { useUploadSample } from "@/api/hooks/uploads";
+import { Button } from "@/components/ui/button";
+import { WaveformViz } from "@/components/waveform-viz";
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
+
+const MAX_FILE_SIZE_MB = 50;
+
+function CandidateCard({
+  sample,
+  isPlaying,
+  onTogglePlay,
+  onPlaybackEnd,
+}: {
+  sample: SampleSchema;
+  isPlaying: boolean;
+  onTogglePlay: (sample: SampleSchema) => void;
+  onPlaybackEnd: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copyId = useCallback(() => {
+    navigator.clipboard.writeText(sample.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [sample.id]);
+
+  return (
+    <div className="rounded-lg border bg-card p-2 text-sm">
+      <div className="flex items-center gap-2">
+        <button
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+          onClick={() => onTogglePlay(sample)}
+          type="button"
+        >
+          {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-xs" title={sample.filename}>
+            {sample.filename}
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            {sample.sample_type && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.sample_type}
+              </span>
+            )}
+            <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+              {sample.is_loop ? "loop" : "one-shot"}
+            </span>
+            {sample.key && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.key}
+              </span>
+            )}
+            {sample.bpm != null && sample.bpm > 0 && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.bpm} BPM
+              </span>
+            )}
+            {sample.duration != null && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.duration.toFixed(1)}s
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          onClick={copyId}
+          title="Copy sample ID"
+          type="button"
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
+      </div>
+
+      {isPlaying && (
+        <div className="mt-2">
+          <WaveformViz
+            audioUrl={`${BACKEND_URL}/api/samples/${sample.id}/audio`}
+            height={40}
+            autoplay
+            onFinish={onPlaybackEnd}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function CandidateSamples() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  const { data, isLoading } = useQuery(
+    listSamplesOptions({
+      query: { limit: 100, source: "upload" },
+    }),
+  );
+
+  const uploadMutation = useUploadSample();
+
+  const samples = data?.samples ?? [];
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Reset input so the same file can be re-selected
+      e.target.value = "";
+
+      if (!file.name.toLowerCase().endsWith(".wav")) {
+        toast.error("Only WAV files are supported");
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        toast.error(`File exceeds ${MAX_FILE_SIZE_MB}MB limit`);
+        return;
+      }
+
+      uploadMutation.mutate(
+        { body: { file } },
+        {
+          onSuccess: (data) => {
+            toast.success(
+              `Uploaded ${data.filename} — ${data.sample_type ?? "unknown type"}, ${data.duration?.toFixed(1) ?? "?"}s`,
+            );
+          },
+          onError: (error) => {
+            const detail = error.response?.data?.detail ?? "Upload failed";
+            toast.error(typeof detail === "string" ? detail : "Upload failed");
+          },
+        },
+      );
+    },
+    [uploadMutation],
+  );
+
+  const handleTogglePlay = useCallback((sample: SampleSchema) => {
+    setPlayingId((prev) => (prev === sample.id ? null : sample.id));
+  }, []);
+
+  const handlePlaybackEnd = useCallback(() => {
+    setPlayingId(null);
+  }, []);
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold">Candidate Samples</h2>
+          <p className="text-xs text-muted-foreground">
+            {samples.length} uploaded sample{samples.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div>
+          <input
+            accept=".wav,audio/wav"
+            className="hidden"
+            onChange={handleFileChange}
+            ref={fileInputRef}
+            type="file"
+          />
+          <Button
+            className="h-7 gap-1.5 text-xs"
+            disabled={uploadMutation.isPending}
+            onClick={() => fileInputRef.current?.click()}
+            size="sm"
+          >
+            {uploadMutation.isPending ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <Upload className="size-3" />
+            )}
+            {uploadMutation.isPending ? "Processing..." : "Upload WAV"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Sample list */}
+      <div className="flex-1 overflow-y-auto p-3">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+            Loading...
+          </div>
+        ) : samples.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+            <Upload className="size-8 opacity-50" />
+            <p>No uploads yet</p>
+            <p className="text-xs">
+              Upload a song or snippet to find similar samples in the library
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {samples.map((sample) => (
+              <CandidateCard
+                isPlaying={playingId === sample.id}
+                key={sample.id}
+                onPlaybackEnd={handlePlaybackEnd}
+                onTogglePlay={handleTogglePlay}
+                sample={sample}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

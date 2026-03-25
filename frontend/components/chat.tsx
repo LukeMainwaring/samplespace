@@ -4,18 +4,20 @@ import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getThreadMessagesQueryKey,
   listThreadsQueryKey,
 } from "@/api/generated/@tanstack/react-query.gen";
 import { useThreadSongContext } from "@/api/hooks/threads";
+import { useUploadSample } from "@/api/hooks/uploads";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import type { ChatMessage } from "@/lib/types";
 import { ChatHeader } from "./chat-header";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import type { Attachment } from "./preview-attachment";
 
 export function Chat({
   id,
@@ -32,6 +34,34 @@ export function Chat({
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const uploadMutation = useUploadSample();
+
+  const handleUpload = useCallback(
+    (file: File) => {
+      const attachment: Attachment = { file, isUploading: true };
+      setAttachments((prev) => [...prev, attachment]);
+
+      uploadMutation.mutate(
+        { body: { file } },
+        {
+          onSuccess: (data) => {
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.file === file
+                  ? { ...a, sample: data, isUploading: false }
+                  : a,
+              ),
+            );
+          },
+          onError: () => {
+            setAttachments((prev) => prev.filter((a) => a.file !== file));
+          },
+        },
+      );
+    },
+    [uploadMutation],
+  );
 
   const transport = useMemo(
     () =>
@@ -87,10 +117,13 @@ export function Chat({
       <Messages messages={messages} setMessages={setMessages} status={status} />
 
       <MultimodalInput
+        attachments={attachments}
         chatId={id}
         input={input}
         messages={messages}
+        onUpload={handleUpload}
         sendMessage={sendMessage}
+        setAttachments={setAttachments}
         setInput={setInput}
         setMessages={setMessages}
         status={status}
