@@ -83,6 +83,9 @@ export function PairVerdictBlock({
   let payload: PairVerdictPayload;
   try {
     payload = JSON.parse(code.trim());
+    if (!payload.sample_a?.id || !payload.sample_b?.id) {
+      throw new Error("Missing sample data");
+    }
   } catch {
     return (
       <div className="my-2 rounded-lg border border-border bg-muted/30 p-3 text-muted-foreground text-xs">

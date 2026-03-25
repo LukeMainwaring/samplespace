@@ -20,6 +20,9 @@ from samplespace.services import sample as sample_service
 
 logger = logging.getLogger(__name__)
 
+# Prevent background tasks from being garbage-collected before completion
+_background_tasks: set[asyncio.Task[None]] = set()
+
 
 async def present_pair(
     ctx: RunContext[AgentDeps],
@@ -115,11 +118,13 @@ async def record_verdict(
             sample_b_id=sample_b_id,
             verdict=approved,
             pair_score=score.overall,
-            pair_score_detail=json.loads(score.model_dump_json()),
+            pair_score_detail=score.model_dump(),
         )
 
         # Fire-and-forget background feature extraction
-        asyncio.create_task(_extract_features_background(verdict.id, sample_a_id, sample_b_id))
+        task = asyncio.create_task(_extract_features_background(verdict.id, sample_a_id, sample_b_id))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
         total = await PairVerdict.count_all(ctx.deps.db)
         status = "approved" if approved else "rejected"
