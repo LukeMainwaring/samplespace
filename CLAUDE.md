@@ -46,10 +46,10 @@ FastAPI Python backend using async patterns throughout.
 
 -   **`src/samplespace/app.py`**: FastAPI application entry point with CORS middleware and lifespan handler (CLAP model loading)
 -   **`src/samplespace/routers/`**: API routes by domain (samples, agent, health)
--   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, and song context management; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`)
+-   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, song context management, and upload similarity; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`, `upload_tools.py`, `formatting.py`)
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
--   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management)
+-   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing)
 -   **`src/samplespace/ml/`**: PyTorch CNN -- model definition (`model.py`), torchaudio dataset (`dataset.py`), training script (`train.py`), inference wrapper (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
@@ -63,13 +63,15 @@ Next.js 16 with App Router.
 
 -   **`app/page.tsx`**: Main sample browser page
 -   **`app/api/chat/route.ts`**: Proxy route that forwards chat requests to backend agent
--   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` useChat hook; fetches and passes song context to header
+-   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` useChat hook; fetches and passes song context to header; manages file attachment state for uploads
 -   **`components/messages.tsx`**: Message list container with smart scroll behavior (MutationObserver/ResizeObserver-based auto-scroll, scroll-to-bottom button)
 -   **`components/message.tsx`**: Individual message rendering (`PreviewMessage`) and loading state (`RiffingMessage`)
--   **`components/multimodal-input.tsx`**: Chat input with local storage persistence, auto-focus, and memoization
+-   **`components/multimodal-input.tsx`**: Chat input with file attachment (paperclip button), local storage persistence, auto-focus, and memoization
 -   **`components/greeting.tsx`**: Animated empty state with Framer Motion fade-in
 -   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe) as pills
 -   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters
+-   **`components/candidate-samples.tsx`**: Upload page for reference tracks with CLAP similarity search
+-   **`components/preview-attachment.tsx`**: File attachment chip with loading/complete states for chat input
 -   **`components/audio-player.tsx`**: Audio playback controls
 -   **`components/waveform-viz.tsx`**: wavesurfer.js waveform rendering
 -   **`api/client.ts`**: Axios client configuration (baseURL, credentials)
@@ -97,8 +99,10 @@ Key patterns:
     - `analyze_sample()` -- full metadata retrieval (key, BPM, duration, type)
     - `suggest_complement()` -- combines CLAP search + key/BPM filtering (uses song context as fallback)
     - `set_song_context()` -- persists key/BPM/genre/vibe to thread for context-aware searches
+    - `find_similar_to_upload()` -- CLAP audio-to-audio search using an uploaded sample's embedding (excludes other uploads)
 5. Agent streams response back as SSE (Vercel AI SDK format)
 6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header
+7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
 
 ## Additional Instructions
 

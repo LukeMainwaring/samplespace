@@ -54,7 +54,7 @@ This is a brainstorm document — exploratory in tone but structured enough that
 - **Feature 1 (Song Context)** is the foundation (implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
 - **Feature 2 (Pair Scoring)** depends on 1 (implemented) — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM).
 - **Feature 3 (Audio Transformation)** depends on 1 — `match_to_context` needs a target key and BPM.
-- **Feature 4 (Sample Upload)** has a soft dependency on 1 — uploaded samples benefit from context-aware ranking, but could be built independently.
+- **Feature 4 (Sample Upload)** has a soft dependency on 1 (implemented) — uploaded samples benefit from context-aware ranking.
 - **Feature 5 (Pairing & Feedback)** depends on 2 and 3 — needs pair scoring to generate plausible pairs and benefits from transformed audio (users judge pairs that are already key/BPM-matched). Can also ingest uploaded samples from 4.
 - **Feature 6 (Kit Builder)** depends on 5 (and transitively on 1, 2, 3) — uses pair scoring, learned rules, song context, and optionally transformation.
 
@@ -70,15 +70,15 @@ Both implemented. SampleSpace is now a context-aware assistant with multi-dimens
 
 ### Phase 2: Audio Pipeline
 
-**Features**: Audio Transformation (3) ✅, Sample Upload (4)
+**Features**: Audio Transformation (3) ✅, Sample Upload (4) ✅
 
-Audio Transformation is implemented. Sample Upload can be built next, independently.
+Both implemented. Phase 2 is complete. Phase 3 is next — Pairing & Feedback Loop and Kit Builder.
 
 ### Phase 3: Learning & Assembly
 
 **Features**: Pairing & Feedback Loop (5), Kit Builder (6)
 
-The most complex features, building on Phase 1 and 2 infrastructure. The flywheel (5) is a data collection + offline analysis pipeline. Kit Builder (6) is the capstone that combines everything.
+The most complex features, building on Phase 1 and 2 infrastructure. The flywheel (5) is a data collection + offline analysis pipeline. Kit Builder (6) is the capstone that combines everything. All prerequisite features (1-4) are now implemented.
 
 ---
 
@@ -184,51 +184,37 @@ The most complex features, building on Phase 1 and 2 infrastructure. The flywhee
 
 ---
 
-### 4. Sample Upload / "Find More Like This"
+### 4. Sample Upload / "Find More Like This" — Implemented
 
-**What**: The user uploads a WAV/MP3 file. The system computes CLAP + CNN embeddings on the fly and uses them to search for similar or complementary samples in the library. Can be temporary (just for search) or permanent (added to library).
+**What**: The user uploads a WAV file (often a full song or snippet used as a reference track). The system analyzes it (key, BPM, duration, type), generates a CLAP embedding, and stores it permanently. The user can then ask the agent to find similar samples from the splice library using CLAP audio-to-audio similarity.
 
-**Why**: Closes the loop between "I have audio I like" and "find me more." Currently users can only search by text or by referencing samples already in the library. The old project had a placeholder for this ("Upload current song section") but never shipped it.
+**Why**: Closes the loop between "I have audio I like" and "find me more." Previously users could only search by text or reference samples already in the library.
 
 **Depends on**: Feature 1 (Song Context) loosely.
 
-#### Backend
+#### Implementation Summary
 
-- Add endpoint `POST /samples/upload`:
-  1. Accept multipart file upload.
-  2. Save to temp directory.
-  3. Run `analyze_and_classify` for metadata.
-  4. Run `embed_audio` for CLAP embedding (CLAP model from app state).
-  5. Optionally run CNN inference for CNN embedding.
-  6. Return metadata + temporary sample ID. Does not persist to DB by default.
-- Add endpoint `POST /samples/upload/search` that takes the computed embeddings and runs `Sample.search_by_clap` / `Sample.find_similar_by_cnn`.
-- `permanent` flag: if true, create a Sample record and save file to `data/samples/uploads/`.
-- Agent integration: upload happens through REST (frontend), which returns a temp ID. User tells the agent "find more like the sample I just uploaded" and the agent uses the temp ID.
-- Add agent tool `find_similar_to_upload(temp_sample_id)` that queries by the uploaded sample's precomputed embeddings.
+**Backend:**
+- `POST /samples/upload` endpoint: accepts multipart WAV upload, validates (RIFF/WAVE header bytes, 50MB size limit, 60s duration limit), saves to `data/uploads/` with UUID filenames, runs `analyze_and_classify` for metadata, generates CLAP embedding via `asyncio.to_thread()`. Cleans up orphaned files on failure.
+- Reuses existing `samples` table with `source="upload"` — no new tables or migrations. `find_audio_file()` extended with source-aware path resolution for uploads.
+- `source` filter added to `Sample.get_all()` and `exclude_source` filter to `Sample.search_by_clap()` so the agent tool can search the library while excluding other uploads.
+- `find_similar_to_upload` agent tool in `agents/tools/upload_tools.py`: fetches the uploaded sample's CLAP embedding and runs cosine distance search against the library.
+- `UPLOAD_DIR` and `UPLOAD_MAX_SIZE_MB` settings in `core/config.py`.
+- Shared `format_sample_results()` utility extracted to `agents/tools/formatting.py` (used by CLAP, CNN, and upload tools).
 
-#### Frontend
+**Frontend:**
+- Dedicated "Candidate Samples" page at `/candidates` with upload button, sample cards (metadata, playback via WaveformViz, copy-ID button), and empty state.
+- Chat input file attachment: paperclip button triggers file picker, eager upload on file selection (Vercel chatbot template pattern), `PreviewAttachment` chip shows loading/complete state above textarea.
+- Attachment state lifted to `chat.tsx` (parent owns `attachments/setAttachments`). On send, `[Uploaded sample: filename (ID: xxx)]` is prepended to the message text so the agent sees the reference.
+- `useUploadSample` TanStack Query mutation hook wrapping the generated client.
+- "Candidate Samples" nav link added to sidebar dropdown.
 
-- Upload button/dropzone in the chat panel or sample browser.
-- On upload, call `POST /samples/upload`, display analyzed metadata, store temp ID.
-- User says "find more like this" in chat; frontend passes temp sample ID in message context.
+#### Resolved Questions
 
-#### Data Model
-
-- Add `UPLOAD_DIR` and `UPLOAD_MAX_SIZE_MB` to Settings.
-- Uploaded samples use existing `samples` table if permanent, otherwise ephemeral.
-
-#### Agent Tools
-
-| Tool | Signature |
-|------|-----------|
-| `find_similar_to_upload` | `(temp_sample_id) -> str` |
-
-#### Open Questions
-
-- Max file size? Duration limit?
-- How long do temporary uploads live? Clean up on session end or TTL?
-- MP3 support? librosa handles it, but CLAP expects 48kHz WAV internally.
-- Should uploaded samples get CNN embeddings? Fast but requires model to be loaded.
+- **File size / duration**: 50MB / 60 seconds. Configurable via `UPLOAD_MAX_SIZE_MB`.
+- **Temporary vs permanent**: All uploads are permanent. No ephemeral mode — simplifies the architecture.
+- **Format support**: WAV only. RIFF/WAVE header bytes validated on upload.
+- **CNN embeddings**: Out of scope — CLAP only. CNN embeddings can be added later when models are revisited.
 
 ---
 
@@ -424,7 +410,7 @@ None initially. Kits are ephemeral (returned in chat). A `kits` table could stor
 | `pair_verdicts` | 3 | Pairing & Feedback Loop |
 | `pair_rules` | 3 | Pairing & Feedback Loop |
 
-Features 1-4 and 6 require no new tables beyond the existing `threads` and `messages` tables (already implemented). Song context is a JSONB column on the `threads` table. Pair scoring is computed on the fly. Transformed audio is filesystem cache. Uploads use the existing `samples` table if permanent. Kits are ephemeral.
+Features 1-4 and 6 require no new tables beyond the existing `threads` and `messages` tables (already implemented). Song context is a JSONB column on the `threads` table. Pair scoring is computed on the fly. Transformed audio is filesystem cache. Uploads use the existing `samples` table with `source="upload"` and are stored in `data/uploads/`. Kits are ephemeral.
 
 ### New Agent Tools
 
@@ -433,7 +419,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `set_song_context` | 1 | Song Context | ✅ Implemented |
 | `rate_pair` | 1 | Pair Scoring | ✅ Implemented |
 | `match_to_context` | 2 | Audio Transformation | ✅ Implemented |
-| `find_similar_to_upload` | 2 | Sample Upload |
+| `find_similar_to_upload` | 2 | Sample Upload | ✅ Implemented |
 | `present_pair` | 3 | Pairing & Feedback |
 | `record_verdict` | 3 | Pairing & Feedback |
 | `build_kit` | 3 | Kit Builder |
@@ -444,8 +430,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | Endpoint | Method | Phase | Feature |
 |----------|--------|-------|---------|
 | `/samples/{id}/audio/transformed` | GET | 2 | Audio Transformation |
-| `/samples/upload` | POST | 2 | Sample Upload |
-| `/samples/upload/search` | POST | 2 | Sample Upload |
+| `/samples/upload` | POST | 2 | Sample Upload | ✅ Implemented |
 | `/pairs/verdict` | POST | 3 | Pairing & Feedback |
 | `/pairs/score` | POST | 1 | Pair Scoring |
 
@@ -456,6 +441,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `services/pair_scoring.py` | 1 | Multi-dimensional pair compatibility scoring | ✅ Implemented |
 | `services/music_theory.py` | 1 | Reusable key compatibility and circle-of-fifths logic | ✅ Implemented |
 | `services/audio_transform.py` | 2 | Pitch-shift + time-stretch with caching | ✅ Implemented |
+| `services/upload.py` | 2 | WAV upload pipeline with validation and CLAP embedding | ✅ Implemented |
 | `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) | |
 | `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction | |
 | `services/kit_builder.py` | 3 | Greedy kit assembly algorithm | |
@@ -467,7 +453,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `agents/tools/context_tools.py` | 1 | `set_song_context` | ✅ Implemented |
 | `agents/tools/pair_tools.py` | 1, 3 | `rate_pair`, `present_pair`, `record_verdict` | ✅ `rate_pair` implemented |
 | `agents/tools/transform_tools.py` | 2 | `match_to_context` | ✅ Implemented |
-| `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` |
+| `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` | ✅ Implemented |
 | `agents/tools/kit_tools.py` | 3 | `build_kit`, `swap_kit_sample` |
 
 ### New Settings
@@ -475,7 +461,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | Setting | Phase | Purpose |
 |---------|-------|---------|
 | `TRANSFORM_CACHE_DIR` | 2 | Cache directory for transformed audio files |
-| `UPLOAD_DIR` | 2 | Temporary storage for uploaded files |
+| `UPLOAD_DIR` | 2 | Permanent storage for uploaded files |
 | `UPLOAD_MAX_SIZE_MB` | 2 | Upload size limit |
 
 ---

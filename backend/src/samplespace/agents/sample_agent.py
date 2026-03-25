@@ -16,6 +16,7 @@ from samplespace.agents.tools.cnn_tools import register_cnn_tools
 from samplespace.agents.tools.context_tools import register_context_tools
 from samplespace.agents.tools.pair_tools import register_pair_tools
 from samplespace.agents.tools.transform_tools import register_transform_tools
+from samplespace.agents.tools.upload_tools import register_upload_tools
 from samplespace.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,11 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
    - Only works for loops (one-shots have no reference key/BPM)
    - Handles cross-mode shifts using relative keys (e.g., minor sample + major song → targets relative minor)
 
+9. **find_similar_to_upload**: Find library samples similar to an uploaded reference track
+   - Best for: "find samples like this song I uploaded", "what in the library matches my reference?"
+   - Uses the uploaded sample's CLAP audio embedding to search the splice library
+   - Requires a sample ID of an uploaded sample (source="upload")
+
 ## Guidelines
 
 - When song context is set, use it to improve search results and recommendations
@@ -105,6 +111,7 @@ register_analysis_tools(sample_agent)
 register_context_tools(sample_agent)
 register_pair_tools(sample_agent)
 register_transform_tools(sample_agent)
+register_upload_tools(sample_agent)
 
 
 @sample_agent.system_prompt

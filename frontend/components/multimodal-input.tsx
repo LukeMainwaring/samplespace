@@ -2,7 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Paperclip, Square } from "lucide-react";
 import {
   type Dispatch,
   memo,
@@ -13,6 +13,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+import { MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -21,6 +22,7 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
 } from "./elements/prompt-input";
+import { type Attachment, PreviewAttachment } from "./preview-attachment";
 import { Button } from "./ui/button";
 
 function PureMultimodalInput({
@@ -32,6 +34,9 @@ function PureMultimodalInput({
   messages: _messages,
   setMessages,
   sendMessage,
+  attachments,
+  setAttachments,
+  onUpload,
   className,
 }: {
   chatId: string;
@@ -42,9 +47,13 @@ function PureMultimodalInput({
   messages: UIMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  attachments: Attachment[];
+  setAttachments: Dispatch<SetStateAction<Attachment[]>>;
+  onUpload: (file: File) => void;
   className?: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { width } = useWindowSize();
 
   const adjustHeight = useCallback(() => {
@@ -100,11 +109,44 @@ function PureMultimodalInput({
     setInput(event.target.value);
   };
 
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
+
+      if (!file.name.toLowerCase().endsWith(".wav")) {
+        toast.error("Only WAV files are supported");
+        return;
+      }
+      if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
+        toast.error(`File exceeds ${MAX_UPLOAD_SIZE_MB}MB limit`);
+        return;
+      }
+
+      onUpload(file);
+    },
+    [onUpload],
+  );
+
   const submitForm = useCallback(() => {
     window.history.replaceState({}, "", `/chat/${chatId}`);
 
-    sendMessage({ text: input });
+    // Build message text with attachment references
+    const completedAttachments = attachments.filter(
+      (a) => !a.isUploading && a.sample,
+    );
+    const attachmentPrefix = completedAttachments
+      .map(
+        (a) => `[Uploaded sample: ${a.sample?.filename} (ID: ${a.sample?.id})]`,
+      )
+      .join("\n");
 
+    const text = attachmentPrefix ? `${attachmentPrefix}\n${input}` : input;
+
+    sendMessage({ text });
+
+    setAttachments([]);
     setLocalStorageInput("");
     resetHeight();
     setInput("");
@@ -120,6 +162,8 @@ function PureMultimodalInput({
     width,
     chatId,
     resetHeight,
+    attachments,
+    setAttachments,
   ]);
 
   return (
@@ -141,7 +185,37 @@ function PureMultimodalInput({
             }
           }}
         >
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-2 pt-2">
+              {attachments.map((attachment) => (
+                <PreviewAttachment
+                  attachment={attachment}
+                  key={attachment.id}
+                  onRemove={() =>
+                    setAttachments((prev) =>
+                      prev.filter((a) => a.id !== attachment.id),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
           <div className="flex flex-row items-start gap-1 sm:gap-2">
+            <input
+              accept=".wav,audio/wav"
+              className="hidden"
+              onChange={handleFileChange}
+              ref={fileInputRef}
+              type="file"
+            />
+            <button
+              className="mt-2.5 ml-1 flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach WAV file"
+              type="button"
+            >
+              <Paperclip size={16} />
+            </button>
             <PromptInputTextarea
               className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
               disableAutoResize={true}
@@ -159,7 +233,10 @@ function PureMultimodalInput({
             ) : (
               <PromptInputSubmit
                 className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-                disabled={!input.trim()}
+                disabled={
+                  !input.trim() &&
+                  !attachments.some((a) => !a.isUploading && a.sample)
+                }
                 status={status}
               >
                 <ArrowUp size={14} />
@@ -179,6 +256,9 @@ export const MultimodalInput = memo(
       return false;
     }
     if (prevProps.status !== nextProps.status) {
+      return false;
+    }
+    if (prevProps.attachments !== nextProps.attachments) {
       return false;
     }
     return true;

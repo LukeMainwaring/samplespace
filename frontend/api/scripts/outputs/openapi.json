@@ -53,7 +53,7 @@
           "samples"
         ],
         "summary": "List Samples",
-        "description": "List all samples with pagination.",
+        "description": "List all samples with pagination. Optionally filter by source.",
         "operationId": "listSamples",
         "parameters": [
           {
@@ -75,6 +75,22 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
           }
         ],
         "responses": {
@@ -84,6 +100,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SampleListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/samples/upload": {
+      "post": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Upload Sample",
+        "description": "Upload a WAV file, analyze it, and generate CLAP embeddings.",
+        "operationId": "uploadSample",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadSample"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleSchema"
                 }
               }
             }
@@ -523,6 +581,20 @@
   },
   "components": {
     "schemas": {
+      "Body_uploadSample": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadSample"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {

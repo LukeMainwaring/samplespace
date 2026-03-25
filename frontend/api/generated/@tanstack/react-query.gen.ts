@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, deleteThread, getSample, getSampleAudio, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData } from '../types.gen';
+import { dbHealthCheck, deleteThread, getSample, getSampleAudio, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, uploadSample } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
 
 /**
  * Stream Chat
@@ -87,7 +87,7 @@ export const listSamplesQueryKey = (options?: Options<ListSamplesData>) => creat
 /**
  * List Samples
  *
- * List all samples with pagination.
+ * List all samples with pagination. Optionally filter by source.
  */
 export const listSamplesOptions = (options?: Options<ListSamplesData>) => queryOptions<ListSamplesResponse, AxiosError<ListSamplesError>, ListSamplesResponse, ReturnType<typeof listSamplesQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -136,7 +136,7 @@ export const listSamplesInfiniteQueryKey = (options?: Options<ListSamplesData>):
 /**
  * List Samples
  *
- * List all samples with pagination.
+ * List all samples with pagination. Optionally filter by source.
  */
 export const listSamplesInfiniteOptions = (options?: Options<ListSamplesData>) => infiniteQueryOptions<ListSamplesResponse, AxiosError<ListSamplesError>, InfiniteData<ListSamplesResponse>, QueryKey<Options<ListSamplesData>>, number | Pick<QueryKey<Options<ListSamplesData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
 // @ts-ignore
@@ -159,6 +159,25 @@ export const listSamplesInfiniteOptions = (options?: Options<ListSamplesData>) =
     },
     queryKey: listSamplesInfiniteQueryKey(options)
 });
+
+/**
+ * Upload Sample
+ *
+ * Upload a WAV file, analyze it, and generate CLAP embeddings.
+ */
+export const uploadSampleMutation = (options?: Partial<Options<UploadSampleData>>): UseMutationOptions<UploadSampleResponse, AxiosError<UploadSampleError>, Options<UploadSampleData>> => {
+    const mutationOptions: UseMutationOptions<UploadSampleResponse, AxiosError<UploadSampleError>, Options<UploadSampleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await uploadSample({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 /**
  * Search Samples

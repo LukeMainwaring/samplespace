@@ -41,7 +41,8 @@ graph TB
 3. **CLAP search** encodes the text query into a 512-dim embedding (enriched with song context vibe), then finds nearest audio embeddings via pgvector cosine similarity
 4. **CNN similarity** uses a custom-trained dual-head CNN to find spectrally similar samples via 128-dim embeddings
 5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples, using song context key/BPM as fallback defaults
-6. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
+6. **Sample upload** lets users upload WAV files (songs, snippets) as reference tracks. The system analyzes metadata, generates CLAP embeddings, and the agent finds similar library samples via audio-to-audio cosine similarity
+7. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
 
 ### Why CLAP + CNN + Agent?
 
@@ -83,7 +84,8 @@ samplespace/
 │   │   ├── services/
 │   │   │   ├── embedding.py        # CLAP embed_audio() / embed_text()
 │   │   │   ├── audio_analysis.py   # librosa key/BPM/duration extraction
-│   │   │   └── sample.py           # CRUD + pgvector search
+│   │   │   ├── sample.py           # CRUD + pgvector search
+│   │   │   └── upload.py           # WAV upload pipeline (validate, store, analyze, embed)
 │   │   ├── routers/                # REST + SSE streaming endpoints
 │   │   ├── models/                 # SQLAlchemy (Sample with pgvector columns, Thread with song context)
 │   │   └── migrations/             # Alembic
@@ -94,16 +96,19 @@ samplespace/
 │   │   ├── page.tsx                # Split layout: chat + sample browser
 │   │   └── api/chat/route.ts       # Proxy to backend agent
 │   ├── components/
-│   │   ├── chat.tsx                # Chat orchestrator (useChat + song context)
+│   │   ├── chat.tsx                # Chat orchestrator (useChat + song context + upload state)
 │   │   ├── messages.tsx            # Message list with smart scroll
 │   │   ├── message.tsx             # Message rendering + RiffingMessage loading state
-│   │   ├── multimodal-input.tsx    # Chat input with local storage persistence
+│   │   ├── multimodal-input.tsx    # Chat input with file attachment + local storage persistence
 │   │   ├── greeting.tsx            # Animated empty state
 │   │   ├── song-context-badge.tsx  # Read-only song context display (key/BPM/genre/vibe)
 │   │   ├── sample-browser.tsx      # Sample grid with filters + audio playback
+│   │   ├── candidate-samples.tsx   # Upload page for reference tracks with CLAP similarity search
+│   │   ├── preview-attachment.tsx  # File attachment chip (loading/complete states)
 │   │   └── elements/              # Shared UI primitives (tool-call, response, bouncing-dots)
 │   └── api/generated/              # Auto-generated TypeScript client
 ├── data/
+│   ├── uploads/                    # Uploaded reference tracks (gitignored)
 │   ├── samples/                    # Audio files (gitignored)
 │   └── checkpoints/                # CNN model checkpoints (gitignored)
 └── docker-compose.yml

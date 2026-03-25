@@ -51,9 +51,10 @@ async def get_samples(
     *,
     limit: int = 50,
     offset: int = 0,
+    source: str | None = None,
 ) -> SampleListResponse:
     """List samples with pagination."""
-    samples, total = await Sample.get_all(db, limit=limit, offset=offset)
+    samples, total = await Sample.get_all(db, limit=limit, offset=offset, source=source)
 
     return SampleListResponse(
         samples=[SampleSchema.model_validate(s) for s in samples],
@@ -75,6 +76,7 @@ async def search_by_text(
     bpm_max: int | None = None,
     sample_type: str | None = None,
     is_loop: bool | None = None,
+    exclude_source: str | None = None,
     limit: int = 20,
 ) -> list[SampleSchema]:
     """Search samples by CLAP text embedding with optional metadata filters.
@@ -89,6 +91,7 @@ async def search_by_text(
         bpm_max=bpm_max,
         sample_type=sample_type,
         is_loop=is_loop,
+        exclude_source=exclude_source,
         limit=limit,
     )
 
@@ -128,6 +131,10 @@ def find_audio_file(sample: Sample) -> Path | None:
         if candidate.exists():
             return candidate
         return None
+
+    if sample.source == "upload":
+        candidate = Path(settings.UPLOAD_DIR) / sample.relative_path
+        return candidate if candidate.exists() else None
 
     # Local source: resolve against SAMPLES_DIR
     samples_dir = Path(settings.SAMPLES_DIR)
