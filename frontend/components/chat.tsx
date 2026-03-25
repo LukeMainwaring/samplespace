@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   getThreadMessagesQueryKey,
@@ -14,6 +14,7 @@ import { useThreadSongContext } from "@/api/hooks/threads";
 import { useUploadSample } from "@/api/hooks/uploads";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import type { ChatMessage } from "@/lib/types";
+import { ChatActionsProvider } from "./chat-actions-provider";
 import { ChatHeader } from "./chat-header";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
@@ -106,6 +107,14 @@ export function Chat({
     setMessages,
   });
 
+  // Stable ref for sendMessage to avoid re-renders in the provider
+  const sendMessageRef = useRef(sendMessage);
+  sendMessageRef.current = sendMessage;
+
+  const sendChatMessage = useCallback((text: string) => {
+    sendMessageRef.current({ text });
+  }, []);
+
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
@@ -120,7 +129,13 @@ export function Chat({
     <div className="flex h-dvh min-w-0 flex-col bg-background">
       <ChatHeader songContext={songContext} />
 
-      <Messages messages={messages} setMessages={setMessages} status={status} />
+      <ChatActionsProvider sendMessage={sendChatMessage}>
+        <Messages
+          messages={messages}
+          setMessages={setMessages}
+          status={status}
+        />
+      </ChatActionsProvider>
 
       <MultimodalInput
         attachments={attachments}

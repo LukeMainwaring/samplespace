@@ -18,7 +18,9 @@ from samplespace.agents.tools.context_tools import register_context_tools
 from samplespace.agents.tools.pair_tools import register_pair_tools
 from samplespace.agents.tools.transform_tools import register_transform_tools
 from samplespace.agents.tools.upload_tools import register_upload_tools
+from samplespace.agents.tools.verdict_tools import register_verdict_tools
 from samplespace.core.config import get_settings
+from samplespace.models.pair_rule import PairRule
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
@@ -76,6 +78,14 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
    - Uses the uploaded sample's CLAP audio embedding to search the splice library
    - Requires a sample ID of an uploaded sample (source="upload")
 
+10. **present_pair**: Present a sample pair for the user to evaluate
+    - Finds a complementary candidate and shows side-by-side playback
+    - Use when the user asks to rate pairs, evaluate combinations, or train the system
+
+11. **record_verdict**: Record the user's yes/no verdict on a presented pair
+    - Always call after the user responds to a presented pair
+    - Triggers background feature extraction for learning
+
 ## Guidelines
 
 - When song context is set, use it to improve search results and recommendations
@@ -90,6 +100,11 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
 - NEVER generate URLs or markdown links — just use plain text and bold for emphasis
 - When you find a sample that's a great match but in a different key or BPM from the song context, proactively offer to transform it (e.g., "This pad is in E minor but your song is in G minor — want me to transpose it?")
 - After calling match_to_context, always include the audio player block from the tool result in your response so the user can preview the transformed audio
+
+## Pair Feedback
+- When the user asks to evaluate pairs, use present_pair to show them
+- After the user gives a verdict (yes/no, thumbs up/down, approve/reject, or a [PAIR_VERDICT] message), call record_verdict
+- Don't present more than 3 pairs in a row without asking if they want to continue
 
 ## One-Shots vs Loops
 
@@ -116,6 +131,7 @@ register_context_tools(sample_agent)
 register_pair_tools(sample_agent)
 register_transform_tools(sample_agent)
 register_upload_tools(sample_agent)
+register_verdict_tools(sample_agent)
 
 
 @sample_agent.system_prompt
@@ -141,3 +157,19 @@ async def inject_song_context(ctx: RunContext[AgentDeps]) -> str:
         + "\n\nUse this context to inform your searches and recommendations. "
         "The vibe is automatically appended to CLAP searches."
     )
+
+
+@sample_agent.system_prompt
+async def inject_pair_rules(ctx: RunContext[AgentDeps]) -> str:
+    """Inject learned pair rules into the system prompt."""
+    rules = await PairRule.get_active(ctx.deps.db)
+    if not rules:
+        return ""
+    lines = ["\n\n## Learned Pairing Preferences"]
+    for rule in rules:
+        lines.append(
+            f"- For {rule.type_pair} pairs: prefer {rule.feature_name} "
+            f"{rule.direction} {rule.threshold:.2f} "
+            f"(confidence: {rule.confidence:.0%})"
+        )
+    return "\n".join(lines)
