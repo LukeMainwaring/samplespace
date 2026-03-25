@@ -4,6 +4,7 @@ import { FileAudio, Loader2, X } from "lucide-react";
 import type { SampleSchema } from "@/api/generated/types.gen";
 
 export type Attachment = {
+  id: string;
   file: File;
   sample?: SampleSchema;
   isUploading: boolean;

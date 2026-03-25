@@ -13,6 +13,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+import { MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -23,8 +24,6 @@ import {
 } from "./elements/prompt-input";
 import { type Attachment, PreviewAttachment } from "./preview-attachment";
 import { Button } from "./ui/button";
-
-const MAX_FILE_SIZE_MB = 50;
 
 function PureMultimodalInput({
   chatId,
@@ -120,8 +119,8 @@ function PureMultimodalInput({
         toast.error("Only WAV files are supported");
         return;
       }
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        toast.error(`File exceeds ${MAX_FILE_SIZE_MB}MB limit`);
+      if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
+        toast.error(`File exceeds ${MAX_UPLOAD_SIZE_MB}MB limit`);
         return;
       }
 
@@ -188,12 +187,14 @@ function PureMultimodalInput({
         >
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-2 pt-2">
-              {attachments.map((attachment, index) => (
+              {attachments.map((attachment) => (
                 <PreviewAttachment
                   attachment={attachment}
-                  key={attachment.file.name + index}
+                  key={attachment.id}
                   onRemove={() =>
-                    setAttachments((prev) => prev.filter((_, i) => i !== index))
+                    setAttachments((prev) =>
+                      prev.filter((a) => a.id !== attachment.id),
+                    )
                   }
                 />
               ))}

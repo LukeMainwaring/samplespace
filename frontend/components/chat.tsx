@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   getThreadMessagesQueryKey,
   listThreadsQueryKey,
@@ -39,7 +40,11 @@ export function Chat({
 
   const handleUpload = useCallback(
     (file: File) => {
-      const attachment: Attachment = { file, isUploading: true };
+      const attachment: Attachment = {
+        id: crypto.randomUUID(),
+        file,
+        isUploading: true,
+      };
       setAttachments((prev) => [...prev, attachment]);
 
       uploadMutation.mutate(
@@ -56,6 +61,7 @@ export function Chat({
           },
           onError: () => {
             setAttachments((prev) => prev.filter((a) => a.file !== file));
+            toast.error(`Failed to upload ${file.name}`);
           },
         },
       );

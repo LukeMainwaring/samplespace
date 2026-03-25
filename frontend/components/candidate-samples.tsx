@@ -9,11 +9,10 @@ import type { SampleSchema } from "@/api/generated/types.gen";
 import { useUploadSample } from "@/api/hooks/uploads";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
+import { MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
-
-const MAX_FILE_SIZE_MB = 50;
 
 function CandidateCard({
   sample,
@@ -127,8 +126,8 @@ export function CandidateSamples() {
         return;
       }
 
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        toast.error(`File exceeds ${MAX_FILE_SIZE_MB}MB limit`);
+      if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
+        toast.error(`File exceeds ${MAX_UPLOAD_SIZE_MB}MB limit`);
         return;
       }
 

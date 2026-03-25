@@ -5,6 +5,7 @@ import logging
 from pydantic_ai import Agent, RunContext
 
 from samplespace.agents.deps import AgentDeps
+from samplespace.agents.tools.formatting import format_sample_results
 from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleSchema
 
@@ -44,29 +45,14 @@ async def find_similar_to_upload(ctx: RunContext[AgentDeps], sample_id: str) -> 
             return "No similar library samples found."
 
         formatted = [SampleSchema.model_validate(s) for s in results]
-        return _format_results(formatted, sample.filename)
+        return format_sample_results(
+            formatted,
+            f'Found {len(formatted)} library samples similar to uploaded file "{sample.filename}":',
+            include_duration=True,
+        )
     except Exception:
         logger.exception("Error in upload similarity search")
         return "An error occurred while finding similar samples."
-
-
-def _format_results(results: list[SampleSchema], source_name: str) -> str:
-    lines = [f'Found {len(results)} library samples similar to uploaded file "{source_name}":\n']
-    for i, s in enumerate(results, 1):
-        parts = [f"{i}. **{s.filename}**"]
-        if s.sample_type:
-            parts.append(f"type={s.sample_type}")
-        parts.append("loop" if s.is_loop else "one-shot")
-        if s.is_loop:
-            if s.key:
-                parts.append(f"key={s.key}")
-            if s.bpm and s.bpm > 0:
-                parts.append(f"bpm={s.bpm}")
-        if s.duration:
-            parts.append(f"duration={s.duration:.1f}s")
-        parts.append(f"id={s.id}")
-        lines.append(" | ".join(parts))
-    return "\n".join(lines)
 
 
 def register_upload_tools(agent: Agent[AgentDeps, str]) -> None:
