@@ -4,11 +4,13 @@ import { type ComponentProps, memo } from "react";
 import { type PluginConfig, Streamdown } from "streamdown";
 import { cn } from "@/lib/utils";
 import { AudioBlock } from "./audio-block";
+import { KitBlock } from "./kit-block";
 import { PairVerdictBlock } from "./pair-verdict-block";
 
 const plugins: PluginConfig = {
   renderers: [
     { language: "audio", component: AudioBlock },
+    { language: "kit", component: KitBlock },
     { language: "pair-verdict", component: PairVerdictBlock },
   ],
 };

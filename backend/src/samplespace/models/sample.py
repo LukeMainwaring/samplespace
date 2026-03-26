@@ -73,6 +73,14 @@ class Sample(Base):
         return samples, total
 
     @classmethod
+    async def get_many(cls, db: AsyncSession, sample_ids: list[str]) -> Sequence[Sample]:
+        """Batch-load samples by ID list."""
+        if not sample_ids:
+            return []
+        result = await db.execute(select(cls).where(cls.id.in_(sample_ids)))
+        return result.scalars().all()
+
+    @classmethod
     async def search_by_clap(
         cls,
         db: AsyncSession,

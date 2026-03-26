@@ -15,6 +15,7 @@ from samplespace.agents.tools.analysis_tools import register_analysis_tools
 from samplespace.agents.tools.clap_tools import register_clap_tools
 from samplespace.agents.tools.cnn_tools import register_cnn_tools
 from samplespace.agents.tools.context_tools import register_context_tools
+from samplespace.agents.tools.kit_tools import register_kit_tools
 from samplespace.agents.tools.pair_tools import register_pair_tools
 from samplespace.agents.tools.transform_tools import register_transform_tools
 from samplespace.agents.tools.upload_tools import register_upload_tools
@@ -86,6 +87,11 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
     - Always call after the user responds to a presented pair
     - Triggers background feature extraction for learning
 
+12. **build_kit**: Assemble a multi-sample kit optimized for pairwise compatibility
+    - Specify vibe, genre, and/or sample types (default: kick, snare, hihat, bass, pad)
+    - Uses CLAP search per type, then greedy optimization for pairwise compatibility
+    - Song context (key/BPM/vibe) is automatically incorporated
+
 ## Guidelines
 
 - When song context is set, use it to improve search results and recommendations
@@ -100,6 +106,12 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
 - NEVER generate URLs or markdown links — just use plain text and bold for emphasis
 - When you find a sample that's a great match but in a different key or BPM from the song context, proactively offer to transform it (e.g., "This pad is in E minor but your song is in G minor — want me to transpose it?")
 - After calling match_to_context, always include the audio player block from the tool result in your response so the user can preview the transformed audio
+
+## Kit Building
+- When the user asks to build a kit, assemble a sample set, or create a drum kit, use build_kit
+- If the user specifies a genre, infer appropriate sample types (e.g., EDM = kick+snare+hihat+bass+lead)
+- Include the kit code fence from the tool result in your response so the user can preview all samples
+- If the user wants to swap a sample, use existing search tools to find an alternative and rebuild
 
 ## Pair Feedback
 - When the user asks to evaluate pairs, use present_pair to show them
@@ -132,6 +144,7 @@ register_pair_tools(sample_agent)
 register_transform_tools(sample_agent)
 register_upload_tools(sample_agent)
 register_verdict_tools(sample_agent)
+register_kit_tools(sample_agent)
 
 
 @sample_agent.system_prompt
