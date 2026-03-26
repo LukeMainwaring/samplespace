@@ -87,15 +87,6 @@ async def build_kit(
             limit=CANDIDATES_PER_TYPE,
         )
 
-        # Fallback: retry without type filter if no results
-        if not results:
-            results = await sample_service.search_by_text(
-                db,
-                query_embedding=query_embedding,
-                exclude_source="upload",
-                limit=CANDIDATES_PER_TYPE,
-            )
-
         if not results:
             skipped_types.append(sample_type)
             logger.info(f"Kit builder: no candidates found for type '{sample_type}', skipping")
@@ -138,7 +129,7 @@ async def build_kit(
             # First slot: best CLAP match (already sorted by relevance)
             best = candidates[0]
         else:
-            best = _pick_best_candidate(candidates, selected, cnn_embeddings, sample_type)
+            best = _pick_best_candidate(candidates, selected, cnn_embeddings)
 
         selected.append((sample_type, best))
         selected_ids.add(best.id)
@@ -154,6 +145,10 @@ async def build_kit(
         )
 
     # --- Phase 3: Final scoring ---
+    # Uses full pair_scoring for detailed breakdowns shown in the UI.
+    # Each score_pair call loads both samples — for a 5-slot kit that's
+    # 10 pairs x 2 loads = 20 queries. Acceptable at this scale; could
+    # optimize with a variant that accepts pre-loaded Sample objects.
     # Re-order to match user's requested type order
     type_order = {t: i for i, t in enumerate(kit_types)}
     selected.sort(key=lambda x: type_order.get(x[0], 99))
@@ -196,7 +191,6 @@ def _pick_best_candidate(
     candidates: list[SampleSchema],
     selected: list[tuple[str, SampleSchema]],
     cnn_embeddings: dict[str, list[float]],
-    candidate_type: str,
 ) -> SampleSchema:
     """Pick the candidate that maximizes compatibility with already-selected samples."""
     best: SampleSchema = candidates[0]
@@ -207,15 +201,15 @@ def _pick_best_candidate(
         compat_scores = [_fast_compatibility(candidate, sel_sample) for _, sel_sample in selected]
         avg_compat = sum(compat_scores) / len(compat_scores)
 
-        # CNN diversity penalty (only against same-type selected samples)
+        # CNN diversity penalty — penalize spectral similarity to all selected samples
+        # to encourage timbral variety across the kit
         diversity_penalty = 0.0
         cand_cnn = cnn_embeddings.get(candidate.id)
         if cand_cnn is not None:
-            for sel_type, sel_sample in selected:
-                if sel_type.lower() == candidate_type.lower():
-                    sel_cnn = cnn_embeddings.get(sel_sample.id)
-                    if sel_cnn is not None:
-                        diversity_penalty += _cosine_similarity(cand_cnn, sel_cnn)
+            for _, sel_sample in selected:
+                sel_cnn = cnn_embeddings.get(sel_sample.id)
+                if sel_cnn is not None:
+                    diversity_penalty += _cosine_similarity(cand_cnn, sel_cnn)
 
         composite = avg_compat - DIVERSITY_ALPHA * diversity_penalty
         if composite > best_score:
