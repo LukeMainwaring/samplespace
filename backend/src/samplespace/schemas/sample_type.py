@@ -70,7 +70,6 @@ SAMPLE_TYPE_KEYWORDS: dict[SampleType, list[str]] = {
 }
 
 # Flattened lookup: keyword -> sample type value
-KEYWORD_TO_SAMPLE_TYPE: dict[str, str] = {}
-for _sample_type, _keywords in SAMPLE_TYPE_KEYWORDS.items():
-    for _kw in _keywords:
-        KEYWORD_TO_SAMPLE_TYPE[_kw] = _sample_type.value
+KEYWORD_TO_SAMPLE_TYPE: dict[str, str] = {
+    kw: st.value for st, keywords in SAMPLE_TYPE_KEYWORDS.items() for kw in keywords
+}

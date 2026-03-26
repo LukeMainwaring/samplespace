@@ -44,7 +44,7 @@ async def _fetch_samples_from_db() -> list[tuple[Path, int]] | None:
             result = await db.execute(stmt)
             db_samples = result.scalars().all()
     except Exception:
-        logger.warning("Could not connect to database, falling back to directory scan")
+        logger.warning("Could not connect to database, falling back to directory scan", exc_info=True)
         return None
 
     samples: list[tuple[Path, int]] = []

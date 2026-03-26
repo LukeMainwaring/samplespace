@@ -37,7 +37,7 @@ DIVERSITY_ALPHA = 0.15
 _TONAL_PRIORITY: dict[str, int] = {
     "pad": 0,
     "bass": 1,
-    "lead": 2,
+    "synth": 2,
     "vocals": 3,
     "kick": 4,
     "snare": 5,

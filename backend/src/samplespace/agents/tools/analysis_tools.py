@@ -93,7 +93,7 @@ async def suggest_complement(
 
     Args:
         sample_id: The ID of the sample to find complements for.
-        desired_type: Optional type filter (e.g., "bass", "pad", "lead").
+        desired_type: Optional type filter (e.g., "bass", "pad", "synth").
     """
     try:
         source = await sample_service.get_sample_by_id(ctx.deps.db, sample_id)

@@ -17,7 +17,7 @@ class SampleSchema(BaseSchema):
     key: str | None = None
     bpm: int | None = None
     duration: float | None = None
-    sample_type: str | None = Field(None, description="Category of the sample (e.g., kick, snare, pad, lead)")
+    sample_type: str | None = Field(None, description="Category of the sample (e.g., kick, snare, pad, synth)")
     is_loop: bool = False
     created_at: datetime
 

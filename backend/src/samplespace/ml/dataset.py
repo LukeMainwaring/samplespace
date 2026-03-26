@@ -23,7 +23,6 @@ HOP_LENGTH = 512
 DURATION_SEC = 2.0  # Pad/trim all samples to this length
 TARGET_LENGTH = int(SAMPLE_RATE * DURATION_SEC)
 
-
 NUM_CLASSES = len(SAMPLE_TYPES)
 LABEL_TO_IDX = {label: idx for idx, label in enumerate(SAMPLE_TYPES)}
 
