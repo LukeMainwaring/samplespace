@@ -156,4 +156,4 @@ Model checkpoints are saved to `data/checkpoints/` (gitignored). The training se
 
 ### CLAP Model
 
-The CLAP model (`laion/larger_clap_music`) is ~600MB and cached by HuggingFace transformers in `~/.cache/huggingface/`. It is loaded once at startup via the FastAPI lifespan handler. Mock it in tests.
+The CLAP model (`laion/clap-htsat-unfused`) is ~600MB and cached by HuggingFace transformers in `~/.cache/huggingface/`. It is loaded once at startup via the FastAPI lifespan handler. Mock it in tests.

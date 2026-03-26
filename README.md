@@ -188,6 +188,7 @@ Audio File (.wav)
     │              Uses audio_model + audio_projection independently
     │
     └── CNN ──→ 128-dim embedding + category prediction
-                 4 conv blocks → global avg pool → dual head
+                 4 residual conv blocks (SE attention) → global avg pool → dual head
+                 Combined loss: cross-entropy + supervised contrastive (SupCon)
                  Trained on mel spectrograms (128 mel bins, 2s fixed length)
 ```

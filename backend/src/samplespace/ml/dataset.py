@@ -7,6 +7,7 @@ from pathlib import Path
 
 import soundfile as sf
 import torch
+import torchaudio.functional as F
 import torchaudio.transforms as T
 from torch.utils.data import Dataset
 
@@ -37,6 +38,15 @@ SAMPLE_TYPES = [
 NUM_CLASSES = len(SAMPLE_TYPES)
 LABEL_TO_IDX = {label: idx for idx, label in enumerate(SAMPLE_TYPES)}
 
+# Shared transforms — created once at module load, reused by dataset and inference
+mel_transform = T.MelSpectrogram(
+    sample_rate=SAMPLE_RATE,
+    n_fft=N_FFT,
+    hop_length=HOP_LENGTH,
+    n_mels=N_MELS,
+)
+amplitude_to_db = T.AmplitudeToDB()
+
 
 def _load_and_preprocess(file_path: str) -> torch.Tensor:
     """Load audio file and convert to fixed-length mel spectrogram.
@@ -63,20 +73,40 @@ def _load_and_preprocess(file_path: str) -> torch.Tensor:
     else:
         waveform = waveform[:, :TARGET_LENGTH]
 
-    # Compute mel spectrogram
-    mel_transform = T.MelSpectrogram(
-        sample_rate=SAMPLE_RATE,
-        n_fft=N_FFT,
-        hop_length=HOP_LENGTH,
-        n_mels=N_MELS,
-    )
+    # Compute mel spectrogram using shared transforms
     mel_spec = mel_transform(waveform)
-
-    # Convert to log scale (dB)
-    amplitude_to_db = T.AmplitudeToDB()
     mel_spec_db: torch.Tensor = amplitude_to_db(mel_spec)
 
     return mel_spec_db
+
+
+def _load_waveform(file_path: str) -> torch.Tensor:
+    """Load audio file as a mono waveform at SAMPLE_RATE.
+
+    Returns a tensor of shape (1, num_frames) — NOT fixed-length.
+    Callers handle padding/trimming after any waveform-level augmentations.
+    """
+    data, sr = sf.read(file_path, dtype="float32", always_2d=True)
+    waveform = torch.from_numpy(data.T)
+
+    if waveform.shape[0] > 1:
+        waveform = waveform.mean(dim=0, keepdim=True)
+
+    if sr != SAMPLE_RATE:
+        resampler = T.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)
+        waveform = resampler(waveform)
+
+    return waveform
+
+
+def _pad_or_trim(waveform: torch.Tensor, target_length: int = TARGET_LENGTH) -> torch.Tensor:
+    """Pad (zero) or trim a waveform to exactly target_length samples."""
+    if waveform.shape[1] < target_length:
+        padding = target_length - waveform.shape[1]
+        waveform = torch.nn.functional.pad(waveform, (0, padding))
+    else:
+        waveform = waveform[:, :target_length]
+    return waveform
 
 
 class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
@@ -86,6 +116,11 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
         data/samples/kick/file1.wav
         data/samples/snare/file2.wav
         ...
+
+    Augmentation pipeline (training only):
+        1. Waveform-level: random pitch shift (±2 semitones), random time stretch
+           (0.9-1.1x), random crop (for samples longer than DURATION_SEC)
+        2. Spectrogram-level: time masking, frequency masking, random gain (±5 dB)
     """
 
     def __init__(
@@ -96,6 +131,7 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
         self.samples_dir = Path(samples_dir)
         self.augment = augment
         self.samples: list[tuple[Path, int]] = []
+        self._cache: dict[int, torch.Tensor] = {}
 
         for sample_type, idx in LABEL_TO_IDX.items():
             type_dir = self.samples_dir / sample_type
@@ -112,21 +148,52 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
         file_path, label = self.samples[idx]
-        mel_spec = _load_and_preprocess(str(file_path))
 
         if self.augment:
-            mel_spec = self._apply_augmentation(mel_spec)
+            # Waveform-level augmentations require loading raw audio
+            waveform = _load_waveform(str(file_path))
+            waveform = self._apply_waveform_augmentation(waveform)
+            waveform = _pad_or_trim(waveform)
+
+            mel_spec = mel_transform(waveform)
+            mel_spec = amplitude_to_db(mel_spec)
+            mel_spec = self._apply_spectrogram_augmentation(mel_spec)
+        else:
+            # Cache base spectrograms for non-augmented access (validation/inference)
+            if idx not in self._cache:
+                self._cache[idx] = _load_and_preprocess(str(file_path))
+            mel_spec = self._cache[idx]
 
         return mel_spec, label
 
-    def _apply_augmentation(self, mel_spec: torch.Tensor) -> torch.Tensor:
-        """Apply random augmentations to mel spectrogram."""
-        # Time masking (mask a random time segment)
+    def _apply_waveform_augmentation(self, waveform: torch.Tensor) -> torch.Tensor:
+        """Apply random waveform-level augmentations before mel conversion."""
+        # Random pitch shift (±2 semitones)
+        if torch.rand(1).item() > 0.5:
+            semitones = (torch.rand(1).item() - 0.5) * 4  # -2 to +2
+            waveform = F.pitch_shift(waveform, SAMPLE_RATE, n_steps=semitones)
+
+        # Random time stretch (0.9x to 1.1x)
+        if torch.rand(1).item() > 0.5:
+            rate = 0.9 + torch.rand(1).item() * 0.2  # 0.9 to 1.1
+            waveform = F.speed(waveform, SAMPLE_RATE, factor=rate)[0]
+
+        # Random crop (for samples longer than target, pick random start)
+        if waveform.shape[1] > TARGET_LENGTH:
+            max_start = waveform.shape[1] - TARGET_LENGTH
+            start = int(torch.randint(0, max_start, (1,)).item())
+            waveform = waveform[:, start : start + TARGET_LENGTH]
+
+        return waveform
+
+    def _apply_spectrogram_augmentation(self, mel_spec: torch.Tensor) -> torch.Tensor:
+        """Apply random spectrogram-level augmentations (SpecAugment-style)."""
+        # Time masking
         if torch.rand(1).item() > 0.5:
             time_mask = T.TimeMasking(time_mask_param=20)
             mel_spec = time_mask(mel_spec)
 
-        # Frequency masking (mask random frequency bands)
+        # Frequency masking
         if torch.rand(1).item() > 0.5:
             freq_mask = T.FrequencyMasking(freq_mask_param=15)
             mel_spec = freq_mask(mel_spec)
