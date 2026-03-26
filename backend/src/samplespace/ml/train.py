@@ -18,9 +18,9 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
-from samplespace.ml.dataset import SAMPLE_TYPES, SampleDataset
+from samplespace.ml.dataset import SAMPLE_TYPES, SampleDataset, scan_samples
 from samplespace.ml.model import SampleCNN
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -133,21 +133,30 @@ def train(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Training on {device}")
 
-    # Load dataset
-    dataset = SampleDataset(SAMPLES_DIR, augment=True)
-    if len(dataset) == 0:
+    # Scan all samples, then split into train/val with separate augmentation settings.
+    # Using separate SampleDataset instances (not random_split) ensures validation
+    # data is never augmented — critical for reliable model selection and LR scheduling.
+    all_samples = scan_samples(SAMPLES_DIR)
+    if not all_samples:
         logger.error(f"No samples found in {SAMPLES_DIR}")
         return
 
     # Log class distribution
-    label_counts = Counter(label for _, label in dataset.samples)
+    label_counts = Counter(label for _, label in all_samples)
     for idx, count in sorted(label_counts.items()):
         logger.info(f"  {SAMPLE_TYPES[idx]}: {count} samples")
 
-    # Train/val split
-    val_size = max(1, int(len(dataset) * val_split))
-    train_size = len(dataset) - val_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    # Deterministic shuffle then split
+    generator = torch.Generator().manual_seed(42)
+    indices = torch.randperm(len(all_samples), generator=generator).tolist()
+    val_size = max(1, int(len(all_samples) * val_split))
+    train_size = len(all_samples) - val_size
+
+    train_samples = [all_samples[i] for i in indices[:train_size]]
+    val_samples = [all_samples[i] for i in indices[train_size:]]
+
+    train_dataset = SampleDataset(augment=True, samples=train_samples)
+    val_dataset = SampleDataset(augment=False, samples=val_samples)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
@@ -158,7 +167,7 @@ def train(
     model = SampleCNN().to(device)
     classification_loss = nn.CrossEntropyLoss()
     contrastive_loss = SupConLoss(temperature=0.07)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.5)
 
     best_val_loss = float("inf")
@@ -239,7 +248,8 @@ def train(
 
         # Per-class F1 scores
         f1_scores = _compute_per_class_f1(val_preds, val_labels, SAMPLE_TYPES)
-        active_f1 = {k: v for k, v in f1_scores.items() if v > 0 or k in [SAMPLE_TYPES[l] for l in val_labels]}
+        val_label_names = {SAMPLE_TYPES[l] for l in val_labels}
+        active_f1 = {k: v for k, v in f1_scores.items() if v > 0 or k in val_label_names}
         if active_f1:
             f1_str = ", ".join(f"{k}: {v:.3f}" for k, v in active_f1.items())
             macro_f1 = sum(active_f1.values()) / len(active_f1) if active_f1 else 0.0

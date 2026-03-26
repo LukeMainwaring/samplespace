@@ -48,7 +48,7 @@ class SEBlock(nn.Module):
 class ConvBlock(nn.Module):
     """Two-conv residual block with SE attention.
 
-    Structure: (Conv2d -> BN -> ReLU) x2 -> residual add -> SE -> MaxPool.
+    Structure: (Conv2d -> BN -> ReLU) -> (Conv2d -> BN) -> residual add -> ReLU -> SE -> MaxPool.
     Skip connection uses 1x1 conv when channel dimensions change.
     """
 

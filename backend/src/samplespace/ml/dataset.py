@@ -109,13 +109,36 @@ def _pad_or_trim(waveform: torch.Tensor, target_length: int = TARGET_LENGTH) -> 
     return waveform
 
 
+def scan_samples(samples_dir: str | Path) -> list[tuple[Path, int]]:
+    """Scan a directory for audio files organized by sample type subdirectory.
+
+    Returns a list of (file_path, label_index) tuples, sorted deterministically.
+    """
+    samples_dir = Path(samples_dir)
+    samples: list[tuple[Path, int]] = []
+
+    for sample_type, idx in LABEL_TO_IDX.items():
+        type_dir = samples_dir / sample_type
+        if not type_dir.exists():
+            continue
+        for audio_file in sorted(type_dir.glob("*")):
+            if audio_file.suffix.lower() in {".wav", ".mp3", ".flac", ".ogg", ".aiff"}:
+                samples.append((audio_file, idx))
+
+    logger.info(f"Found {len(samples)} samples in {samples_dir}")
+    return samples
+
+
 class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
     """Dataset that loads audio files as mel spectrograms with sample type labels.
 
-    Expects audio files organized in subdirectories by type:
-        data/samples/kick/file1.wav
-        data/samples/snare/file2.wav
-        ...
+    Can be constructed two ways:
+        1. From a directory: ``SampleDataset(samples_dir="data/samples/")``
+        2. From a pre-built sample list: ``SampleDataset(samples=[(path, label), ...])``
+
+    Use ``scan_samples()`` + list slicing to create separate train/val datasets
+    with different augmentation settings (avoids the ``random_split`` pitfall where
+    both subsets share the parent dataset's augment flag).
 
     Augmentation pipeline (training only):
         1. Waveform-level: random pitch shift (±2 semitones), random time stretch
@@ -125,23 +148,21 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
 
     def __init__(
         self,
-        samples_dir: str | Path,
+        samples_dir: str | Path | None = None,
         augment: bool = False,
+        *,
+        samples: list[tuple[Path, int]] | None = None,
     ) -> None:
-        self.samples_dir = Path(samples_dir)
         self.augment = augment
-        self.samples: list[tuple[Path, int]] = []
         self._cache: dict[int, torch.Tensor] = {}
 
-        for sample_type, idx in LABEL_TO_IDX.items():
-            type_dir = self.samples_dir / sample_type
-            if not type_dir.exists():
-                continue
-            for audio_file in sorted(type_dir.glob("*")):
-                if audio_file.suffix.lower() in {".wav", ".mp3", ".flac", ".ogg", ".aiff"}:
-                    self.samples.append((audio_file, idx))
-
-        logger.info(f"Loaded {len(self.samples)} samples from {self.samples_dir}")
+        if samples is not None:
+            self.samples = list(samples)
+        elif samples_dir is not None:
+            self.samples = scan_samples(samples_dir)
+        else:
+            msg = "Either samples_dir or samples must be provided"
+            raise ValueError(msg)
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -170,8 +191,9 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
         """Apply random waveform-level augmentations before mel conversion."""
         # Random pitch shift (±2 semitones)
         if torch.rand(1).item() > 0.5:
-            semitones = (torch.rand(1).item() - 0.5) * 4  # -2 to +2
-            waveform = F.pitch_shift(waveform, SAMPLE_RATE, n_steps=semitones)
+            semitones = int((torch.rand(1).item() - 0.5) * 4)  # -2 to +2 (integer)
+            if semitones != 0:
+                waveform = F.pitch_shift(waveform, SAMPLE_RATE, n_steps=semitones)
 
         # Random time stretch (0.9x to 1.1x)
         if torch.rand(1).item() > 0.5:
