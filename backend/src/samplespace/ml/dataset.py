@@ -11,6 +11,8 @@ import torchaudio.functional as F
 import torchaudio.transforms as T
 from torch.utils.data import Dataset
 
+from samplespace.schemas.sample_type import SAMPLE_TYPES
+
 logger = logging.getLogger(__name__)
 
 # Audio preprocessing constants
@@ -21,20 +23,7 @@ HOP_LENGTH = 512
 DURATION_SEC = 2.0  # Pad/trim all samples to this length
 TARGET_LENGTH = int(SAMPLE_RATE * DURATION_SEC)
 
-# Sample type labels (alphabetical for deterministic ordering)
-SAMPLE_TYPES = [
-    "bass",
-    "clap",
-    "fx",
-    "hihat",
-    "keys",
-    "kick",
-    "lead",
-    "pad",
-    "percussion",
-    "snare",
-    "vocal",
-]
+
 NUM_CLASSES = len(SAMPLE_TYPES)
 LABEL_TO_IDX = {label: idx for idx, label in enumerate(SAMPLE_TYPES)}
 

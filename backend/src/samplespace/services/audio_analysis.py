@@ -16,6 +16,21 @@ _LOOP_PATTERN = re.compile(r"\b(?:loop|loops|looped)\b", re.IGNORECASE)
 _ONE_SHOT_PATTERN = re.compile(r"\b(?:one[-_ ]?shot|oneshot|hit|hits|single)\b", re.IGNORECASE)
 _BPM_KEYWORD_PATTERN = re.compile(r"(\d{2,3})[\s_-]*\bbpm\b|\bbpm\b[\s_-]*(\d{2,3})", re.IGNORECASE)
 _NOTE_BEFORE_NUMBER_PATTERN = re.compile(r"[A-Ga-g][#b]?$")
+_KEY_EXPLICIT_PATTERN = re.compile(
+    r"(?<![a-zA-Z])"  # not preceded by a letter
+    r"([A-Ga-g])"  # note letter
+    r"([#b]?)"  # optional accidental
+    r"(min(?:or)?|maj(?:or)?|m)"  # mode indicator
+    r"(?=[^a-zA-Z]|$)",  # followed by non-letter or end
+    re.IGNORECASE,
+)
+_KEY_BARE_NOTE_PATTERN = re.compile(
+    r"(?<![a-zA-Z#b])"  # not preceded by a letter or accidental
+    r"([A-G])"  # uppercase note letter only (avoids matching lowercase words)
+    r"([#]?)"  # optional sharp
+    r"(?=[^a-zA-Z0-9#]|$)",  # followed by non-alphanumeric or end
+)
+_FLAT_TO_SHARP = {"Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#", "Cb": "B", "Fb": "E"}
 
 
 @dataclass
@@ -148,6 +163,44 @@ def _extract_bpm_from_filename(filename: str) -> int | None:
     return None
 
 
+def _extract_key_from_filename(filename: str) -> str | None:
+    """Extract musical key from a sample filename.
+
+    Two-tier approach:
+    1. Explicit mode: Emin, C#min, Fmaj, Dm, A#m, em, Bminor, D#major
+    2. Bare note: _C, _F#, _A (uppercase only, assumes major — Splice convention)
+
+    Takes the last match in the filename (key typically appears after BPM/pack metadata).
+    Normalizes flats to sharps for consistency with librosa detection output.
+    """
+    stem = Path(filename).stem
+
+    # Tier 1: explicit mode indicator (high confidence)
+    explicit_matches = list(_KEY_EXPLICIT_PATTERN.finditer(stem))
+    if explicit_matches:
+        match = explicit_matches[-1]
+        note = match.group(1).upper()
+        accidental = match.group(2)
+        mode_raw = match.group(3).lower()
+        mode = "major" if mode_raw.startswith("maj") else "minor"
+
+        note_with_accidental = f"{note}{accidental}"
+        if accidental == "b" and note_with_accidental in _FLAT_TO_SHARP:
+            note_with_accidental = _FLAT_TO_SHARP[note_with_accidental]
+
+        return f"{note_with_accidental} {mode}"
+
+    # Tier 2: bare note letter (assumes major — Splice convention)
+    bare_matches = list(_KEY_BARE_NOTE_PATTERN.finditer(stem))
+    if bare_matches:
+        match = bare_matches[-1]
+        note = match.group(1)
+        accidental = match.group(2)
+        return f"{note}{accidental} major"
+
+    return None
+
+
 def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetadata:
     """Extract key, BPM, and duration from already-loaded audio."""
     duration = float(librosa.get_duration(y=y, sr=sr))
@@ -162,7 +215,12 @@ def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetad
         tempo_val = float(tempo[0]) if isinstance(tempo, np.ndarray) else float(tempo)
         bpm = round(tempo_val)
 
-    key = _detect_key(y, sr)
+    filename_key = _extract_key_from_filename(filename)
+    if filename_key is not None:
+        key: str | None = filename_key
+        logger.info(f"Key={key} from filename: {filename}")
+    else:
+        key = _detect_key(y, sr)
 
     logger.info(f"Analyzed {file_path}: key={key}, bpm={bpm}, duration={duration:.1f}s")
     return AudioMetadata(key=key, bpm=bpm, duration=round(duration, 2))
