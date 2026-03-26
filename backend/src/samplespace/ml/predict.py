@@ -8,7 +8,10 @@ from pathlib import Path
 
 import torch
 
-from samplespace.ml.dataset import SAMPLE_TYPES, _load_and_preprocess
+from samplespace.ml.dataset import (
+    SAMPLE_TYPES,
+    _load_and_preprocess,
+)
 from samplespace.ml.model import SampleCNN
 
 logger = logging.getLogger(__name__)
@@ -69,3 +72,47 @@ def predict(file_path: str, model: SampleCNN) -> PredictionResult:
         confidence=round(confidence, 4),
         type_probabilities=type_probs,
     )
+
+
+def predict_batch(file_paths: list[str], model: SampleCNN) -> list[PredictionResult]:
+    """Run inference on multiple audio files in a single forward pass.
+
+    More efficient than calling predict() in a loop — stacks spectrograms
+    into a single batch tensor for one GPU/CPU pass.
+    """
+    if not file_paths:
+        return []
+
+    # Load and preprocess all files
+    spectrograms = []
+    for fp in file_paths:
+        mel_spec = _load_and_preprocess(fp)
+        spectrograms.append(mel_spec)
+
+    batch = torch.stack(spectrograms)
+
+    with torch.no_grad():
+        logits, embeddings = model(batch)
+
+    # Convert batch outputs to individual results
+    probabilities = torch.softmax(logits, dim=1)
+    results: list[PredictionResult] = []
+
+    for i in range(len(file_paths)):
+        probs = probabilities[i]
+        predicted_idx = int(probs.argmax().item())
+        confidence = probs[predicted_idx].item()
+        predicted_type = SAMPLE_TYPES[predicted_idx]
+
+        type_probs = {SAMPLE_TYPES[j]: round(probs[j].item(), 4) for j in range(len(SAMPLE_TYPES))}
+
+        results.append(
+            PredictionResult(
+                embedding=embeddings[i].tolist(),
+                predicted_type=predicted_type,
+                confidence=round(confidence, 4),
+                type_probabilities=type_probs,
+            )
+        )
+
+    return results

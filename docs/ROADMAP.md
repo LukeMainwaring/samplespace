@@ -34,6 +34,26 @@ Interactive feedback loop where the agent presents sample pairs for evaluation a
 - Dynamic system prompt injection for learned pair rules (returns empty until stages 4-6 are built)
 - Stages 4-6 (pattern analysis, rule extraction, rule application) deferred until ~20+ verdicts collected
 
+### CNN Training & Architecture Overhaul
+
+Modernized the CNN to produce properly trained embeddings and use current best practices.
+
+- **Supervised Contrastive Loss (SupCon)**: The embedding head now receives direct training signal via SupCon loss (Khosla et al., NeurIPS 2020), combined with cross-entropy: `total = cls_loss + 0.5 * supcon_loss`. Previously only cross-entropy was used — embeddings were shaped incidentally by the shared backbone.
+- **Residual connections**: Each ConvBlock now uses a skip connection (1x1 conv when channels change, identity otherwise). Standard since ResNet — improves gradient flow through the 4-block network.
+- **Squeeze-and-Excitation (SE) attention**: Channel-wise attention after each residual block. Learns to re-weight feature channels, well-established for audio spectrograms.
+- **Training improvements**: AdamW with weight decay (1e-4), gradient clipping (max_norm=1.0), per-class F1 logging, class distribution logging, default batch size increased to 16 for better contrastive learning.
+- **Dataset pipeline**: Mel spectrogram transforms created once (not per-sample), waveform-level augmentations (pitch shift ±2 semitones, time stretch 0.9-1.1x, random crop), spectrogram caching for validation.
+- **Batch inference**: `predict_batch()` for efficient multi-sample embedding generation.
+- **pgvector HNSW indexes**: Added HNSW indexes on both `clap_embedding` and `cnn_embedding` columns for efficient cosine similarity search (replaces full table scans).
+
+### Kit Builder
+
+Assembles a complete multi-sample kit (kick + snare + hihat + bass + pad) using greedy pairwise optimization. See `docs/feature-brainstorm.md` Feature 6.
+
+- `build_kit` agent tool with CLAP retrieval per type, fast inline compatibility scoring, CNN diversity penalty
+- `services/kit_builder.py` with 3-phase greedy assembly (candidate retrieval, constrained selection, final pairwise scoring)
+- Frontend `KitBlock` Streamdown renderer with per-slot playback and compatibility scores
+
 ## Upcoming Features
 
 ## UI Features
@@ -58,22 +78,11 @@ Record a short (~15s) GIF for the README showing the core loop: ask a question i
 
 ## ML Improvements
 
-### CNN Training Loss
-
-The embedding head is currently not optimized during training — only the classification head's cross-entropy loss drives backprop. The embedding space is shaped incidentally by the shared backbone, not by an explicit similarity objective.
-
-- Add a contrastive or triplet loss on the embedding head alongside the existing classification loss
-- Triplet loss (anchor, positive from same class, negative from different class) would directly optimize the embedding space for similarity search
-- Weight the combined loss: `total = classification_loss + lambda * embedding_loss` (start with `lambda=0.5`)
-- Fix the docstring in `train.py` which already claims this dual-loss setup but doesn't implement it
-
 ### Data Augmentation
 
-Current augmentations (time masking, frequency masking, gain adjustment) operate on the mel spectrogram. More aggressive augmentation would help with the small dataset (~75 samples).
+Waveform-level augmentations (pitch shift, time stretch, random crop) and spectrogram-level augmentations (SpecAugment-style masking, gain) are now implemented. Remaining:
 
-- Add pitch shifting and time stretching on the raw waveform (before mel conversion) using `torchaudio.functional`
-- Add random cropping — select a random 2s window from longer samples instead of always taking the first 2s
-- Add mixup augmentation — blend two samples from the same class to create synthetic training examples
+- Add mixup augmentation — blend two spectrograms from the same class to create synthetic training examples
 
 ### Dataset Scaling
 
@@ -93,9 +102,8 @@ Currently using `laion/clap-htsat-unfused`. Potential improvements:
 
 ### CNN Architecture
 
-The current 4-block CNN is straightforward. Some directions to explore:
+Residual connections and SE attention are now implemented. Remaining directions to explore:
 
-- Add residual connections (skip connections) to each ConvBlock to improve gradient flow
 - Replace global average pooling with attention pooling — learn which time-frequency regions matter most
 - Experiment with 1D convolutions on raw waveform (SampleCNN-style from the literature) as an alternative to mel spectrograms
 - Add a lightweight MLP projection head after the embedding layer (as in SimCLR) to separate the representation space from the similarity search space

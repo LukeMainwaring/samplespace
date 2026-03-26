@@ -50,7 +50,7 @@ FastAPI Python backend using async patterns throughout.
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
 -   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, kit building)
--   **`src/samplespace/ml/`**: PyTorch CNN -- model definition (`model.py`), torchaudio dataset (`dataset.py`), training script (`train.py`), inference wrapper (`predict.py`)
+-   **`src/samplespace/ml/`**: PyTorch CNN with residual blocks + SE attention -- model definition (`model.py`), torchaudio dataset with waveform + spectrogram augmentation (`dataset.py`), training script with SupCon + cross-entropy loss (`train.py`), inference wrapper with batch support (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
 -   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client)
