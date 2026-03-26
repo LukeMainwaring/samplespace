@@ -51,12 +51,12 @@ This is a brainstorm document — exploratory in tone but structured enough that
        +-----------------------+
 ```
 
-- **Feature 1 (Song Context)** is the foundation (implemented). Every other feature is more useful when it can filter/rank against the user's active song context.
-- **Feature 2 (Pair Scoring)** depends on 1 (implemented) — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM).
-- **Feature 3 (Audio Transformation)** depends on 1 — `match_to_context` needs a target key and BPM.
-- **Feature 4 (Sample Upload)** has a soft dependency on 1 (implemented) — uploaded samples benefit from context-aware ranking.
-- **Feature 5 (Pairing & Feedback)** depends on 2 and 3 — needs pair scoring to generate plausible pairs and benefits from transformed audio (users judge pairs that are already key/BPM-matched). Can also ingest uploaded samples from 4.
-- **Feature 6 (Kit Builder)** depends on 5 (and transitively on 1, 2, 3) — uses pair scoring, learned rules, song context, and optionally transformation.
+- **Feature 1 (Song Context)** is the foundation. Every other feature is more useful when it can filter/rank against the user's active song context. ✅
+- **Feature 2 (Pair Scoring)** depends on 1 — scoring is more meaningful when weighted by song context (e.g., BPM compatibility is moot if both samples will be time-stretched to the song's BPM). ✅
+- **Feature 3 (Audio Transformation)** depends on 1 — `match_to_context` needs a target key and BPM. ✅
+- **Feature 4 (Sample Upload)** has a soft dependency on 1 — uploaded samples benefit from context-aware ranking. ✅
+- **Feature 5 (Pairing & Feedback)** depends on 2 and 3 — needs pair scoring to generate plausible pairs and benefits from transformed audio (users judge pairs that are already key/BPM-matched). Can also ingest uploaded samples from 4. ✅ (Stages 1-3)
+- **Feature 6 (Kit Builder)** depends on 5 (and transitively on 1, 2, 3) — uses pair scoring, learned rules, song context, and optionally transformation. ✅
 
 ---
 
@@ -76,9 +76,9 @@ Both implemented. Phase 2 is complete. Phase 3 is next — Pairing & Feedback Lo
 
 ### Phase 3: Learning & Assembly
 
-**Features**: Pairing & Feedback Loop (5) ✅ (Stages 1-3), Kit Builder (6)
+**Features**: Pairing & Feedback Loop (5) ✅ (Stages 1-3), Kit Builder (6) ✅
 
-Stages 1-3 of the flywheel (5) are implemented: pair presentation, verdict collection, and background relational feature extraction. Stages 4-6 (pattern analysis, rule extraction, rule application) are deferred until ~20+ verdicts are collected. The `pair_rules` table schema and dynamic system prompt injection are in place and ready. Kit Builder (6) is the remaining capstone feature.
+All brainstorm features are now implemented. Stages 1-3 of the flywheel (5) are live: pair presentation, verdict collection, and background relational feature extraction. Stages 4-6 (pattern analysis, rule extraction, rule application) are deferred until ~20+ verdicts are collected. The `pair_rules` table schema and dynamic system prompt injection are in place and ready. Kit Builder (6) is implemented with a greedy assembly algorithm. `swap_kit_sample` is deferred — users can rebuild kits with adjusted parameters or use existing search tools conversationally.
 
 ---
 
@@ -383,7 +383,7 @@ Stage 6: Rule Application
 
 ---
 
-### 6. Kit Builder
+### 6. Kit Builder — Implemented
 
 **What**: The agent assembles a coherent multi-sample kit (kick + snare + hihat + bass + pad) given a vibe, genre, or reference description. Uses song context for key/BPM targeting, pair scoring for inter-sample compatibility, CNN diversity to avoid redundancy, CLAP relevance for vibe matching, and optionally learned rules from the flywheel.
 
@@ -391,43 +391,30 @@ Stage 6: Rule Application
 
 **Depends on**: Features 1, 2, and benefits from 3 and 5.
 
-#### Backend
+#### Implementation Summary
 
-- Create `services/kit_builder.py` with the assembly algorithm:
-  1. **Define kit template**: list of required types (e.g., `["kick", "snare", "hihat", "bass", "pad"]`). User can customize.
-  2. **Candidate retrieval**: for each slot, CLAP search filtered by type + song context key/BPM → top 10-20 candidates.
-  3. **Greedy assembly**: pick best candidate for first slot, then for each subsequent slot, pick the candidate that maximizes pair compatibility with all already-selected samples while maintaining CNN diversity (penalize high CNN similarity to already-selected samples of the same type-category).
-  4. **Score the kit**: sum of pairwise scores / number of pairs.
-  5. **Optional**: generate a second "alternative" kit from different top candidates.
-- Agent tools:
-  - `build_kit(vibe?, genre?, types?)` — calls kit builder, returns assembled kit with per-sample and overall scores.
-  - `swap_kit_sample(position, new_sample_id)` — iterative refinement ("replace the bass with something warmer").
-- If Feature 3 is available, offer to transform all kit samples to the song's key/BPM.
+**Backend:**
+- `services/kit_builder.py` with a 3-phase greedy assembly algorithm:
+  1. **Candidate retrieval**: per-type CLAP search with vibe/genre/song context enrichment. `_build_clap_query()` constructs natural language queries per type, omitting key for one-shot types (kick, snare, hihat). 10 candidates per type.
+  2. **Greedy assembly**: most-constrained-first ordering (fewest candidates first, tonal elements as tiebreaker). First slot picks best CLAP match; subsequent slots maximize average `_fast_compatibility()` with all selected samples, minus a CNN diversity penalty (`DIVERSITY_ALPHA = 0.15`) to encourage timbral variety. `_fast_compatibility()` is a lightweight inline scorer using type complementarity, key compatibility, and BPM compatibility — zero DB calls during this phase.
+  3. **Final scoring**: full `pair_scoring_service.score_pair()` for all C(N,2) pairs to produce detailed breakdowns for the UI. Per-slot compatibility = mean of that slot's pairwise scores.
+- `schemas/kit.py`: `KitSlot`, `PairwiseEntry`, `KitResult` Pydantic schemas. No database persistence — kits are ephemeral.
+- `Sample.get_many()` classmethod for batch-loading candidates (warms SQLAlchemy identity map).
+- `build_kit` agent tool in `agents/tools/kit_tools.py`. Returns a `kit` code fence with JSON payload containing slots, pairwise scores, and overall score.
+- System prompt updated with tool documentation and kit building guidelines.
 
-#### Frontend
+**Frontend:**
+- `SampleCard` component extracted from `pair-verdict-block.tsx` into shared `elements/sample-card.tsx` (used by both `PairVerdictBlock` and `KitBlock`).
+- `KitBlock` Streamdown renderer for `kit` code fence — displays overall score badge, vibe/genre pills, vertical list of kit slots (type label + `SampleCard` + compatibility score), and a skipped types note.
+- Tool verb: "Building sample kit" in tool call display.
 
-- Render kit results as a structured card with all samples, types, and pairwise compatibility indicators.
-- Each sample has a play button (wavesurfer).
-- "Play all" — sequential or layered playback.
-- Swap buttons per slot to request alternatives.
+#### Resolved Questions
 
-#### Data Model
-
-None initially. Kits are ephemeral (returned in chat). A `kits` table could store saved kits later.
-
-#### Agent Tools
-
-| Tool | Signature |
-|------|-----------|
-| `build_kit` | `(vibe?, genre?, types?) -> str` |
-| `swap_kit_sample` | `(position, new_sample_id) -> str` |
-
-#### Open Questions
-
-- How to handle small libraries (<100 samples)? Relax constraints gracefully.
-- Optimize for *diversity* (different-sounding samples) or *cohesion* (similar vibe across all)?
-- Kit templates by genre? EDM = kick+snare+hihat+bass+lead, ambient = pad+texture+lead+fx.
-- "Play all" UX — sequential playback or layered mixdown?
+- **Small libraries**: If a type has 0 CLAP candidates, the slot is skipped and added to `skipped_types`. No fallback to wrong types.
+- **Diversity vs cohesion**: Both — pairwise compatibility scoring drives cohesion, CNN diversity penalty prevents spectral redundancy.
+- **Kit templates by genre**: Not implemented as static templates. The agent infers appropriate types from genre context (e.g., EDM = kick+snare+hihat+bass+lead) guided by system prompt instructions.
+- **"Play all" UX**: Deferred — each slot has individual wavesurfer playback.
+- **`swap_kit_sample`**: Deferred — users can rebuild kits with adjusted parameters or ask the agent to find alternatives using existing search tools.
 
 ---
 
@@ -452,8 +439,8 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `find_similar_to_upload` | 2 | Sample Upload | ✅ Implemented |
 | `present_pair` | 3 | Pairing & Feedback | ✅ Implemented |
 | `record_verdict` | 3 | Pairing & Feedback | ✅ Implemented |
-| `build_kit` | 3 | Kit Builder |
-| `swap_kit_sample` | 3 | Kit Builder |
+| `build_kit` | 3 | Kit Builder | ✅ Implemented |
+| `swap_kit_sample` | 3 | Kit Builder | Deferred |
 
 ### New API Endpoints
 
@@ -474,7 +461,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `services/upload.py` | 2 | WAV upload pipeline with validation and CLAP embedding | ✅ Implemented |
 | `services/pair_features.py` | 3 | Relational audio feature extraction (librosa) | ✅ Implemented |
 | `services/pair_analysis.py` | 3 | Verdict pattern analysis + rule extraction | Deferred (stages 4-5) |
-| `services/kit_builder.py` | 3 | Greedy kit assembly algorithm | |
+| `services/kit_builder.py` | 3 | Greedy kit assembly algorithm | ✅ Implemented |
 
 ### New Agent Tool Modules
 
@@ -485,7 +472,7 @@ Features 1-4 and 6 require no new tables beyond the existing `threads` and `mess
 | `agents/tools/verdict_tools.py` | 3 | `present_pair`, `record_verdict` | ✅ Implemented |
 | `agents/tools/transform_tools.py` | 2 | `match_to_context` | ✅ Implemented |
 | `agents/tools/upload_tools.py` | 2 | `find_similar_to_upload` | ✅ Implemented |
-| `agents/tools/kit_tools.py` | 3 | `build_kit`, `swap_kit_sample` |
+| `agents/tools/kit_tools.py` | 3 | `build_kit` | ✅ Implemented |
 
 ### New Settings
 

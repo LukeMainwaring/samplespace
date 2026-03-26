@@ -23,6 +23,7 @@ const TOOL_VERBS: Record<string, string> = {
   match_to_context: "Transforming sample",
   present_pair: "Finding a pair to evaluate",
   record_verdict: "Recording verdict",
+  build_kit: "Building sample kit",
 };
 
 function getToolVerb(name: string): string {

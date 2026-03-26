@@ -46,10 +46,10 @@ FastAPI Python backend using async patterns throughout.
 
 -   **`src/samplespace/app.py`**: FastAPI application entry point with CORS middleware and lifespan handler (CLAP model loading)
 -   **`src/samplespace/routers/`**: API routes by domain (samples, agent, health)
--   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, song context management, upload similarity, pair presentation, and verdict recording; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`, `pair_tools.py`, `transform_tools.py`, `upload_tools.py`, `verdict_tools.py`, `formatting.py`)
+-   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, song context management, upload similarity, pair presentation, verdict recording, and kit building; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`, `pair_tools.py`, `transform_tools.py`, `upload_tools.py`, `verdict_tools.py`, `kit_tools.py`, `formatting.py`)
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
--   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory)
+-   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, kit building)
 -   **`src/samplespace/ml/`**: PyTorch CNN -- model definition (`model.py`), torchaudio dataset (`dataset.py`), training script (`train.py`), inference wrapper (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
@@ -72,6 +72,7 @@ Next.js 16 with App Router.
 -   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters
 -   **`components/candidate-samples.tsx`**: Upload page for reference tracks with CLAP similarity search
 -   **`components/preview-attachment.tsx`**: File attachment chip with loading/complete states for chat input
+-   **`components/elements/sample-card.tsx`**: Shared sample card component (filename, metadata pills, WaveformViz) used by pair-verdict-block and kit-block
 -   **`components/audio-player.tsx`**: Audio playback controls
 -   **`components/waveform-viz.tsx`**: wavesurfer.js waveform rendering
 -   **`api/client.ts`**: Axios client configuration (baseURL, credentials)
@@ -102,8 +103,9 @@ Key patterns:
     - `find_similar_to_upload()` -- CLAP audio-to-audio search using an uploaded sample's embedding (excludes other uploads)
     - `present_pair()` -- finds a complementary candidate via CNN/pair scoring and returns a `pair-verdict` code fence for side-by-side evaluation
     - `record_verdict()` -- persists user's thumbs up/down verdict and fires background relational feature extraction
+    - `build_kit()` -- assembles a multi-sample kit via greedy pairwise optimization (CLAP retrieval per type, fast inline scoring, CNN diversity penalty) and returns a `kit` code fence
 5. Agent streams response back as SSE (Vercel AI SDK format)
-6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `pair-verdict` code fences render as interactive side-by-side audio players with verdict buttons
+6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `pair-verdict` code fences render as interactive side-by-side audio players with verdict buttons; `kit` code fences render as kit cards with per-slot playback and compatibility scores
 7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
 
 ## Additional Instructions

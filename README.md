@@ -43,7 +43,8 @@ graph TB
 5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples, using song context key/BPM as fallback defaults
 6. **Sample upload** lets users upload WAV files (songs, snippets) as reference tracks. The system analyzes metadata, generates CLAP embeddings, and the agent finds similar library samples via audio-to-audio cosine similarity
 7. **Pair feedback** lets users evaluate sample pairs — the agent presents plausible pairs with side-by-side playback, collects thumbs up/down verdicts, and computes relational audio features (spectral overlap, onset alignment, timbral contrast, harmonic consonance, spectral centroid gap, RMS energy ratio) in the background
-8. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
+8. **Kit builder** assembles a complete multi-sample kit (e.g., kick + snare + hihat + bass + pad) using a greedy algorithm that maximizes pairwise compatibility. Per-type CLAP search retrieves candidates, fast inline scoring selects samples, and CNN diversity penalties prevent spectral redundancy — all rendered as an interactive kit card with per-slot playback
+9. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
 
 ### Why CLAP + CNN + Agent?
 
@@ -76,7 +77,7 @@ samplespace/
 │   │   ├── agents/
 │   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic context/rules
 │   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)
-│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts
+│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts, kit
 │   │   ├── ml/
 │   │   │   ├── model.py            # Dual-head CNN (classification + 128-dim embedding)
 │   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset
@@ -87,6 +88,7 @@ samplespace/
 │   │   │   ├── audio_analysis.py   # librosa key/BPM/duration extraction
 │   │   │   ├── sample.py           # CRUD + pgvector search
 │   │   │   ├── pair_features.py    # Relational audio features for sample pairs (6 librosa metrics)
+│   │   │   ├── kit_builder.py      # Greedy kit assembly (CLAP retrieval + pairwise optimization)
 │   │   │   └── upload.py           # WAV upload pipeline (validate, store, analyze, embed)
 │   │   ├── routers/                # REST + SSE streaming endpoints
 │   │   ├── models/                 # SQLAlchemy (Sample, Thread, PairVerdict, PairRule)
@@ -108,7 +110,7 @@ samplespace/
 │   │   ├── candidate-samples.tsx   # Upload page for reference tracks with CLAP similarity search
 │   │   ├── preview-attachment.tsx  # File attachment chip (loading/complete states)
 │   │   ├── chat-actions-provider.tsx # React context for threading sendMessage to nested renderers
-│   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block)
+│   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block, kit-block, sample-card)
 │   └── api/generated/              # Auto-generated TypeScript client
 ├── data/
 │   ├── uploads/                    # Uploaded reference tracks (gitignored)
