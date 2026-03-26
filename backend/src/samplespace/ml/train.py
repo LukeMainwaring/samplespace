@@ -12,22 +12,58 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 from collections import Counter
 from pathlib import Path
 
 import torch
 import torch.nn as nn
+from sqlalchemy import select
 from torch.utils.data import DataLoader
 
-from samplespace.ml.dataset import SAMPLE_TYPES, SampleDataset, scan_samples
+from samplespace.dependencies.db import get_async_sqlalchemy_session
+from samplespace.ml.dataset import LABEL_TO_IDX, SampleDataset, scan_samples
 from samplespace.ml.model import SampleCNN
+from samplespace.models.sample import Sample
+from samplespace.schemas.sample_type import SAMPLE_TYPES
+from samplespace.services.sample import find_audio_file
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 SAMPLES_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "samples"
 CHECKPOINTS_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "checkpoints"
+
+
+async def _fetch_samples_from_db() -> list[tuple[Path, int]] | None:
+    """Query the database for all samples with a known sample_type and resolve their audio paths."""
+    try:
+        async with get_async_sqlalchemy_session() as db:
+            stmt = select(Sample).where(Sample.sample_type.in_(SAMPLE_TYPES))
+            result = await db.execute(stmt)
+            db_samples = result.scalars().all()
+    except Exception:
+        logger.warning("Could not connect to database, falling back to directory scan", exc_info=True)
+        return None
+
+    samples: list[tuple[Path, int]] = []
+    for s in db_samples:
+        label_idx = LABEL_TO_IDX.get(s.sample_type)  # type: ignore[arg-type]
+        if label_idx is None:
+            continue
+        audio_path = find_audio_file(s)
+        if audio_path is None:
+            logger.warning(f"Audio file not found for sample {s.id}: {s.filename}")
+            continue
+        samples.append((audio_path, label_idx))
+
+    return sorted(samples, key=lambda x: (x[1], str(x[0])))
+
+
+def _load_samples_from_db() -> list[tuple[Path, int]] | None:
+    """Sync wrapper for DB sample loading."""
+    return asyncio.run(_fetch_samples_from_db())
 
 
 class SupConLoss(nn.Module):
@@ -133,12 +169,18 @@ def train(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Training on {device}")
 
-    # Scan all samples, then split into train/val with separate augmentation settings.
+    # Load samples from the database (supports all sources: local, splice, upload).
+    # Falls back to directory scan if the database is unavailable.
     # Using separate SampleDataset instances (not random_split) ensures validation
     # data is never augmented — critical for reliable model selection and LR scheduling.
-    all_samples = scan_samples(SAMPLES_DIR)
+    all_samples = _load_samples_from_db()
+    if all_samples:
+        logger.info(f"Loaded {len(all_samples)} samples from database")
+    else:
+        logger.info("Falling back to directory scan")
+        all_samples = scan_samples(SAMPLES_DIR)
     if not all_samples:
-        logger.error(f"No samples found in {SAMPLES_DIR}")
+        logger.error("No samples found")
         return
 
     # Log class distribution

@@ -8,11 +8,9 @@ from pathlib import Path
 
 import torch
 
-from samplespace.ml.dataset import (
-    SAMPLE_TYPES,
-    _load_and_preprocess,
-)
+from samplespace.ml.dataset import _load_and_preprocess
 from samplespace.ml.model import SampleCNN
+from samplespace.schemas.sample_type import SAMPLE_TYPES
 
 logger = logging.getLogger(__name__)
 

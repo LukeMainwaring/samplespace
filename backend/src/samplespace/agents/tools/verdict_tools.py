@@ -40,7 +40,7 @@ async def present_pair(
 
     Args:
         sample_id: The anchor sample to find a pair for.
-        candidate_type: Optional sample type to look for (e.g., "pad", "lead").
+        candidate_type: Optional sample type to look for (e.g., "pad", "synth").
     """
     try:
         anchor = await Sample.get(ctx.deps.db, sample_id)
