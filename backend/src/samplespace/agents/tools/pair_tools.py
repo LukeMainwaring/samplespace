@@ -2,7 +2,7 @@
 
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.schemas.pair import PairScore
@@ -52,8 +52,3 @@ def _format_pair_score(score: PairScore) -> str:
     lines.append("")
     lines.append(score.summary)
     return "\n".join(lines)
-
-
-def register_pair_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register pair scoring tools with the agent."""
-    agent.tool(rate_pair)

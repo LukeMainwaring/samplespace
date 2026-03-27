@@ -2,7 +2,7 @@
 
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -35,8 +35,3 @@ async def find_similar_samples(ctx: RunContext[AgentDeps], sample_id: str) -> st
     except Exception:
         logger.exception("Error in CNN similarity search")
         return "An error occurred while finding similar samples."
-
-
-def register_cnn_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register CNN similarity tools with the agent."""
-    agent.tool(find_similar_samples)

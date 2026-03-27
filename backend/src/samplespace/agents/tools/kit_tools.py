@@ -3,7 +3,7 @@
 import json
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.schemas.kit import KitResult
@@ -118,8 +118,3 @@ def _sample_to_payload(sample: SampleSchema) -> dict[str, object]:
         if sample.bpm and sample.bpm > 0:
             payload["bpm"] = sample.bpm
     return payload
-
-
-def register_kit_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register kit builder tools with the agent."""
-    agent.tool(build_kit)

@@ -2,7 +2,7 @@
 
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -53,8 +53,3 @@ async def find_similar_to_upload(ctx: RunContext[AgentDeps], sample_id: str) -> 
     except Exception:
         logger.exception("Error in upload similarity search")
         return "An error occurred while finding similar samples."
-
-
-def register_upload_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register upload similarity tools with the agent."""
-    agent.tool(find_similar_to_upload)
