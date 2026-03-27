@@ -84,7 +84,7 @@ curl -o docs/pydantic-ai-llms-full.txt https://ai.pydantic.dev/llms-full.txt
 ```
 
 ```bash
-curl -s https://ai-sdk.dev/llms.txt | sed -n -e '/^# AI SDK UI$/,/^# AI_APICallError$/{' -e '/^# AI_APICallError$/d' -e p -e '}' > docs/vercel-ai-sdk-ui.txt
+curl -s https://ai-sdk.dev/llms.txt | awk '/^# AI SDK UI$/{if(!found){found=1; printing=1}} /^# AI_APICallError$/{if(printing){printing=0; exit}} printing' > docs/vercel-ai-sdk-ui.txt
 ```
 
 ## Phase 5: Validate
