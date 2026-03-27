@@ -154,7 +154,7 @@ uv run embed-samples    # CLAP embeddings (~2 min)
 uv run embed-cnn        # CNN embeddings (after training)
 
 # Train CNN (optional)
-PYTHONPATH=src uv run python -m samplespace.ml.train
+uv run train-cnn
 
 # Frontend setup
 cd ../frontend

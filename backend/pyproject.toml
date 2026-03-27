@@ -58,6 +58,7 @@ seed-db = "samplespace.scripts.seed:main"
 seed-splice = "samplespace.scripts.seed_splice:main"
 embed-samples = "samplespace.scripts.embed_samples:main"
 embed-cnn = "samplespace.scripts.embed_cnn:main"
+train-cnn = "samplespace.ml.train:main"
 
 [tool.uv]
 default-groups = ["dev"]

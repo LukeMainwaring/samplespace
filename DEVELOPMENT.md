@@ -149,7 +149,7 @@ Audio files are stored in `data/samples/`. The database stores metadata (key, BP
 ### CNN Training
 
 ```bash
-python -m samplespace.ml.train
+uv run train-cnn
 ```
 
 Model checkpoints are saved to `data/checkpoints/` (gitignored). The training set is small (50-100 samples) -- the architecture and pipeline are the focus, not benchmark results.

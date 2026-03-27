@@ -5,8 +5,8 @@ Trains with a combined loss:
   - Supervised contrastive loss (SupCon) for the embedding head
 
 Usage:
-    python -m samplespace.ml.train
-    python -m samplespace.ml.train --epochs 50 --lr 0.0005
+    uv run train-cnn
+    uv run train-cnn --epochs 50 --lr 0.0005
 """
 
 from __future__ import annotations
