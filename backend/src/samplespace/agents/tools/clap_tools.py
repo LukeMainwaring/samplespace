@@ -2,7 +2,7 @@
 
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -42,8 +42,3 @@ async def search_by_description(ctx: RunContext[AgentDeps], query: str) -> str:
     except Exception:
         logger.exception("Error in CLAP search")
         return "An error occurred while searching for samples."
-
-
-def register_clap_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register CLAP search tools with the agent."""
-    agent.tool(search_by_description)

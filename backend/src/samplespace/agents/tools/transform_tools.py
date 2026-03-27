@@ -4,7 +4,7 @@ import asyncio
 import logging
 from urllib.parse import quote
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.services import audio_transform as audio_transform_service
@@ -188,8 +188,3 @@ def _format_result(
             parts.append(f"*{note}*")
 
     return "\n".join(parts)
-
-
-def register_transform_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register audio transformation tools with the agent."""
-    agent.tool(match_to_context)

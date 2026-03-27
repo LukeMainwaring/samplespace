@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.dependencies.db import get_async_sqlalchemy_session
@@ -202,9 +202,3 @@ def _sample_to_payload(sample: SampleSchema) -> dict[str, object]:
         if sample.bpm and sample.bpm > 0:
             payload["bpm"] = sample.bpm
     return payload
-
-
-def register_verdict_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register pair verdict tools with the agent."""
-    agent.tool(present_pair)
-    agent.tool(record_verdict)

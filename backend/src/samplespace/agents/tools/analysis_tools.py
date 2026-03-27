@@ -2,7 +2,7 @@
 
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.services import music_theory as music_theory_service
@@ -158,10 +158,3 @@ async def suggest_complement(
     except Exception:
         logger.exception("Error suggesting complements")
         return "An error occurred while suggesting complements."
-
-
-def register_analysis_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register analysis and music theory tools with the agent."""
-    agent.tool(analyze_sample)
-    agent.tool(check_key_compatibility)
-    agent.tool(suggest_complement)

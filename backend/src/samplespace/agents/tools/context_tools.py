@@ -2,7 +2,7 @@
 
 import logging
 
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.models.thread import Thread
@@ -60,8 +60,3 @@ async def set_song_context(
     except Exception:
         logger.exception("Error updating song context")
         return "An error occurred while updating the song context."
-
-
-def register_context_tools(agent: Agent[AgentDeps, str]) -> None:
-    """Register song context tools with the agent."""
-    agent.tool(set_song_context)

@@ -7,21 +7,16 @@ and audio analysis tools to help users find and combine samples.
 import logging
 
 import logfire
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIResponsesModel
 
+from samplespace.agents.capabilities.analysis import AnalysisCapability
+from samplespace.agents.capabilities.context import ContextCapability
+from samplespace.agents.capabilities.pairing import PairingCapability
+from samplespace.agents.capabilities.production import ProductionCapability
+from samplespace.agents.capabilities.search import SearchCapability
 from samplespace.agents.deps import AgentDeps
-from samplespace.agents.tools.analysis_tools import register_analysis_tools
-from samplespace.agents.tools.clap_tools import register_clap_tools
-from samplespace.agents.tools.cnn_tools import register_cnn_tools
-from samplespace.agents.tools.context_tools import register_context_tools
-from samplespace.agents.tools.kit_tools import register_kit_tools
-from samplespace.agents.tools.pair_tools import register_pair_tools
-from samplespace.agents.tools.transform_tools import register_transform_tools
-from samplespace.agents.tools.upload_tools import register_upload_tools
-from samplespace.agents.tools.verdict_tools import register_verdict_tools
 from samplespace.core.config import get_settings
-from samplespace.models.pair_rule import PairRule
 
 logfire.configure()
 logfire.instrument_pydantic_ai()
@@ -133,56 +128,12 @@ _model = OpenAIResponsesModel(config.AGENT_MODEL)
 sample_agent = Agent(
     model=_model,
     deps_type=AgentDeps,
-    system_prompt=SYSTEM_PROMPT,
+    instructions=SYSTEM_PROMPT,
+    capabilities=[
+        SearchCapability(),
+        AnalysisCapability(),
+        ContextCapability(),
+        PairingCapability(),
+        ProductionCapability(),
+    ],
 )
-
-register_clap_tools(sample_agent)
-register_cnn_tools(sample_agent)
-register_analysis_tools(sample_agent)
-register_context_tools(sample_agent)
-register_pair_tools(sample_agent)
-register_transform_tools(sample_agent)
-register_upload_tools(sample_agent)
-register_verdict_tools(sample_agent)
-register_kit_tools(sample_agent)
-
-
-@sample_agent.system_prompt
-async def inject_song_context(ctx: RunContext[AgentDeps]) -> str:
-    """Inject active song context into the system prompt."""
-    if not ctx.deps.song_context:
-        return ""
-    sc = ctx.deps.song_context
-    parts = []
-    if sc.key:
-        parts.append(f"Key: {sc.key}")
-    if sc.bpm:
-        parts.append(f"BPM: {sc.bpm}")
-    if sc.genre:
-        parts.append(f"Genre: {sc.genre}")
-    if sc.vibe:
-        parts.append(f"Vibe: {sc.vibe}")
-    if not parts:
-        return ""
-    return (
-        "\n\n## Active Song Context\n"
-        + "\n".join(f"- {p}" for p in parts)
-        + "\n\nUse this context to inform your searches and recommendations. "
-        "The vibe is automatically appended to CLAP searches."
-    )
-
-
-@sample_agent.system_prompt
-async def inject_pair_rules(ctx: RunContext[AgentDeps]) -> str:
-    """Inject learned pair rules into the system prompt."""
-    rules = await PairRule.get_active(ctx.deps.db)
-    if not rules:
-        return ""
-    lines = ["\n\n## Learned Pairing Preferences"]
-    for rule in rules:
-        lines.append(
-            f"- For {rule.type_pair} pairs: prefer {rule.feature_name} "
-            f"{rule.direction} {rule.threshold:.2f} "
-            f"(confidence: {rule.confidence:.0%})"
-        )
-    return "\n".join(lines)
