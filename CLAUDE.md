@@ -36,7 +36,7 @@ pnpm -C frontend format          # format with ultracite
 pnpm -C frontend generate-client # regenerate API client from backend OpenAPI
 ```
 
-After making frontend code changes, run `pnpm -C frontend format` to fix formatting. Use `pnpm -C frontend lint` to check for errors. Do not run `pnpm build` for validation -- it's slow and rarely catches issues that linting misses. The dev server (`pnpm dev`) is typically already running during development.
+After making frontend code changes, run `pnpm -C frontend format` to fix formatting. Use `pnpm -C frontend lint` to check for errors. Do not run `pnpm -C frontend build` for validation -- it's slow and rarely catches issues that linting misses. The dev server (`pnpm -C frontend dev`) is typically already running during development.
 
 ## Architecture
 
