@@ -142,28 +142,26 @@ cp .env.sample .env
 docker compose up -d
 
 # Backend setup
-cd backend
-uv sync
-uv run pre-commit install
+uv sync --directory backend
+uv run --directory backend pre-commit install
 
 # Seed samples (place .wav files in data/samples/ organized by type)
-uv run seed-db
+uv run --directory backend seed-db
 
 # Generate embeddings
-uv run embed-samples    # CLAP embeddings (~2 min)
-uv run embed-cnn        # CNN embeddings (after training)
+uv run --directory backend embed-samples    # CLAP embeddings (~2 min)
+uv run --directory backend embed-cnn        # CNN embeddings (after training)
 
 # Train CNN (optional)
-uv run train-cnn
+uv run --directory backend train-cnn
 
 # Frontend setup
-cd ../frontend
-pnpm install
-pnpm generate-client
+pnpm -C frontend install
+pnpm -C frontend generate-client
 
 # Run
 # Terminal 1: docker compose up -d (if not already running)
-# Terminal 2: cd frontend && pnpm dev
+# Terminal 2: pnpm -C frontend dev
 # Visit http://localhost:3002
 ```
 
