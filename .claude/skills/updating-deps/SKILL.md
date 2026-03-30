@@ -39,7 +39,7 @@ uv lock --upgrade --directory backend
 1. Check outdated packages:
 
 ```bash
-cd frontend && pnpm outdated --json
+pnpm -C frontend outdated --json
 ```
 
 2. Note current vs latest for all packages
@@ -63,14 +63,14 @@ uv sync --directory backend
 For dependencies using `^` ranges:
 
 ```bash
-cd frontend && pnpm update --latest
+pnpm -C frontend update --latest
 ```
 
 For exact-pinned dependencies (no `^` prefix -- e.g., `react`, `react-dom`, `next`, and any in `devDependencies` pinned exactly like `@biomejs/biome`, `ultracite`), bump individually:
 
 ```bash
-cd frontend && pnpm add <pkg>@latest
-cd frontend && pnpm add -D <pkg>@latest  # for devDependencies
+pnpm -C frontend add <pkg>@latest
+pnpm -C frontend add -D <pkg>@latest  # for devDependencies
 ```
 
 Update everything -- no exclusions.
@@ -94,13 +94,13 @@ Run linting and type checking to catch any issues from the version bumps:
 ### Backend
 
 ```bash
-cd backend && uv run pre-commit run --all-files
+uv run --directory backend pre-commit run --all-files
 ```
 
 ### Frontend
 
 ```bash
-cd frontend && pnpm lint
+pnpm -C frontend lint
 ```
 
 Report any failures with full error output. Do NOT auto-fix -- the user will decide how to address issues.

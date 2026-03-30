@@ -12,31 +12,31 @@ When working with this codebase, prioritize readability over cleverness. Ask cla
 
 ```bash
 # Install dependencies
-cd backend && uv sync
+uv sync --directory backend
 
 # Run backend with Docker (includes PostgreSQL)
 docker compose up -d
 
 # Pre-commit hooks (covers type checking, linting, and formatting for backend)
-uv run pre-commit run --all-files
+uv run --directory backend pre-commit run --all-files
 
 # Create local database migration
-cd backend && ./scripts/create-db-revision-docker.sh "<migration_message>"
+./backend/scripts/create-db-revision-docker.sh "<migration_message>"
 
 # Apply pending migrations (ask user first)
-cd backend && ./scripts/migrate-docker.sh
+./backend/scripts/migrate-docker.sh
 ```
 
 ### Frontend (TypeScript/Next.js)
 
 ```bash
-cd frontend && pnpm install
-cd frontend && pnpm lint            # lint with ultracite
-cd frontend && pnpm format          # format with ultracite
-cd frontend && pnpm generate-client # regenerate API client from backend OpenAPI
+pnpm -C frontend install
+pnpm -C frontend lint            # lint with ultracite
+pnpm -C frontend format          # format with ultracite
+pnpm -C frontend generate-client # regenerate API client from backend OpenAPI
 ```
 
-After making frontend code changes, run `pnpm format` to fix formatting. Use `pnpm lint` to check for errors. Do not run `pnpm build` for validation -- it's slow and rarely catches issues that linting misses. The dev server (`pnpm dev`) is typically already running during development.
+After making frontend code changes, run `pnpm -C frontend format` to fix formatting. Use `pnpm -C frontend lint` to check for errors. Do not run `pnpm -C frontend build` for validation -- it's slow and rarely catches issues that linting misses. The dev server (`pnpm -C frontend dev`) is typically already running during development.
 
 ## Architecture
 
@@ -113,10 +113,10 @@ Key patterns:
 -   This project uses Pydantic AI. Documentation is available at `docs/pydantic-ai-llms-full.txt`. Read this file when working on agent code or when you need Pydantic AI API reference. Re-download periodically with `curl -o docs/pydantic-ai-llms-full.txt https://ai.pydantic.dev/llms-full.txt`.
 -   Vercel AI SDK UI documentation is available at `docs/vercel-ai-sdk-ui.txt`. This project only uses **AI SDK UI** (hooks like `useChat` for chat UI) — it does NOT use AI SDK Core (LLM orchestration is handled by Pydantic AI on the backend). Read this file when working on frontend chat UI, message rendering, `useChat` hook, or streaming integration. Re-download with: `curl -s https://ai-sdk.dev/llms.txt | awk '/^# AI SDK UI$/{if(!found){found=1; printing=1}} /^# AI_APICallError$/{if(printing){printing=0; exit}} printing' > docs/vercel-ai-sdk-ui.txt`.
 -   Assume that Git operations for branches, commits, and pushes will mostly be done manually. If executing a multi-step, comprehensive plan that involves successive commits, ask before making a commit.
--   Do not run `cd ... && git ...` for git commands in this repo. Assume you are already in the codebase.
+-   All commands in this file are designed to run from the repo root. Do not use `cd <dir> && ...` patterns -- use `--directory` (uv) or `-C` (pnpm) flags instead.
 -   Do not make any changes until you have 95% confidence that you know what to build -- ask me follow up questions using the AskUserQuestion tool until you have that confidence; but don't ask obvious questions, dig into the hard parts I might not have considered.
 -   Do not worry about running the pytest commands yet. I have not implemented unit tests and likely will not for a while.
--   After modifying backend API endpoints, regenerate the frontend client with `cd frontend && pnpm generate-client`. Do not manually edit files in `frontend/api/generated/`.
--   Audio sample files in `data/samples/` are gitignored -- use `cd backend && uv run seed-db` to populate.
+-   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
+-   Audio sample files in `data/samples/` are gitignored -- use `uv run --directory backend seed-db` to populate.
 -   CLAP model is ~600MB, loaded at startup via lifespan. Mock in tests.
 -   CNN training data is small (50-100 samples) -- the architecture and pipeline matter more than results.
