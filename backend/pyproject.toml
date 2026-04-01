@@ -31,6 +31,7 @@ dev = [
   "pre-commit>=4.5.1",
   "pytest>=9.0.2",
   "ruff>=0.15.8",
+  "tensorboard>=2.19.0",
 ]
 
 [tool.pytest.ini_options]
@@ -45,6 +46,7 @@ strict = true
 [[tool.mypy.overrides]]
 module = ["pgvector.*", "librosa.*", "music21.*", "transformers.*", "torchaudio.*", "soundfile", "soundfile.*"]
 ignore_missing_imports = true
+
 
 [tool.ruff]
 line-length = 120
