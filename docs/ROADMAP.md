@@ -86,9 +86,15 @@ Record a short (~15s) GIF for the README showing the core loop: ask a question i
 
 ### Data Augmentation
 
-Augmentation pipeline is comprehensive: pitch shift, time stretch, Gaussian noise injection, random EQ, random crop (waveform-level), plus SpecAugment masking and random gain (spectrogram-level). Remaining:
+Active augmentations: Gaussian noise injection, random EQ, random crop (waveform-level), plus SpecAugment masking and random gain (spectrogram-level). Pitch shift (±2 semitones) and time stretch (0.9-1.1x) are implemented but disabled by default (`expensive_augment=False`) — they use `torch.stft` which deadlocks in macOS multiprocessing workers and adds ~10 min/epoch in single-threaded mode.
 
-- Add mixup augmentation — blend two spectrograms from the same class to create synthetic training examples
+Next steps:
+
+- **Re-enable time stretch first** — cheaper than pitch shift (single STFT pass vs STFT + resample), teaches tempo invariance which matters more for this use case. Benchmark per-epoch time with `num_workers=0` to see if it's tolerable (~3-4 min/epoch estimated)
+- **Offline precomputation** — a CLI script that generates pitch-shifted/time-stretched waveform variants as `.pt` files, loaded at training time instead of computed live. One-time cost (~10-20 min), ~1.7 GB disk for 2,000 samples × ~4 variants each. Avoids the STFT-in-worker deadlock entirely
+- **DataLoader parallelization** — `num_workers > 0` works on macOS only with cheap augmentations (no `torch.stft`). On CUDA/Linux, `num_workers=4` with all augmentations should work. Could also explore `torch.utils.data.DataLoader` with `prefetch_factor` tuning
+- **Mixup augmentation** — blend two spectrograms from the same class to create synthetic training examples (operates on spectrograms, so no STFT issue)
+- **Polarity inversion** — trivially flip waveform sign (free, teaches phase invariance)
 
 ### Dataset Scaling
 

@@ -186,6 +186,8 @@ def train(
     grad_accum: int = 1,
     patience: int = 15,
     warmup_epochs: int = 5,
+    num_workers: int = 0,
+    expensive_augment: bool = False,
     use_tensorboard: bool = True,
 ) -> None:
     """Train the SampleCNN model with combined classification + SupCon loss."""
@@ -220,7 +222,7 @@ def train(
     train_samples = [all_samples[i] for i in indices[:train_size]]
     val_samples = [all_samples[i] for i in indices[train_size:]]
 
-    train_dataset = SampleDataset(augment=True, samples=train_samples)
+    train_dataset = SampleDataset(augment=True, samples=train_samples, expensive_augment=expensive_augment)
     val_dataset = SampleDataset(augment=False, samples=val_samples)
 
     # Clamp batch_size to training set size to avoid empty epochs with drop_last=True
@@ -230,8 +232,30 @@ def train(
             f"Batch size {batch_size} exceeds training set ({train_size}), clamping to {effective_batch_size}"
         )
 
-    train_loader = DataLoader(train_dataset, batch_size=effective_batch_size, shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=effective_batch_size, shuffle=False)
+    # num_workers > 0 parallelizes data loading and augmentation.
+    # "forkserver" avoids fork-related deadlocks on macOS/MPS.
+    # persistent_workers avoids respawning processes each epoch.
+    persist = num_workers > 0
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=effective_batch_size,
+        shuffle=True,
+        drop_last=True,
+        num_workers=num_workers,
+        persistent_workers=persist,
+        multiprocessing_context="forkserver" if num_workers > 0 else None,
+        pin_memory=False,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=effective_batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        persistent_workers=persist,
+        multiprocessing_context="forkserver" if num_workers > 0 else None,
+        pin_memory=False,
+    )
 
     logger.info(f"Train: {train_size}, Val: {val_size}, Classes: {len(SAMPLE_TYPES)}")
 
@@ -461,6 +485,10 @@ def main() -> None:
     parser.add_argument("--grad-accum", type=int, default=1, help="Gradient accumulation steps")
     parser.add_argument("--patience", type=int, default=15, help="Early stopping patience (epochs)")
     parser.add_argument("--warmup-epochs", type=int, default=5, help="Linear LR warmup epochs")
+    parser.add_argument("--num-workers", type=int, default=0, help="DataLoader worker processes (0 = main thread)")
+    parser.add_argument(
+        "--expensive-augment", action="store_true", help="Enable pitch shift/time stretch (slow, deadlocks on macOS)"
+    )
     parser.add_argument("--no-tensorboard", action="store_true", help="Disable TensorBoard logging")
     args = parser.parse_args()
 
@@ -473,6 +501,8 @@ def main() -> None:
         grad_accum=args.grad_accum,
         patience=args.patience,
         warmup_epochs=args.warmup_epochs,
+        num_workers=args.num_workers,
+        expensive_augment=args.expensive_augment,
         use_tensorboard=not args.no_tensorboard,
     )
 
