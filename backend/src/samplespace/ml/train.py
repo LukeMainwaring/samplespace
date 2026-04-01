@@ -223,8 +223,15 @@ def train(
     train_dataset = SampleDataset(augment=True, samples=train_samples)
     val_dataset = SampleDataset(augment=False, samples=val_samples)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    # Clamp batch_size to training set size to avoid empty epochs with drop_last=True
+    effective_batch_size = min(batch_size, train_size)
+    if effective_batch_size < batch_size:
+        logger.warning(
+            f"Batch size {batch_size} exceeds training set ({train_size}), clamping to {effective_batch_size}"
+        )
+
+    train_loader = DataLoader(train_dataset, batch_size=effective_batch_size, shuffle=True, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=effective_batch_size, shuffle=False)
 
     logger.info(f"Train: {train_size}, Val: {val_size}, Classes: {len(SAMPLE_TYPES)}")
 
@@ -248,9 +255,9 @@ def train(
         optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_epochs]
     )
 
-    # Mixed precision: autocast on CUDA/MPS, GradScaler on CUDA only
-    use_amp = device.type in ("cuda", "mps")
-    scaler = torch.amp.GradScaler(enabled=(device.type == "cuda"))  # type: ignore[attr-defined]
+    # Mixed precision: CUDA only (MPS autocast has limited dtype coverage and no GradScaler)
+    use_amp = device.type == "cuda"
+    scaler = torch.amp.GradScaler(enabled=use_amp)  # type: ignore[attr-defined]
 
     best_val_loss = float("inf")
     epochs_without_improvement = 0

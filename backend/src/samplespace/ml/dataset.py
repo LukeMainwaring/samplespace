@@ -189,20 +189,21 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
             rate = 0.9 + torch.rand(1).item() * 0.2  # 0.9 to 1.1
             waveform = F.speed(waveform, SAMPLE_RATE, factor=rate)[0]
 
-        # Gaussian noise injection (10-30 dB SNR)
+        # Gaussian noise injection (10-30 dB SNR), skip near-silent signals
         if torch.rand(1).item() > 0.5:
-            snr_db = 10.0 + torch.rand(1).item() * 20.0
             signal_power = waveform.pow(2).mean()
-            noise_power = signal_power / (10 ** (snr_db / 10))
-            noise = torch.randn_like(waveform) * noise_power.sqrt()
-            waveform = waveform + noise
+            if signal_power > 1e-10:
+                snr_db = 10.0 + torch.rand(1).item() * 20.0
+                noise_power = signal_power / (10 ** (snr_db / 10))
+                noise = torch.randn_like(waveform) * noise_power.sqrt()
+                waveform = waveform + noise
 
         # Random EQ: boost/cut a random frequency band
         if torch.rand(1).item() > 0.5:
             center_freq = 200.0 + torch.rand(1).item() * 4800.0  # 200-5000 Hz
-            Q = 0.5 + torch.rand(1).item() * 1.5  # Q factor 0.5-2.0
+            q_factor = 0.5 + torch.rand(1).item() * 1.5  # 0.5-2.0
             gain_db = (torch.rand(1).item() - 0.5) * 12.0  # ±6 dB
-            waveform = F.equalizer_biquad(waveform, SAMPLE_RATE, center_freq, gain_db, Q)
+            waveform = F.equalizer_biquad(waveform, SAMPLE_RATE, center_freq, gain_db, q_factor)
 
         # Random crop (for samples longer than target, pick random start)
         if waveform.shape[1] > TARGET_LENGTH:
