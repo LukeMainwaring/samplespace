@@ -38,13 +38,19 @@ Interactive feedback loop where the agent presents sample pairs for evaluation a
 
 Modernized the CNN to produce properly trained embeddings and use current best practices.
 
-- **Supervised Contrastive Loss (SupCon)**: The embedding head now receives direct training signal via SupCon loss (Khosla et al., NeurIPS 2020), combined with cross-entropy: `total = cls_loss + 0.5 * supcon_loss`. Previously only cross-entropy was used — embeddings were shaped incidentally by the shared backbone.
-- **Residual connections**: Each ConvBlock now uses a skip connection (1x1 conv when channels change, identity otherwise). Standard since ResNet — improves gradient flow through the 4-block network.
-- **Squeeze-and-Excitation (SE) attention**: Channel-wise attention after each residual block. Learns to re-weight feature channels, well-established for audio spectrograms.
-- **Training improvements**: AdamW with weight decay (1e-4), gradient clipping (max_norm=1.0), per-class F1 logging, class distribution logging, default batch size increased to 16 for better contrastive learning.
-- **Dataset pipeline**: Mel spectrogram transforms created once (not per-sample), waveform-level augmentations (pitch shift ±2 semitones, time stretch 0.9-1.1x, random crop), spectrogram caching for validation.
+- **Wider architecture**: Channel progression 1→64→128→256→512 (was 1→32→64→128→256), ~5.3M parameters. Residual connections with SE attention at each block.
+- **2-layer projection head**: SimCLR-style projection (512→256→128 with ReLU + BatchNorm) replaces single linear layer. Improves contrastive embedding quality.
+- **Supervised Contrastive Loss (SupCon)**: Combined with cross-entropy: `total = cls_loss + 0.5 * supcon_loss` (Khosla et al., NeurIPS 2020).
+- **Cosine annealing with linear warmup**: 5-epoch warmup from 1% of target LR, then cosine decay to 1e-6. Replaces ReduceLROnPlateau.
+- **Mixed precision training**: `torch.amp.autocast` + `GradScaler` on CUDA. Disabled on MPS (limited dtype coverage).
+- **Gradient accumulation**: `--grad-accum` flag to simulate larger effective batch sizes for SupCon.
+- **Early stopping**: Configurable patience (default 15 epochs). Prevents overfitting on small datasets.
+- **MPS device support**: Auto-detects Apple Silicon for local training on MacBook.
+- **TensorBoard logging**: Loss curves, LR schedule, per-class F1 scores, and embedding projector visualization (t-SNE/UMAP of 128-dim space). Logs to `data/runs/`.
+- **Augmentation pipeline**: Pitch shift ±2 semitones, time stretch 0.9-1.1x, Gaussian noise injection (10-30 dB SNR), random EQ (±6 dB via equalizer biquad), SpecAugment (time/freq masking), random gain ±5 dB.
+- **Defaults**: 100 epochs, batch size 64, AdamW (weight decay 1e-4), grad clipping (max_norm=1.0).
 - **Batch inference**: `predict_batch()` for efficient multi-sample embedding generation.
-- **pgvector HNSW indexes**: Added HNSW indexes on both `clap_embedding` and `cnn_embedding` columns for efficient cosine similarity search (replaces full table scans).
+- **pgvector HNSW indexes**: Added HNSW indexes on both `clap_embedding` and `cnn_embedding` columns for efficient cosine similarity search.
 
 ### Kit Builder
 
@@ -80,17 +86,16 @@ Record a short (~15s) GIF for the README showing the core loop: ask a question i
 
 ### Data Augmentation
 
-Waveform-level augmentations (pitch shift, time stretch, random crop) and spectrogram-level augmentations (SpecAugment-style masking, gain) are now implemented. Remaining:
+Augmentation pipeline is comprehensive: pitch shift, time stretch, Gaussian noise injection, random EQ, random crop (waveform-level), plus SpecAugment masking and random gain (spectrogram-level). Remaining:
 
 - Add mixup augmentation — blend two spectrograms from the same class to create synthetic training examples
 
 ### Dataset Scaling
 
-The current dataset (75 samples, 11 classes) will overfit. The architecture and pipeline are the focus, but there are paths to better embeddings.
+Scaling to ~2,000 Splice samples across 15-16 classes. At this scale, SupCon loss becomes effective (enough same-class samples per batch) and the wider 512-channel architecture is justified. Further paths:
 
-- [NSynth](https://magenta.tensorflow.org/datasets/nsynth) (300K samples) is the natural scaling path for instrument classification
+- [NSynth](https://magenta.tensorflow.org/datasets/nsynth) (300K samples) for instrument classification
 - [FSD50K](https://zenodo.org/record/4060432) for broader audio event classification
-- Even doubling the current set to ~150 samples with more variety per class would meaningfully improve the embedding space
 
 ### CLAP Model
 
@@ -102,8 +107,7 @@ Currently using `laion/clap-htsat-unfused`. Potential improvements:
 
 ### CNN Architecture
 
-Residual connections and SE attention are now implemented. Remaining directions to explore:
+Wider 512-channel backbone with residual connections, SE attention, and 2-layer SimCLR-style projection head are now implemented. Remaining directions to explore:
 
 - Replace global average pooling with attention pooling — learn which time-frequency regions matter most
 - Experiment with 1D convolutions on raw waveform (SampleCNN-style from the literature) as an alternative to mel spectrograms
-- Add a lightweight MLP projection head after the embedding layer (as in SimCLR) to separate the representation space from the similarity search space

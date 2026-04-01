@@ -50,7 +50,7 @@ FastAPI Python backend using async patterns throughout.
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
 -   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, kit building)
--   **`src/samplespace/ml/`**: PyTorch CNN with residual blocks + SE attention -- model definition (`model.py`), torchaudio dataset with waveform + spectrogram augmentation (`dataset.py`), training script with SupCon + cross-entropy loss (`train.py`), inference wrapper with batch support (`predict.py`)
+-   **`src/samplespace/ml/`**: PyTorch CNN (4 residual blocks, SE attention, 1→64→128→256→512 channels, 2-layer projection head) -- model definition (`model.py`), torchaudio dataset with waveform + spectrogram augmentation (`dataset.py`), training script with SupCon + cross-entropy loss, cosine annealing, mixed precision, TensorBoard logging (`train.py`), inference wrapper with batch support (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
 -   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client)
@@ -119,4 +119,4 @@ Key patterns:
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files in `data/samples/` are gitignored -- use `uv run --directory backend seed-db` to populate.
 -   CLAP model is ~600MB, loaded at startup via lifespan. Mock in tests.
--   CNN training data is small (50-100 samples) -- the architecture and pipeline matter more than results.
+-   CNN training defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `data/runs/`.

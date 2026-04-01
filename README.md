@@ -79,9 +79,9 @@ samplespace/
 │   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)
 │   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts, kit
 │   │   ├── ml/
-│   │   │   ├── model.py            # Dual-head CNN (classification + 128-dim embedding)
-│   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset
-│   │   │   ├── train.py            # Training with augmentation
+│   │   │   ├── model.py            # Dual-head CNN (512-ch backbone + 2-layer projection → 128-dim embedding)
+│   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset with augmentation
+│   │   │   ├── train.py            # Training (SupCon + CE, cosine annealing, AMP, TensorBoard)
 │   │   │   └── predict.py          # Inference wrapper
 │   │   ├── services/
 │   │   │   ├── embedding.py        # CLAP embed_audio() / embed_text()
@@ -170,7 +170,7 @@ pnpm -C frontend generate-client
 - **One backend service, not three.** The ML models load in-process — a separate inference service adds latency and operational complexity without benefit at this scale.
 - **pgvector for both embedding types.** One database for structured data + vector search. No external vector DB needed.
 - **CLAP model choice.** Switched from `larger_clap_music` to `clap-htsat-unfused` for better text-audio contrastive alignment.
-- **CNN dataset size.** 75 samples across 11 classes — see [Roadmap](docs/ROADMAP.md) for scaling plans (NSynth, FSD50K).
+- **CNN training pipeline.** Modern training loop with cosine annealing, mixed precision, early stopping, and TensorBoard. Designed for ~2,000 samples but scales down gracefully.
 - **No auth yet.** Auth is planned but not yet implemented.
 - **Agentic RAG over static pipeline.** The agent decides which tools to call per query, enabling multi-step reasoning (analyze sample → check key → search for complement).
 - **Thread-backed song context.** Persistent per-thread JSONB column (not session-based) so context survives refreshes. The agent is the only mutation path — no direct-edit UI — keeping the conversational interface as the source of truth.
@@ -186,7 +186,8 @@ Audio File (.wav)
     │              Uses audio_model + audio_projection independently
     │
     └── CNN ──→ 128-dim embedding + category prediction
-                 4 residual conv blocks (SE attention) → global avg pool → dual head
+                 4 residual conv blocks (SE attention, 1→64→128→256→512 channels)
+                 Global avg pool → 2-layer projection head (SimCLR-style)
                  Combined loss: cross-entropy + supervised contrastive (SupCon)
                  Trained on mel spectrograms (128 mel bins, 2s fixed length)
 ```

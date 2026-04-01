@@ -150,9 +150,17 @@ Audio files are stored in `data/samples/`. The database stores metadata (key, BP
 
 ```bash
 uv run --directory backend train-cnn
+uv run --directory backend train-cnn --epochs 50 --batch-size 32 --grad-accum 2
+uv run --directory backend train-cnn --help  # all options
 ```
 
-Model checkpoints are saved to `data/checkpoints/` (gitignored). The training set is small (50-100 samples) -- the architecture and pipeline are the focus, not benchmark results.
+Model checkpoints are saved to `data/checkpoints/` (gitignored). TensorBoard logs go to `data/runs/` (gitignored). Defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch linear warmup, early stopping (patience 15), mixed precision on CUDA.
+
+Monitor training:
+
+```bash
+uv run --directory backend tensorboard --logdir data/runs/
+```
 
 ### CLAP Model
 
