@@ -129,10 +129,13 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
     both subsets share the parent dataset's augment flag).
 
     Augmentation pipeline (training only):
-        1. Waveform-level: random pitch shift (±2 semitones), random time stretch
-           (0.9-1.1x), Gaussian noise injection (10-30 dB SNR), random EQ (±6 dB),
+        1. Waveform-level: Gaussian noise injection (10-30 dB SNR), random EQ (±6 dB),
            random crop (for samples longer than DURATION_SEC)
         2. Spectrogram-level: time masking, frequency masking, random gain (±5 dB)
+
+    Note: pitch shift and time stretch augmentations are available but disabled by default
+    (``expensive_augment=False``) — they use torch.stft which deadlocks in multiprocessing
+    worker processes on macOS. Enable for CUDA training or precompute offline.
     """
 
     def __init__(
@@ -141,8 +144,10 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
         augment: bool = False,
         *,
         samples: list[tuple[Path, int]] | None = None,
+        expensive_augment: bool = False,
     ) -> None:
         self.augment = augment
+        self.expensive_augment = expensive_augment
         self._cache: dict[int, torch.Tensor] = {}
 
         if samples is not None:
@@ -178,16 +183,17 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
 
     def _apply_waveform_augmentation(self, waveform: torch.Tensor) -> torch.Tensor:
         """Apply random waveform-level augmentations before mel conversion."""
-        # Random pitch shift (±2 semitones)
-        if torch.rand(1).item() > 0.5:
-            semitones = int((torch.rand(1).item() - 0.5) * 4)  # -2 to +2 (integer)
-            if semitones != 0:
-                waveform = F.pitch_shift(waveform, SAMPLE_RATE, n_steps=semitones)
+        # Pitch shift and time stretch use torch.stft which deadlocks in macOS
+        # multiprocessing workers. Gated behind expensive_augment flag.
+        if self.expensive_augment:
+            if torch.rand(1).item() > 0.5:
+                semitones = int((torch.rand(1).item() - 0.5) * 4)  # ±2 semitones
+                if semitones != 0:
+                    waveform = F.pitch_shift(waveform, SAMPLE_RATE, n_steps=semitones)
 
-        # Random time stretch (0.9x to 1.1x)
-        if torch.rand(1).item() > 0.5:
-            rate = 0.9 + torch.rand(1).item() * 0.2  # 0.9 to 1.1
-            waveform = F.speed(waveform, SAMPLE_RATE, factor=rate)[0]
+            if torch.rand(1).item() > 0.5:
+                rate = 0.9 + torch.rand(1).item() * 0.2  # 0.9-1.1x
+                waveform = F.speed(waveform, SAMPLE_RATE, factor=rate)[0]
 
         # Gaussian noise injection (10-30 dB SNR), skip near-silent signals
         if torch.rand(1).item() > 0.5:
