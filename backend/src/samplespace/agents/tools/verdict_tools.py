@@ -47,20 +47,17 @@ async def present_pair(
         if anchor is None:
             return f"Sample {sample_id} not found."
 
-        # Find candidates via CNN similarity
         candidates = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=15)
 
         if not candidates:
             return "No candidates found. The sample may not have a CNN embedding."
 
-        # Filter by type if requested
         if candidate_type:
             type_lower = candidate_type.lower()
             typed = [c for c in candidates if c.sample_type and c.sample_type.lower() == type_lower]
             if typed:
                 candidates = typed
 
-        # Score each candidate and pick one in the "interesting" range (0.4-0.8)
         best_candidate = None
         best_score = None
         best_distance_from_target = float("inf")
@@ -107,10 +104,8 @@ async def record_verdict(
         if not thread_id:
             return "No thread context available."
 
-        # Score the pair for the snapshot
         score = await pair_scoring_service.score_pair(ctx.deps.db, sample_a_id, sample_b_id)
 
-        # Create the verdict
         verdict = await PairVerdict.create(
             ctx.deps.db,
             thread_id=thread_id,
@@ -121,7 +116,6 @@ async def record_verdict(
             pair_score_detail=score.model_dump(),
         )
 
-        # Fire-and-forget background feature extraction
         task = asyncio.create_task(_extract_features_background(verdict.id, sample_a_id, sample_b_id))
         _background_tasks.add(task)
         task.add_done_callback(_background_tasks.discard)
@@ -176,7 +170,6 @@ def _format_pair_verdict(
     pair_score: float,
     summary: str,
 ) -> str:
-    """Format a pair for the pair-verdict Streamdown code fence."""
     payload = {
         "sample_a": _sample_to_payload(sample_a),
         "sample_b": _sample_to_payload(sample_b),
@@ -188,7 +181,6 @@ def _format_pair_verdict(
 
 
 def _sample_to_payload(sample: SampleSchema) -> dict[str, object]:
-    """Convert a sample schema to a JSON-serializable payload for the frontend."""
     payload: dict[str, object] = {
         "id": sample.id,
         "filename": sample.filename,

@@ -1,5 +1,3 @@
-"""Schemas for pair verdict feedback."""
-
 from datetime import datetime
 
 from pydantic import Field
@@ -8,8 +6,6 @@ from samplespace.schemas.base import BaseSchema
 
 
 class PairFeatures(BaseSchema):
-    """Relational audio features computed between two samples."""
-
     spectral_overlap: float = Field(ge=0.0, le=1.0, description="Frequency spectrum IoU")
     onset_alignment: float = Field(ge=0.0, le=1.0, description="Onset cross-correlation")
     timbral_contrast: float = Field(ge=0.0, le=1.0, description="MFCC cosine distance")
@@ -19,8 +15,6 @@ class PairFeatures(BaseSchema):
 
 
 class PairVerdictSchema(BaseSchema):
-    """Response schema for a pair verdict."""
-
     id: int
     thread_id: str
     sample_a_id: str

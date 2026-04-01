@@ -1,5 +1,3 @@
-"""Music theory utilities for key compatibility and pitch transformation."""
-
 # Chromatic note index (C=0, C#=1, ..., B=11) for semitone calculations
 CHROMATIC_INDEX: dict[str, int] = {
     "C": 0,
@@ -62,7 +60,6 @@ _DISTANCE_SCORES: dict[int, float] = {
 
 
 def _parse_root(key: str) -> str | None:
-    """Extract the root note from a key string like 'C major' or 'A minor'."""
     root = key.split()[0] if " " in key else key
     if root in CIRCLE_OF_FIFTHS:
         return root
@@ -84,7 +81,6 @@ def key_distance(key1: str, key2: str) -> int | None:
 
 
 def are_relative_pairs(key1: str, key2: str) -> bool:
-    """Check if two keys are relative major/minor pairs."""
     return RELATIVE_PAIRS.get(key1) == key2
 
 
@@ -115,7 +111,6 @@ def key_compatibility_score(key1: str, key2: str) -> tuple[float, str]:
 
 
 def _parse_mode(key: str) -> str | None:
-    """Extract the mode ('major' or 'minor') from a key string like 'C major'."""
     parts = key.split()
     if len(parts) == 2 and parts[1] in ("major", "minor"):
         return parts[1]

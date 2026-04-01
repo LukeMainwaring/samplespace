@@ -1,5 +1,3 @@
-"""Pydantic schemas for sample API contracts."""
-
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -8,8 +6,6 @@ from samplespace.schemas.base import BaseSchema
 
 
 class SampleSchema(BaseSchema):
-    """Sample response schema."""
-
     id: str
     filename: str
     source: str = "local"
@@ -23,15 +19,11 @@ class SampleSchema(BaseSchema):
 
 
 class SampleListResponse(BaseModel):
-    """Paginated list of samples."""
-
     samples: list[SampleSchema]
     total: int
 
 
 class SampleSearchRequest(BaseModel):
-    """Search request with optional filters."""
-
     query: str | None = Field(None, description="Natural language search query for CLAP semantic search")
     key: str | None = Field(None, description="Filter by musical key (e.g., 'C major', 'A minor')")
     bpm_min: int | None = Field(None, description="Minimum BPM filter")

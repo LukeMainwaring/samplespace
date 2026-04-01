@@ -1,5 +1,3 @@
-"""Infer sample metadata from file paths (sample_type, pack_name)."""
-
 from pathlib import PurePosixPath
 
 from samplespace.schemas.sample_type import KEYWORD_TO_SAMPLE_TYPE

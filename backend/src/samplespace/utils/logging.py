@@ -1,5 +1,3 @@
-"""Contextual logging with request context injection."""
-
 import logging
 import uuid
 from contextvars import ContextVar

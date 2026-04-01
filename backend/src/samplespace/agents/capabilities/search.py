@@ -1,5 +1,3 @@
-"""Search capabilities: CLAP semantic search, CNN similarity, and upload similarity."""
-
 from dataclasses import dataclass
 
 from pydantic_ai import RunContext, ToolDefinition
@@ -16,8 +14,6 @@ _CNN_TOOLS = frozenset({find_similar_samples.__name__})
 
 @dataclass
 class SearchCapability(AbstractCapability[AgentDeps]):
-    """CLAP semantic search, CNN similarity search, and upload similarity."""
-
     def get_toolset(self) -> FunctionToolset[AgentDeps]:
         ts: FunctionToolset[AgentDeps] = FunctionToolset()
         ts.tool(search_by_description)

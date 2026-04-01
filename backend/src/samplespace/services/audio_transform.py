@@ -1,5 +1,3 @@
-"""Audio transformation service — pitch shifting and time stretching with caching."""
-
 import contextlib
 import logging
 import os
@@ -23,11 +21,6 @@ _SAFE_FILENAME_RE = re.compile(r"[^a-zA-Z0-9_-]")
 
 
 def _sanitize_for_filename(value: str) -> str:
-    """Sanitize a string for safe use in filenames.
-
-    Replaces known musical characters first, then strips anything
-    that is not alphanumeric, underscore, or hyphen.
-    """
     result = value.replace(" ", "_").replace("#", "sharp")
     return _SAFE_FILENAME_RE.sub("", result)
 
@@ -54,7 +47,6 @@ def _get_cache_path(sample_id: str, target_key: str | None, target_bpm: int | No
 
 
 def get_cached_transform(sample_id: str, target_key: str | None, target_bpm: int | None) -> Path | None:
-    """Return the cached transform path if it exists, otherwise None."""
     path = _get_cache_path(sample_id, target_key, target_bpm)
     return path if path.exists() else None
 

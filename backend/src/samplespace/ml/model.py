@@ -63,7 +63,6 @@ class ConvBlock(nn.Module):
             nn.BatchNorm2d(out_channels),
         )
 
-        # Skip connection: identity when dims match, 1x1 conv when they don't
         if in_channels != out_channels:
             self.skip: nn.Module = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1),
@@ -97,7 +96,6 @@ class SampleCNN(nn.Module):
     def __init__(self, num_classes: int = NUM_CLASSES) -> None:
         super().__init__()
 
-        # 4 residual conv blocks: 1 -> 64 -> 128 -> 256 -> 512
         self.features = nn.Sequential(
             ConvBlock(1, 64),
             ConvBlock(64, 128),
@@ -105,20 +103,17 @@ class SampleCNN(nn.Module):
             ConvBlock(256, 512),
         )
 
-        # Global average pooling
         self.global_pool = nn.AdaptiveAvgPool2d(1)
 
-        # Shared backbone output
         self.backbone_fc = nn.Sequential(
             nn.Linear(512, 512),
             nn.ReLU(inplace=True),
             nn.Dropout(0.3),
         )
 
-        # Classification head
         self.classifier = nn.Linear(512, num_classes)
 
-        # 2-layer projection head (SimCLR-style)
+        # SimCLR-style projection head
         self.embedding = nn.Sequential(
             nn.Linear(512, 256),
             nn.ReLU(inplace=True),
@@ -127,7 +122,6 @@ class SampleCNN(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass returning (logits, embedding)."""
         x = self.features(x)
         x = self.global_pool(x)
         x = x.view(x.size(0), -1)  # Flatten

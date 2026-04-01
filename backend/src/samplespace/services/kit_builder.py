@@ -66,11 +66,9 @@ async def build_kit(
     """
     kit_types = types or DEFAULT_TYPES
 
-    # Merge vibe/genre with song context (explicit args override)
     effective_vibe = vibe or (song_context.vibe if song_context else None)
     effective_genre = genre or (song_context.genre if song_context else None)
 
-    # --- Phase 1: Candidate retrieval ---
     candidates_by_type: dict[str, list[SampleSchema]] = {}
     all_candidate_ids: list[str] = []
     skipped_types: list[str] = []
@@ -105,12 +103,10 @@ async def build_kit(
             skipped_types=skipped_types,
         )
 
-    # Batch-load all candidates to warm identity map and collect CNN embeddings
     all_samples = await Sample.get_many(db, all_candidate_ids)
     cnn_embeddings: dict[str, list[float]] = {s.id: s.cnn_embedding for s in all_samples if s.cnn_embedding is not None}
 
-    # --- Phase 2: Greedy assembly ---
-    # Order: most-constrained-first, tonal elements as tiebreaker
+    # Most-constrained-first, tonal elements as tiebreaker
     ordered_types = sorted(
         candidates_by_type.keys(),
         key=lambda t: (len(candidates_by_type[t]), _TONAL_PRIORITY.get(t.lower(), 99)),
@@ -144,12 +140,6 @@ async def build_kit(
             skipped_types=skipped_types,
         )
 
-    # --- Phase 3: Final scoring ---
-    # Uses full pair_scoring for detailed breakdowns shown in the UI.
-    # Each score_pair call loads both samples — for a 5-slot kit that's
-    # 10 pairs x 2 loads = 20 queries. Acceptable at this scale; could
-    # optimize with a variant that accepts pre-loaded Sample objects.
-    # Re-order to match user's requested type order
     type_order = {t: i for i, t in enumerate(kit_types)}
     selected.sort(key=lambda x: type_order.get(x[0], 99))
 
@@ -161,7 +151,6 @@ async def build_kit(
 
     overall = sum(p.score for p in pairwise_scores) / len(pairwise_scores) if pairwise_scores else 0.0
 
-    # Compute per-slot compatibility
     slot_compat: dict[int, list[float]] = {i: [] for i in range(len(selected))}
     for p in pairwise_scores:
         slot_compat[p.slot_a].append(p.score)
@@ -192,7 +181,6 @@ def _pick_best_candidate(
     selected: list[tuple[str, SampleSchema]],
     cnn_embeddings: dict[str, list[float]],
 ) -> SampleSchema:
-    """Pick the candidate that maximizes compatibility with already-selected samples."""
     best: SampleSchema = candidates[0]
     best_score = -1.0
 
@@ -220,11 +208,6 @@ def _pick_best_candidate(
 
 
 def _fast_compatibility(sample_a: SampleSchema, sample_b: SampleSchema) -> float:
-    """Lightweight compatibility score using pre-loaded metadata only.
-
-    No database calls — uses type complementarity, key compatibility,
-    and BPM compatibility computed from schema fields.
-    """
     scores: list[float] = []
 
     # Type complementarity
@@ -245,7 +228,6 @@ def _fast_compatibility(sample_a: SampleSchema, sample_b: SampleSchema) -> float
 
 
 def _bpm_compatibility(bpm_a: int, bpm_b: int) -> float:
-    """BPM compatibility score with integer-multiple normalization."""
     norm_a = _normalize_bpm(bpm_a)
     norm_b = _normalize_bpm(bpm_b)
     if max(norm_a, norm_b) == 0:
@@ -254,7 +236,6 @@ def _bpm_compatibility(bpm_a: int, bpm_b: int) -> float:
 
 
 def _normalize_bpm(bpm: int) -> int:
-    """Normalize BPM to the 60-180 range by halving or doubling."""
     if bpm <= 0:
         return 0
     normalized = bpm
@@ -266,7 +247,6 @@ def _normalize_bpm(bpm: int) -> int:
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
-    """Cosine similarity between two embedding vectors."""
     arr_a = np.array(a, dtype=np.float32)
     arr_b = np.array(b, dtype=np.float32)
     norm_a = float(np.linalg.norm(arr_a))
@@ -288,18 +268,14 @@ def _build_clap_query(
     """
     parts: list[str] = []
 
-    # Genre qualifier
     if genre:
         parts.append(genre)
 
-    # Type descriptor
     parts.append(f"{sample_type} sample")
 
-    # Key context for tonal types only
     if sample_type.lower() not in _ONE_SHOT_TYPES and song_context and song_context.key:
         parts.append(song_context.key)
 
-    # Vibe descriptor
     if vibe:
         parts.append(vibe)
 

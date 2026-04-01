@@ -1,5 +1,3 @@
-"""Song context capability: context tool and dynamic instructions."""
-
 from dataclasses import dataclass
 
 from pydantic_ai import RunContext
@@ -11,7 +9,6 @@ from samplespace.agents.tools.context_tools import set_song_context
 
 
 async def _inject_song_context(ctx: RunContext[AgentDeps]) -> str:
-    """Inject active song context into the system prompt."""
     if not ctx.deps.song_context:
         return ""
     sc = ctx.deps.song_context
@@ -36,8 +33,6 @@ async def _inject_song_context(ctx: RunContext[AgentDeps]) -> str:
 
 @dataclass
 class ContextCapability(AbstractCapability[AgentDeps]):
-    """Song context tool and dynamic song context instructions."""
-
     def get_toolset(self) -> FunctionToolset[AgentDeps]:
         ts: FunctionToolset[AgentDeps] = FunctionToolset()
         ts.tool(set_song_context)

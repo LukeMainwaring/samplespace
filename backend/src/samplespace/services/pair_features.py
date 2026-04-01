@@ -25,7 +25,6 @@ _ANALYSIS_SAMPLES = int(_SR * _ANALYSIS_DURATION_S)
 
 
 def _load_and_normalize(path: Path) -> NDArray[np.floating]:
-    """Load audio at standard sample rate, mono, truncated/padded to fixed length."""
     y, _ = librosa.load(str(path), sr=_SR, mono=True)
     if len(y) > _ANALYSIS_SAMPLES:
         y = y[:_ANALYSIS_SAMPLES]
@@ -188,15 +187,7 @@ def _rms_energy_ratio(
 
 
 def compute_pair_features(audio_path_a: Path, audio_path_b: Path) -> dict[str, float]:
-    """Compute all 6 relational audio features between two samples.
-
-    CPU-bound — call via asyncio.to_thread() from async contexts.
-
-    Returns:
-        Dict with keys: spectral_overlap, onset_alignment, timbral_contrast,
-        harmonic_consonance, spectral_centroid_gap, rms_energy_ratio.
-        All values normalized to [0, 1].
-    """
+    """CPU-bound — call via asyncio.to_thread() from async contexts."""
     logger.info(f"Computing pair features: {audio_path_a.name} + {audio_path_b.name}")
 
     y_a = _load_and_normalize(audio_path_a)

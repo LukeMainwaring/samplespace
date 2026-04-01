@@ -1,5 +1,3 @@
-"""Shared dependencies for the sample assistant agent."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,8 +14,6 @@ if TYPE_CHECKING:
 
 @dataclass
 class AgentDeps:
-    """Dependencies injected into agent runs."""
-
     db: AsyncSession
     clap_model: ClapModel
     clap_processor: ClapProcessor

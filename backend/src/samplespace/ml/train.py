@@ -46,7 +46,6 @@ RUNS_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "runs"
 
 
 async def _fetch_samples_from_db() -> list[tuple[Path, int]] | None:
-    """Query the database for all samples with a known sample_type and resolve their audio paths."""
     try:
         async with get_async_sqlalchemy_session() as db:
             stmt = select(Sample).where(Sample.sample_type.in_(SAMPLE_TYPES))
@@ -71,12 +70,10 @@ async def _fetch_samples_from_db() -> list[tuple[Path, int]] | None:
 
 
 def _load_samples_from_db() -> list[tuple[Path, int]] | None:
-    """Sync wrapper for DB sample loading."""
     return asyncio.run(_fetch_samples_from_db())
 
 
 def _get_device() -> torch.device:
-    """Select the best available device: CUDA > MPS > CPU."""
     if torch.cuda.is_available():
         return torch.device("cuda")
     if torch.backends.mps.is_available():
@@ -97,15 +94,6 @@ class SupConLoss(nn.Module):
         self.temperature = temperature
 
     def forward(self, embeddings: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """Compute SupCon loss over a batch of L2-normalized embeddings.
-
-        Args:
-            embeddings: (batch_size, embed_dim) — must be L2-normalized.
-            labels: (batch_size,) — integer class labels.
-
-        Returns:
-            Scalar loss averaged over all anchor-positive pairs in the batch.
-        """
         device = embeddings.device
         batch_size = embeddings.shape[0]
 
@@ -153,7 +141,6 @@ def _compute_per_class_f1(
     all_labels: list[int],
     class_names: list[str],
 ) -> dict[str, float]:
-    """Compute per-class F1 scores from prediction and label lists."""
     num_classes = len(class_names)
     tp = [0] * num_classes
     fp = [0] * num_classes
@@ -190,7 +177,6 @@ def train(
     expensive_augment: bool = False,
     use_tensorboard: bool = True,
 ) -> None:
-    """Train the SampleCNN model with combined classification + SupCon loss."""
     device = _get_device()
     logger.info(f"Training on {device}")
 
@@ -208,12 +194,10 @@ def train(
         logger.error("No samples found")
         return
 
-    # Log class distribution
     label_counts = Counter(label for _, label in all_samples)
     for idx, count in sorted(label_counts.items()):
         logger.info(f"  {SAMPLE_TYPES[idx]}: {count} samples")
 
-    # Deterministic shuffle then split
     generator = torch.Generator().manual_seed(42)
     indices = torch.randperm(len(all_samples), generator=generator).tolist()
     val_size = max(1, int(len(all_samples) * val_split))
@@ -259,7 +243,6 @@ def train(
 
     logger.info(f"Train: {train_size}, Val: {val_size}, Classes: {len(SAMPLE_TYPES)}")
 
-    # Model, losses, optimizer
     model = SampleCNN().to(device)
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model parameters: {param_count:,}")
@@ -268,7 +251,6 @@ def train(
     contrastive_loss = SupConLoss(temperature=temperature)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
 
-    # Cosine annealing with linear warmup
     warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
         optimizer, start_factor=0.01, end_factor=1.0, total_iters=warmup_epochs
     )
@@ -287,7 +269,6 @@ def train(
     epochs_without_improvement = 0
     CHECKPOINTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # TensorBoard
     writer = None
     if use_tensorboard:
         try:
@@ -307,7 +288,6 @@ def train(
     )
 
     for epoch in range(epochs):
-        # Training
         model.train()
         train_loss_sum = 0.0
         train_cls_loss_sum = 0.0
@@ -348,7 +328,6 @@ def train(
         train_con = train_con_loss_sum / train_total
         train_acc = train_correct / train_total
 
-        # Validation
         model.eval()
         val_loss_sum = 0.0
         val_correct = 0
@@ -387,7 +366,6 @@ def train(
             f"LR: {current_lr:.2e}"
         )
 
-        # Per-class F1 scores
         f1_scores = _compute_per_class_f1(val_preds, val_labels, SAMPLE_TYPES)
         val_label_names = {SAMPLE_TYPES[l] for l in val_labels}
         active_f1 = {k: v for k, v in f1_scores.items() if v > 0 or k in val_label_names}
@@ -396,7 +374,6 @@ def train(
             f1_str = ", ".join(f"{k}: {v:.3f}" for k, v in active_f1.items())
             logger.info(f"  Val F1 (macro: {macro_f1:.3f}): {f1_str}")
 
-        # TensorBoard logging
         if writer:
             writer.add_scalar("Loss/train", train_loss, epoch)
             writer.add_scalar("Loss/train_cls", train_cls, epoch)
@@ -409,7 +386,6 @@ def train(
             for class_name, f1 in f1_scores.items():
                 writer.add_scalar(f"F1/{class_name}", f1, epoch)
 
-        # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             epochs_without_improvement = 0
@@ -443,7 +419,6 @@ def train(
                 logger.info(f"Early stopping at epoch {epoch + 1} (no improvement for {patience} epochs)")
                 break
 
-    # Embedding visualization in TensorBoard
     if writer:
         model.eval()
         all_embeddings: list[torch.Tensor] = []
@@ -460,7 +435,6 @@ def train(
             writer.add_embedding(embeddings_tensor, metadata=label_names, tag="val_embeddings")
         writer.close()
 
-    # Save final model
     final_path = CHECKPOINTS_DIR / "sample_cnn_final.pt"
     torch.save(
         {

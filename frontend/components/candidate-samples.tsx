@@ -118,7 +118,6 @@ export function CandidateSamples() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      // Reset input so the same file can be re-selected
       e.target.value = "";
 
       if (!file.name.toLowerCase().endsWith(".wav")) {
@@ -159,7 +158,6 @@ export function CandidateSamples() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold">Candidate Samples</h2>
@@ -191,7 +189,6 @@ export function CandidateSamples() {
         </div>
       </div>
 
-      {/* Sample list */}
       <div className="flex-1 overflow-y-auto p-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">

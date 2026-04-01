@@ -1,5 +1,3 @@
-"""CLAP semantic search tool for the sample assistant agent."""
-
 import logging
 
 from pydantic_ai import RunContext
@@ -24,7 +22,6 @@ async def search_by_description(ctx: RunContext[AgentDeps], query: str) -> str:
                sonic descriptors (warm, bright, punchy, airy, etc.) for best results.
     """
     try:
-        # Enrich query with song context vibe for better semantic matching
         enriched_query = query
         if ctx.deps.song_context and ctx.deps.song_context.vibe:
             enriched_query = f"{query}, {ctx.deps.song_context.vibe}"

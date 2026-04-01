@@ -1,5 +1,3 @@
-"""SQLAlchemy ORM models."""
-
 from .base import Base
 from .message import Message
 from .pair_rule import PairRule

@@ -1,5 +1,3 @@
-"""Multi-dimensional pair compatibility scoring between two audio samples."""
-
 import logging
 
 import numpy as np
@@ -57,12 +55,6 @@ _COMPLEMENTARY_THRESHOLD = 0.6
 
 
 async def score_pair(db: AsyncSession, sample_a_id: str, sample_b_id: str) -> PairScore:
-    """Score compatibility between two samples across multiple dimensions.
-
-    Loads both samples from the database, computes available scoring dimensions
-    (key, BPM, type, spectral), rebalances weights for missing dimensions,
-    and returns a composite score with per-dimension breakdowns.
-    """
     sample_a = await Sample.get(db, sample_a_id)
     if sample_a is None:
         return _error_score(sample_a_id, sample_b_id, f"Sample {sample_a_id} not found")
@@ -71,29 +63,23 @@ async def score_pair(db: AsyncSession, sample_a_id: str, sample_b_id: str) -> Pa
     if sample_b is None:
         return _error_score(sample_a_id, sample_b_id, f"Sample {sample_b_id} not found")
 
-    # Collect available dimensions
     dimensions: dict[str, DimensionScore] = {}
 
-    # Key score — only for loops with known keys
     if sample_a.is_loop and sample_b.is_loop and sample_a.key and sample_b.key:
         dimensions["key"] = _compute_key_score(sample_a.key, sample_b.key)
 
-    # BPM score — only for loops with known BPMs
     if sample_a.is_loop and sample_b.is_loop and sample_a.bpm and sample_b.bpm:
         dimensions["bpm"] = _compute_bpm_score(sample_a.bpm, sample_b.bpm)
 
-    # Type score
     if sample_a.sample_type and sample_b.sample_type:
         dimensions["type"] = _compute_type_score(sample_a.sample_type, sample_b.sample_type)
 
-    # Spectral score (CNN embedding cosine distance)
     if sample_a.cnn_embedding is not None and sample_b.cnn_embedding is not None:
         types_are_complementary = _are_types_complementary(sample_a.sample_type, sample_b.sample_type)
         dimensions["spectral"] = _compute_spectral_score(
             sample_a.cnn_embedding, sample_b.cnn_embedding, types_are_complementary
         )
 
-    # Rebalance weights and compute composite
     if not dimensions:
         return PairScore(
             sample_a_id=sample_a_id,
@@ -120,13 +106,11 @@ async def score_pair(db: AsyncSession, sample_a_id: str, sample_b_id: str) -> Pa
 
 
 def _compute_key_score(key_a: str, key_b: str) -> DimensionScore:
-    """Compute key compatibility dimension."""
     value, explanation = music_theory_service.key_compatibility_score(key_a, key_b)
     return DimensionScore(value=value, weight=0.0, explanation=f"Key: {explanation}")
 
 
 def _compute_bpm_score(bpm_a: int, bpm_b: int) -> DimensionScore:
-    """Compute BPM compatibility with integer-multiple normalization."""
     norm_a = _normalize_bpm(bpm_a)
     norm_b = _normalize_bpm(bpm_b)
 
@@ -149,7 +133,6 @@ def _compute_bpm_score(bpm_a: int, bpm_b: int) -> DimensionScore:
 
 
 def _compute_type_score(type_a: str, type_b: str) -> DimensionScore:
-    """Compute type complementarity dimension."""
     pair_key = frozenset({type_a.lower(), type_b.lower()})
     value = TYPE_COMPLEMENTARITY.get(pair_key, DEFAULT_TYPE_SCORE)
 
@@ -203,7 +186,6 @@ def _compute_spectral_score(
 
 
 def _normalize_bpm(bpm: int) -> int:
-    """Normalize BPM to the 60-180 range by halving or doubling."""
     if bpm <= 0:
         return 0
     normalized = bpm
@@ -215,7 +197,6 @@ def _normalize_bpm(bpm: int) -> int:
 
 
 def _are_types_complementary(type_a: str | None, type_b: str | None) -> bool:
-    """Check if two sample types are considered complementary."""
     if not type_a or not type_b:
         return True  # assume complementary when unknown
     pair_key = frozenset({type_a.lower(), type_b.lower()})
@@ -224,10 +205,6 @@ def _are_types_complementary(type_a: str | None, type_b: str | None) -> bool:
 
 
 def _rebalance_weights(dimensions: dict[str, DimensionScore]) -> None:
-    """Redistribute default weights proportionally across available dimensions.
-
-    Mutates the DimensionScore objects in place to set their effective weights.
-    """
     total_available_weight = sum(DEFAULT_WEIGHTS[k] for k in dimensions)
     for key, dim in dimensions.items():
         dim.weight = DEFAULT_WEIGHTS[key] / total_available_weight
@@ -239,7 +216,6 @@ def _generate_summary(
     filename_a: str,
     filename_b: str,
 ) -> str:
-    """Generate a human-readable summary of the pair score."""
     if overall >= 0.8:
         level = "Strong compatibility"
     elif overall >= 0.6:
@@ -259,7 +235,6 @@ def _generate_summary(
 
 
 def _error_score(sample_a_id: str, sample_b_id: str, message: str) -> PairScore:
-    """Return a PairScore indicating an error."""
     return PairScore(
         sample_a_id=sample_a_id,
         sample_b_id=sample_b_id,

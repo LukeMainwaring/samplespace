@@ -39,14 +39,12 @@ async def stream_chat(
     Uses VercelAIAdapter to handle parsing, agent execution, and streaming
     in Vercel AI SDK protocol format.
     """
-    # Pre-parse body to extract thread_id and user text for on_complete
     body = await request.body()
     run_input = VercelAIAdapter.build_run_input(body)
     thread_id = run_input.id
 
     clap = get_clap_models(request)
 
-    # Load existing song context for this thread
     thread = await Thread.get(db, thread_id, AgentType.CHAT.value)
     existing_context = SongContext.model_validate(thread.song_context) if thread and thread.song_context else None
 

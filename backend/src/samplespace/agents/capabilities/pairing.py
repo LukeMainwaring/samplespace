@@ -1,5 +1,3 @@
-"""Pairing capability: pair scoring, verdicts, and learned preferences."""
-
 from dataclasses import dataclass
 
 from pydantic_ai import RunContext
@@ -13,7 +11,6 @@ from samplespace.models.pair_rule import PairRule
 
 
 async def _inject_pair_rules(ctx: RunContext[AgentDeps]) -> str:
-    """Inject learned pair rules into the system prompt."""
     rules = await PairRule.get_active(ctx.deps.db)
     if not rules:
         return ""
@@ -29,8 +26,6 @@ async def _inject_pair_rules(ctx: RunContext[AgentDeps]) -> str:
 
 @dataclass
 class PairingCapability(AbstractCapability[AgentDeps]):
-    """Pair scoring, verdict collection, and learned pairing preferences."""
-
     def get_toolset(self) -> FunctionToolset[AgentDeps]:
         ts: FunctionToolset[AgentDeps] = FunctionToolset()
         ts.tool(rate_pair)

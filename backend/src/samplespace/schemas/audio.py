@@ -1,5 +1,3 @@
-"""Audio metadata schema for analyze_audio results."""
-
 from pydantic import BaseModel
 
 

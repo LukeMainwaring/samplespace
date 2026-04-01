@@ -1,5 +1,3 @@
-"""Audio analysis and music theory capability."""
-
 from dataclasses import dataclass
 
 from pydantic_ai.capabilities import AbstractCapability
@@ -15,8 +13,6 @@ from samplespace.agents.tools.analysis_tools import (
 
 @dataclass
 class AnalysisCapability(AbstractCapability[AgentDeps]):
-    """Audio analysis and music theory tools."""
-
     def get_toolset(self) -> FunctionToolset[AgentDeps]:
         ts: FunctionToolset[AgentDeps] = FunctionToolset()
         ts.tool(analyze_sample)

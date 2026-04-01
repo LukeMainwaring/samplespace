@@ -132,7 +132,6 @@ function PureMultimodalInput({
   const submitForm = useCallback(() => {
     window.history.replaceState({}, "", `/chat/${chatId}`);
 
-    // Build message text with attachment references
     const completedAttachments = attachments.filter(
       (a) => !a.isUploading && a.sample,
     );

@@ -1,5 +1,3 @@
-"""Sample business logic — CRUD operations and search queries."""
-
 import logging
 import uuid
 from pathlib import Path
@@ -24,7 +22,6 @@ async def create_sample(
     sample_type: str | None = None,
     pack_name: str | None = None,
 ) -> Sample:
-    """Create a sample from an audio file: analyze metadata and persist."""
     result = analyze_and_classify(file_path)
 
     sample = Sample(
@@ -53,7 +50,6 @@ async def get_samples(
     offset: int = 0,
     source: str | None = None,
 ) -> SampleListResponse:
-    """List samples with pagination."""
     samples, total = await Sample.get_all(db, limit=limit, offset=offset, source=source)
 
     return SampleListResponse(
@@ -63,7 +59,6 @@ async def get_samples(
 
 
 async def get_sample_by_id(db: AsyncSession, sample_id: str) -> Sample | None:
-    """Get a single sample by ID."""
     return await Sample.get(db, sample_id)
 
 
@@ -79,10 +74,6 @@ async def search_by_text(
     exclude_source: str | None = None,
     limit: int = 20,
 ) -> list[SampleSchema]:
-    """Search samples by CLAP text embedding with optional metadata filters.
-
-    Uses pgvector cosine distance for semantic similarity ranking.
-    """
     results = await Sample.search_by_clap(
         db,
         query_embedding,
@@ -104,10 +95,6 @@ async def find_similar_by_cnn(
     sample_id: str,
     limit: int = 10,
 ) -> list[SampleSchema]:
-    """Find similar samples using CNN embedding nearest neighbors.
-
-    Uses pgvector cosine distance on the 128-dim CNN embeddings.
-    """
     source = await Sample.get(db, sample_id)
     if source is None or source.cnn_embedding is None:
         return []
@@ -136,12 +123,10 @@ def find_audio_file(sample: Sample) -> Path | None:
         candidate = Path(settings.UPLOAD_DIR) / sample.relative_path
         return candidate if candidate.exists() else None
 
-    # Local source: resolve against SAMPLES_DIR
     samples_dir = Path(settings.SAMPLES_DIR)
     candidate = samples_dir / sample.relative_path
     if candidate.exists():
         return candidate
 
-    # Fallback: try rglob for backwards compatibility
     matches = list(samples_dir.rglob(sample.filename))
     return matches[0] if matches else None

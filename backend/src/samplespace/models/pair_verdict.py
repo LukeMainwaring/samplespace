@@ -1,5 +1,3 @@
-"""PairVerdict model for storing user feedback on sample pairs."""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -16,8 +14,6 @@ from samplespace.models.base import Base
 
 
 class PairVerdict(Base):
-    """Stores a user's verdict on whether two samples work well together."""
-
     __tablename__ = "pair_verdicts"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -67,7 +63,6 @@ class PairVerdict(Base):
 
     @classmethod
     async def get(cls, db: AsyncSession, verdict_id: int) -> PairVerdict | None:
-        """Get a verdict by ID."""
         result = await db.execute(select(cls).where(cls.id == verdict_id))
         return result.scalar_one_or_none()
 
@@ -78,7 +73,6 @@ class PairVerdict(Base):
         sample_a_id: str,
         sample_b_id: str,
     ) -> Sequence[PairVerdict]:
-        """Get all verdicts for a sample pair (canonical order)."""
         if sample_a_id > sample_b_id:
             sample_a_id, sample_b_id = sample_b_id, sample_a_id
 
@@ -91,13 +85,11 @@ class PairVerdict(Base):
 
     @classmethod
     async def get_by_thread(cls, db: AsyncSession, thread_id: str) -> Sequence[PairVerdict]:
-        """Get all verdicts in a thread."""
         result = await db.execute(select(cls).where(cls.thread_id == thread_id).order_by(cls.created_at.desc()))
         return result.scalars().all()
 
     @classmethod
     async def count_all(cls, db: AsyncSession) -> int:
-        """Count total verdicts."""
         result = await db.execute(select(func.count()).select_from(cls))
         return result.scalar_one()
 
@@ -108,7 +100,6 @@ class PairVerdict(Base):
         verdict_id: int,
         features: dict[str, float],
     ) -> None:
-        """Update the pair_features JSONB for a verdict."""
         verdict = await cls.get(db, verdict_id)
         if verdict:
             verdict.pair_features = features  # type: ignore[assignment]

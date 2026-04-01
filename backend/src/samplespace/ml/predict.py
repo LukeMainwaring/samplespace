@@ -1,5 +1,3 @@
-"""Inference wrapper for the trained SampleCNN model."""
-
 from __future__ import annotations
 
 import logging
@@ -20,8 +18,6 @@ DEFAULT_CHECKPOINT = CHECKPOINTS_DIR / "sample_cnn_best.pt"
 
 @dataclass
 class PredictionResult:
-    """Result from CNN inference."""
-
     embedding: list[float]
     predicted_type: str
     confidence: float
@@ -29,7 +25,6 @@ class PredictionResult:
 
 
 def load_model(checkpoint_path: str | Path | None = None) -> SampleCNN:
-    """Load a trained SampleCNN from a checkpoint."""
     path = Path(checkpoint_path) if checkpoint_path else DEFAULT_CHECKPOINT
 
     if not path.exists():
@@ -46,10 +41,6 @@ def load_model(checkpoint_path: str | Path | None = None) -> SampleCNN:
 
 
 def predict(file_path: str, model: SampleCNN) -> PredictionResult:
-    """Run inference on a single audio file.
-
-    Returns the 128-dim embedding, predicted type, and confidence.
-    """
     mel_spec = _load_and_preprocess(file_path)
     mel_spec = mel_spec.unsqueeze(0)  # Add batch dimension
 
@@ -73,11 +64,6 @@ def predict(file_path: str, model: SampleCNN) -> PredictionResult:
 
 
 def predict_batch(file_paths: list[str], model: SampleCNN) -> list[PredictionResult]:
-    """Run inference on multiple audio files in a single forward pass.
-
-    More efficient than calling predict() in a loop — stacks spectrograms
-    into a single batch tensor for one GPU/CPU pass.
-    """
     if not file_paths:
         return []
 

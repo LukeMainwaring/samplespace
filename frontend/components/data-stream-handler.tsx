@@ -18,7 +18,6 @@ export function DataStreamHandler() {
     setDataStream([]);
 
     for (const delta of newDeltas) {
-      // Handle chat title updates (refresh sidebar)
       if (delta.type === "data-chat-title") {
         queryClient.invalidateQueries({ queryKey: listThreadsQueryKey() });
       }

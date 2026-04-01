@@ -119,7 +119,6 @@ export function SampleBrowser() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <div className="border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Sample Library</h2>
         <p className="text-xs text-muted-foreground">
@@ -128,7 +127,6 @@ export function SampleBrowser() {
         </p>
       </div>
 
-      {/* Category filter */}
       <div className="flex gap-1 border-b px-4 py-2">
         {(["all", "one-shot", "loop"] as const).map((cat) => (
           <Button
@@ -143,7 +141,6 @@ export function SampleBrowser() {
         ))}
       </div>
 
-      {/* Type filters */}
       <div className="flex flex-wrap gap-1 border-b px-4 py-2">
         <Button
           className="h-6 text-xs"
@@ -166,7 +163,6 @@ export function SampleBrowser() {
         ))}
       </div>
 
-      {/* Sample list */}
       <div className="flex-1 overflow-y-auto p-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">

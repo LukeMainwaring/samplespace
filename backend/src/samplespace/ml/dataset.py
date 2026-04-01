@@ -1,5 +1,3 @@
-"""torchaudio Dataset for loading audio samples as mel spectrograms."""
-
 from __future__ import annotations
 
 import logging
@@ -37,10 +35,6 @@ amplitude_to_db = T.AmplitudeToDB()
 
 
 def _load_and_preprocess(file_path: str) -> torch.Tensor:
-    """Load audio file and convert to fixed-length mel spectrogram.
-
-    Returns a tensor of shape (1, N_MELS, time_frames).
-    """
     data, sr = sf.read(file_path, dtype="float32", always_2d=True)
     # data shape: (num_frames, num_channels) -> convert to (num_channels, num_frames)
     waveform = torch.from_numpy(data.T)
@@ -69,11 +63,7 @@ def _load_and_preprocess(file_path: str) -> torch.Tensor:
 
 
 def _load_waveform(file_path: str) -> torch.Tensor:
-    """Load audio file as a mono waveform at SAMPLE_RATE.
-
-    Returns a tensor of shape (1, num_frames) — NOT fixed-length.
-    Callers handle padding/trimming after any waveform-level augmentations.
-    """
+    """NOT fixed-length — callers handle padding/trimming after augmentations."""
     data, sr = sf.read(file_path, dtype="float32", always_2d=True)
     waveform = torch.from_numpy(data.T)
 
@@ -88,7 +78,6 @@ def _load_waveform(file_path: str) -> torch.Tensor:
 
 
 def _pad_or_trim(waveform: torch.Tensor, target_length: int = TARGET_LENGTH) -> torch.Tensor:
-    """Pad (zero) or trim a waveform to exactly target_length samples."""
     if waveform.shape[1] < target_length:
         padding = target_length - waveform.shape[1]
         waveform = torch.nn.functional.pad(waveform, (0, padding))
@@ -98,10 +87,6 @@ def _pad_or_trim(waveform: torch.Tensor, target_length: int = TARGET_LENGTH) -> 
 
 
 def scan_samples(samples_dir: str | Path) -> list[tuple[Path, int]]:
-    """Scan a directory for audio files organized by sample type subdirectory.
-
-    Returns a list of (file_path, label_index) tuples, sorted deterministically.
-    """
     samples_dir = Path(samples_dir)
     samples: list[tuple[Path, int]] = []
 
@@ -220,7 +205,6 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
         return waveform
 
     def _apply_spectrogram_augmentation(self, mel_spec: torch.Tensor) -> torch.Tensor:
-        """Apply random spectrogram-level augmentations (SpecAugment-style)."""
         # Time masking
         if torch.rand(1).item() > 0.5:
             time_mask = T.TimeMasking(time_mask_param=20)

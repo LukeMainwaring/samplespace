@@ -17,8 +17,6 @@ from samplespace.models.base import Base
 
 
 class PairRule(Base):
-    """Stores learned rules about which sample pairs work well together."""
-
     __tablename__ = "pair_rules"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -36,6 +34,5 @@ class PairRule(Base):
 
     @classmethod
     async def get_active(cls, db: AsyncSession) -> Sequence[PairRule]:
-        """Get all active rules, ordered by confidence."""
         result = await db.execute(select(cls).where(cls.is_active.is_(True)).order_by(cls.confidence.desc()))
         return result.scalars().all()

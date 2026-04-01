@@ -1,5 +1,3 @@
-"""Audio analysis and music theory tools for the sample assistant agent."""
-
 import logging
 
 from pydantic_ai import RunContext
@@ -100,14 +98,12 @@ async def suggest_complement(
         if source is None:
             return f"Sample {sample_id} not found."
 
-        # Search with type filter if specified
         from samplespace.services.embedding import embed_text
 
         query = f"complement for {source.sample_type or 'sample'}"
         if desired_type:
             query = f"{desired_type} that complements {source.sample_type or 'sample'}"
 
-        # Enrich query with song context vibe for better semantic matching
         if ctx.deps.song_context and ctx.deps.song_context.vibe:
             query = f"{query}, {ctx.deps.song_context.vibe}"
 
@@ -120,13 +116,11 @@ async def suggest_complement(
             limit=10,
         )
 
-        # Filter out the source sample and rank by key compatibility
         filtered = [r for r in results if r.id != sample_id]
 
         if not filtered:
             return "No complementary samples found."
 
-        # Use source key when available; fall back to song context key otherwise
         reference_key = source.key
         if not reference_key and ctx.deps.song_context:
             reference_key = ctx.deps.song_context.key

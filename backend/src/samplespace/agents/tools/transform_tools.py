@@ -1,5 +1,3 @@
-"""Audio transformation tools for the sample assistant agent."""
-
 import asyncio
 import logging
 from urllib.parse import quote
@@ -146,7 +144,6 @@ def _format_result(
     url_bpm: int | None,
     skipped: list[str],
 ) -> str:
-    """Format the transformation result as markdown with an audio code fence."""
     parts: list[str] = []
 
     # Description of what was done

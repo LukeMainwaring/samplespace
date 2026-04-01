@@ -1,5 +1,3 @@
-"""Sample model with pgvector embedding columns."""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -43,7 +41,6 @@ class Sample(Base):
 
     @classmethod
     async def get(cls, db: AsyncSession, sample_id: str) -> Sample | None:
-        """Get a single sample by ID."""
         result = await db.execute(select(cls).where(cls.id == sample_id))
         return result.scalar_one_or_none()
 
@@ -56,7 +53,6 @@ class Sample(Base):
         offset: int = 0,
         source: str | None = None,
     ) -> tuple[Sequence[Sample], int]:
-        """List samples with pagination. Returns (samples, total_count)."""
         count_stmt = select(func.count()).select_from(cls)
         data_stmt = select(cls).order_by(cls.created_at.desc()).limit(limit).offset(offset)
 
@@ -74,7 +70,6 @@ class Sample(Base):
 
     @classmethod
     async def get_many(cls, db: AsyncSession, sample_ids: list[str]) -> Sequence[Sample]:
-        """Batch-load samples by ID list."""
         if not sample_ids:
             return []
         result = await db.execute(select(cls).where(cls.id.in_(sample_ids)))
@@ -94,7 +89,6 @@ class Sample(Base):
         exclude_source: str | None = None,
         limit: int = 20,
     ) -> Sequence[Sample]:
-        """Search samples by CLAP embedding using pgvector cosine distance."""
         distance = cls.clap_embedding.cosine_distance(cast(query_embedding, Vector(512)))
 
         stmt = select(cls, cast(distance, Float).label("distance")).where(cls.clap_embedding.is_not(None))
@@ -128,7 +122,6 @@ class Sample(Base):
         exclude_id: str | None = None,
         limit: int = 10,
     ) -> Sequence[Sample]:
-        """Find similar samples using CNN embedding nearest neighbors."""
         distance = cls.cnn_embedding.cosine_distance(cast(cnn_embedding, Vector(128)))
 
         stmt = (

@@ -107,7 +107,6 @@ export function Chat({
     setMessages,
   });
 
-  // Stable ref for sendMessage to avoid re-renders in the provider
   const sendMessageRef = useRef(sendMessage);
   sendMessageRef.current = sendMessage;
 
@@ -115,7 +114,6 @@ export function Chat({
     sendMessageRef.current({ text });
   }, []);
 
-  // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = () => {
       router.refresh();

@@ -1,5 +1,3 @@
-"""Upload similarity tool for the sample assistant agent."""
-
 import logging
 
 from pydantic_ai import RunContext

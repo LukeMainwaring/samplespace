@@ -1,5 +1,3 @@
-"""Audio analysis service using librosa for key, BPM, and duration extraction."""
-
 import logging
 import re
 from dataclasses import dataclass
@@ -35,8 +33,6 @@ _FLAT_TO_SHARP = {"Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#", "C
 
 @dataclass
 class AnalysisResult:
-    """Combined result of loop inference and audio analysis."""
-
     is_loop: bool
     metadata: AudioMetadata
 
@@ -81,7 +77,6 @@ def analyze_and_classify(file_path: str) -> AnalysisResult:
 
 
 def _infer_from_audio(file_path: str, y: np.ndarray, sr: int) -> bool:
-    """Infer one-shot/loop from audio features (tier 2 heuristic)."""
     duration = float(librosa.get_duration(y=y, sr=sr))
     onsets = librosa.onset.onset_detect(y=y, sr=sr)
     num_onsets = len(onsets)
@@ -111,13 +106,11 @@ def _infer_from_audio(file_path: str, y: np.ndarray, sr: int) -> bool:
 
 
 def _analyze_audio(file_path: str) -> AudioMetadata:
-    """Full audio analysis (key, BPM, duration) — loads file from disk."""
     y, sr = librosa.load(file_path, sr=22050, mono=True)
     return _extract_full_metadata(file_path, y, int(sr))
 
 
 def _analyze_duration_only(file_path: str) -> AudioMetadata:
-    """Duration-only analysis for one-shots — loads file from disk."""
     y, sr = librosa.load(file_path, sr=22050, mono=True)
     duration = round(float(librosa.get_duration(y=y, sr=sr)), 2)
     logger.info(f"Analyzed {file_path}: one-shot, duration={duration:.1f}s (skipped key/BPM)")
@@ -202,7 +195,6 @@ def _extract_key_from_filename(filename: str) -> str | None:
 
 
 def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetadata:
-    """Extract key, BPM, and duration from already-loaded audio."""
     duration = float(librosa.get_duration(y=y, sr=sr))
 
     filename = Path(file_path).name
@@ -227,7 +219,6 @@ def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetad
 
 
 def _detect_key(y: np.ndarray, sr: int) -> str | None:
-    """Detect musical key from audio using chroma features."""
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
     chroma_mean = chroma.mean(axis=1)
 

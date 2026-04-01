@@ -1,5 +1,3 @@
-"""Shared formatting utilities for agent tool results."""
-
 from samplespace.schemas.sample import SampleSchema
 
 
@@ -9,13 +7,7 @@ def format_sample_results(
     *,
     include_duration: bool = False,
 ) -> str:
-    """Format a list of sample results as numbered markdown lines.
-
-    Args:
-        results: List of samples to format.
-        header: First line of the output (e.g., 'Found 5 samples matching "warm pad"').
-        include_duration: Whether to include duration in the output.
-    """
+    """Format a list of sample results as numbered markdown lines."""
     lines = [f"{header}\n"]
     for i, s in enumerate(results, 1):
         parts = [f"{i}. **{s.filename}**"]

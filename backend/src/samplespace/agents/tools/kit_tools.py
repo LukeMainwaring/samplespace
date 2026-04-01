@@ -1,5 +1,3 @@
-"""Kit builder tools for the sample assistant agent."""
-
 import json
 import logging
 
@@ -61,8 +59,6 @@ async def build_kit(
 
 
 def _format_kit_result(kit: KitResult) -> str:
-    """Format a kit result as a kit code fence for frontend rendering."""
-    # Build JSON payload for the frontend component
     payload: dict[str, object] = {
         "slots": [
             {
@@ -104,7 +100,6 @@ def _format_kit_result(kit: KitResult) -> str:
 
 
 def _sample_to_payload(sample: SampleSchema) -> dict[str, object]:
-    """Convert a sample schema to a JSON-serializable payload for the frontend."""
     payload: dict[str, object] = {
         "id": sample.id,
         "filename": sample.filename,

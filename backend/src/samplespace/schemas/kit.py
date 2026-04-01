@@ -1,5 +1,3 @@
-"""Pydantic schemas for kit builder results."""
-
 from pydantic import Field
 
 from samplespace.schemas.base import BaseSchema
@@ -7,8 +5,6 @@ from samplespace.schemas.sample import SampleSchema
 
 
 class KitSlot(BaseSchema):
-    """A single slot in an assembled kit."""
-
     position: int = Field(ge=0, description="0-indexed slot position")
     requested_type: str = Field(description="Sample type requested for this slot (e.g., kick, snare)")
     sample: SampleSchema
@@ -16,8 +12,6 @@ class KitSlot(BaseSchema):
 
 
 class PairwiseEntry(BaseSchema):
-    """One pairwise compatibility score within a kit."""
-
     slot_a: int
     slot_b: int
     score: float = Field(ge=0.0, le=1.0)
@@ -25,8 +19,6 @@ class PairwiseEntry(BaseSchema):
 
 
 class KitResult(BaseSchema):
-    """Complete assembled kit with scoring details."""
-
     slots: list[KitSlot]
     overall_score: float = Field(ge=0.0, le=1.0, description="Mean of all pairwise scores")
     pairwise_scores: list[PairwiseEntry]
