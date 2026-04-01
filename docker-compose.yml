@@ -39,7 +39,6 @@ services:
       - .env
     volumes:
       - ./backend/src:/app/src
-      - ./backend/tests:/app/tests
       - ./data/samples:/app/data/samples
       - ${SPLICE_DIR:-/dev/null}:/app/splice:ro
     depends_on:
