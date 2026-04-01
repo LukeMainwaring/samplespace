@@ -20,6 +20,7 @@ out/
 data/samples/
 data/checkpoints/
 data/transforms/
+data/runs/
 *.h5
 *.pt
 *.pth

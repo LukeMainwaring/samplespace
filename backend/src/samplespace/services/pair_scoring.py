@@ -87,7 +87,7 @@ async def score_pair(db: AsyncSession, sample_a_id: str, sample_b_id: str) -> Pa
         dimensions["type"] = _compute_type_score(sample_a.sample_type, sample_b.sample_type)
 
     # Spectral score (CNN embedding cosine distance)
-    if sample_a.cnn_embedding and sample_b.cnn_embedding:
+    if sample_a.cnn_embedding is not None and sample_b.cnn_embedding is not None:
         types_are_complementary = _are_types_complementary(sample_a.sample_type, sample_b.sample_type)
         dimensions["spectral"] = _compute_spectral_score(
             sample_a.cnn_embedding, sample_b.cnn_embedding, types_are_complementary

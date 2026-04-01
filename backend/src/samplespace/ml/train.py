@@ -4,9 +4,16 @@ Trains with a combined loss:
   - Cross-entropy for the classification head
   - Supervised contrastive loss (SupCon) for the embedding head
 
+Features:
+  - Cosine annealing LR with linear warmup
+  - Mixed precision training (CUDA/MPS)
+  - Gradient accumulation for larger effective batch sizes
+  - Early stopping with configurable patience
+  - TensorBoard logging (loss curves, LR, per-class F1, embedding projector)
+
 Usage:
     uv run train-cnn
-    uv run train-cnn --epochs 50 --lr 0.0005
+    uv run train-cnn --epochs 50 --lr 0.0005 --batch-size 32 --grad-accum 2
 """
 
 from __future__ import annotations
@@ -15,6 +22,7 @@ import argparse
 import asyncio
 import logging
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 import torch
@@ -34,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 SAMPLES_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "samples"
 CHECKPOINTS_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "checkpoints"
+RUNS_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "runs"
 
 
 async def _fetch_samples_from_db() -> list[tuple[Path, int]] | None:
@@ -64,6 +73,15 @@ async def _fetch_samples_from_db() -> list[tuple[Path, int]] | None:
 def _load_samples_from_db() -> list[tuple[Path, int]] | None:
     """Sync wrapper for DB sample loading."""
     return asyncio.run(_fetch_samples_from_db())
+
+
+def _get_device() -> torch.device:
+    """Select the best available device: CUDA > MPS > CPU."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
 
 
 class SupConLoss(nn.Module):
@@ -159,14 +177,19 @@ def _compute_per_class_f1(
 
 
 def train(
-    epochs: int = 30,
+    epochs: int = 100,
     lr: float = 1e-3,
-    batch_size: int = 16,
+    batch_size: int = 64,
     val_split: float = 0.2,
     lambda_embed: float = 0.5,
+    temperature: float = 0.07,
+    grad_accum: int = 1,
+    patience: int = 15,
+    warmup_epochs: int = 5,
+    use_tensorboard: bool = True,
 ) -> None:
     """Train the SampleCNN model with combined classification + SupCon loss."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = _get_device()
     logger.info(f"Training on {device}")
 
     # Load samples from the database (supports all sources: local, splice, upload).
@@ -207,15 +230,50 @@ def train(
 
     # Model, losses, optimizer
     model = SampleCNN().to(device)
+    param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info(f"Model parameters: {param_count:,}")
+
     classification_loss = nn.CrossEntropyLoss()
-    contrastive_loss = SupConLoss(temperature=0.07)
+    contrastive_loss = SupConLoss(temperature=temperature)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.5)
+
+    # Cosine annealing with linear warmup
+    warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+        optimizer, start_factor=0.01, end_factor=1.0, total_iters=warmup_epochs
+    )
+    cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=max(1, epochs - warmup_epochs), eta_min=1e-6
+    )
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
+        optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_epochs]
+    )
+
+    # Mixed precision: autocast on CUDA/MPS, GradScaler on CUDA only
+    use_amp = device.type in ("cuda", "mps")
+    scaler = torch.amp.GradScaler(enabled=(device.type == "cuda"))  # type: ignore[attr-defined]
 
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
     CHECKPOINTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Lambda (embedding loss weight): {lambda_embed}")
+    # TensorBoard
+    writer = None
+    if use_tensorboard:
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+
+            RUNS_DIR.mkdir(parents=True, exist_ok=True)
+            run_name = f"cnn_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            writer = SummaryWriter(log_dir=str(RUNS_DIR / run_name))
+            logger.info(f"TensorBoard logging to {RUNS_DIR / run_name}")
+        except ImportError:
+            logger.warning("tensorboard not installed, skipping logging (install with: uv sync --directory backend)")
+
+    logger.info(
+        f"Hyperparameters: epochs={epochs}, lr={lr}, batch_size={batch_size}, "
+        f"grad_accum={grad_accum}, lambda_embed={lambda_embed}, temperature={temperature}, "
+        f"warmup={warmup_epochs}, patience={patience}, amp={use_amp}"
+    )
 
     for epoch in range(epochs):
         # Training
@@ -225,23 +283,30 @@ def train(
         train_con_loss_sum = 0.0
         train_correct = 0
         train_total = 0
+        optimizer.zero_grad()
 
-        for spectrograms, labels in train_loader:
+        for step_idx, (spectrograms, labels) in enumerate(train_loader):
             spectrograms = spectrograms.to(device)
             labels = labels.to(device)
 
-            optimizer.zero_grad()
-            logits, embeddings = model(spectrograms)
+            with torch.amp.autocast(device_type=device.type, enabled=use_amp):  # type: ignore[attr-defined]
+                logits, embeddings = model(spectrograms)
+                cls_loss = classification_loss(logits, labels)
+                con_loss = contrastive_loss(embeddings, labels)
+                loss = (cls_loss + lambda_embed * con_loss) / grad_accum
 
-            cls_loss = classification_loss(logits, labels)
-            con_loss = contrastive_loss(embeddings, labels)
-            loss = cls_loss + lambda_embed * con_loss
+            scaler.scale(loss).backward()
 
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
+            # Step optimizer every grad_accum iterations (or at end of epoch)
+            if (step_idx + 1) % grad_accum == 0 or (step_idx + 1) == len(train_loader):
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
 
-            train_loss_sum += loss.item() * labels.size(0)
+            # Track un-normalized loss for logging
+            train_loss_sum += (cls_loss.item() + lambda_embed * con_loss.item()) * labels.size(0)
             train_cls_loss_sum += cls_loss.item() * labels.size(0)
             train_con_loss_sum += con_loss.item() * labels.size(0)
             train_correct += (logits.argmax(dim=1) == labels).sum().item()
@@ -265,10 +330,11 @@ def train(
                 spectrograms = spectrograms.to(device)
                 labels = labels.to(device)
 
-                logits, embeddings = model(spectrograms)
-                cls_loss = classification_loss(logits, labels)
-                con_loss = contrastive_loss(embeddings, labels)
-                loss = cls_loss + lambda_embed * con_loss
+                with torch.amp.autocast(device_type=device.type, enabled=use_amp):  # type: ignore[attr-defined]
+                    logits, embeddings = model(spectrograms)
+                    cls_loss = classification_loss(logits, labels)
+                    con_loss = contrastive_loss(embeddings, labels)
+                    loss = cls_loss + lambda_embed * con_loss
 
                 val_loss_sum += loss.item() * labels.size(0)
                 preds = logits.argmax(dim=1)
@@ -280,26 +346,42 @@ def train(
 
         val_loss = val_loss_sum / val_total
         val_acc = val_correct / val_total
-        scheduler.step(val_loss)
+        current_lr = optimizer.param_groups[0]["lr"]
+        scheduler.step()
 
         logger.info(
             f"Epoch {epoch + 1}/{epochs} | "
             f"Train loss: {train_loss:.4f} (cls: {train_cls:.4f}, con: {train_con:.4f}), acc: {train_acc:.2%} | "
-            f"Val loss: {val_loss:.4f}, acc: {val_acc:.2%}"
+            f"Val loss: {val_loss:.4f}, acc: {val_acc:.2%} | "
+            f"LR: {current_lr:.2e}"
         )
 
         # Per-class F1 scores
         f1_scores = _compute_per_class_f1(val_preds, val_labels, SAMPLE_TYPES)
         val_label_names = {SAMPLE_TYPES[l] for l in val_labels}
         active_f1 = {k: v for k, v in f1_scores.items() if v > 0 or k in val_label_names}
+        macro_f1 = sum(active_f1.values()) / len(active_f1) if active_f1 else 0.0
         if active_f1:
             f1_str = ", ".join(f"{k}: {v:.3f}" for k, v in active_f1.items())
-            macro_f1 = sum(active_f1.values()) / len(active_f1) if active_f1 else 0.0
             logger.info(f"  Val F1 (macro: {macro_f1:.3f}): {f1_str}")
+
+        # TensorBoard logging
+        if writer:
+            writer.add_scalar("Loss/train", train_loss, epoch)
+            writer.add_scalar("Loss/train_cls", train_cls, epoch)
+            writer.add_scalar("Loss/train_con", train_con, epoch)
+            writer.add_scalar("Loss/val", val_loss, epoch)
+            writer.add_scalar("Accuracy/train", train_acc, epoch)
+            writer.add_scalar("Accuracy/val", val_acc, epoch)
+            writer.add_scalar("LR", current_lr, epoch)
+            writer.add_scalar("F1/macro", macro_f1, epoch)
+            for class_name, f1 in f1_scores.items():
+                writer.add_scalar(f"F1/{class_name}", f1, epoch)
 
         # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            epochs_without_improvement = 0
             checkpoint_path = CHECKPOINTS_DIR / "sample_cnn_best.pt"
             torch.save(
                 {
@@ -309,10 +391,43 @@ def train(
                     "val_acc": val_acc,
                     "sample_types": SAMPLE_TYPES,
                     "lambda_embed": lambda_embed,
+                    "hyperparameters": {
+                        "lr": lr,
+                        "batch_size": batch_size,
+                        "grad_accum": grad_accum,
+                        "temperature": temperature,
+                        "warmup_epochs": warmup_epochs,
+                        "epochs": epochs,
+                    },
+                    "class_distribution": dict(label_counts),
+                    "train_size": train_size,
+                    "val_size": val_size,
                 },
                 checkpoint_path,
             )
             logger.info(f"  Saved best model (val_loss: {val_loss:.4f})")
+        else:
+            epochs_without_improvement += 1
+            if epochs_without_improvement >= patience:
+                logger.info(f"Early stopping at epoch {epoch + 1} (no improvement for {patience} epochs)")
+                break
+
+    # Embedding visualization in TensorBoard
+    if writer:
+        model.eval()
+        all_embeddings: list[torch.Tensor] = []
+        all_label_indices: list[int] = []
+        with torch.no_grad():
+            for spectrograms, labels in val_loader:
+                with torch.amp.autocast(device_type=device.type, enabled=use_amp):  # type: ignore[attr-defined]
+                    _, embeddings = model(spectrograms.to(device))
+                all_embeddings.append(embeddings.cpu())
+                all_label_indices.extend(labels.tolist())
+        if all_embeddings:
+            embeddings_tensor = torch.cat(all_embeddings)
+            label_names = [SAMPLE_TYPES[l] for l in all_label_indices]
+            writer.add_embedding(embeddings_tensor, metadata=label_names, tag="val_embeddings")
+        writer.close()
 
     # Save final model
     final_path = CHECKPOINTS_DIR / "sample_cnn_final.pt"
@@ -331,13 +446,28 @@ def train(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the SampleCNN model")
-    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--lambda-embed", type=float, default=0.5, help="Weight for embedding (SupCon) loss")
+    parser.add_argument("--temperature", type=float, default=0.07, help="SupCon loss temperature")
+    parser.add_argument("--grad-accum", type=int, default=1, help="Gradient accumulation steps")
+    parser.add_argument("--patience", type=int, default=15, help="Early stopping patience (epochs)")
+    parser.add_argument("--warmup-epochs", type=int, default=5, help="Linear LR warmup epochs")
+    parser.add_argument("--no-tensorboard", action="store_true", help="Disable TensorBoard logging")
     args = parser.parse_args()
 
-    train(epochs=args.epochs, lr=args.lr, batch_size=args.batch_size, lambda_embed=args.lambda_embed)
+    train(
+        epochs=args.epochs,
+        lr=args.lr,
+        batch_size=args.batch_size,
+        lambda_embed=args.lambda_embed,
+        temperature=args.temperature,
+        grad_accum=args.grad_accum,
+        patience=args.patience,
+        warmup_epochs=args.warmup_epochs,
+        use_tensorboard=not args.no_tensorboard,
+    )
 
 
 if __name__ == "__main__":

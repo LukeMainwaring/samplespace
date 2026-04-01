@@ -1,8 +1,9 @@
 """Dual-head CNN for audio sample classification and embedding.
 
 Architecture: 4 residual conv blocks with SE attention -> global average pooling -> dual head:
+  - Channel progression: 1 -> 64 -> 128 -> 256 -> 512
   - Classification head: predicts sample type (kick, snare, pad, etc.)
-  - Embedding head: produces 128-dim L2-normalized embedding for similarity search
+  - Embedding head: 2-layer projection (512 -> 256 -> 128) with L2-normalized output
 
 Training uses a combined loss:
   - Cross-entropy for classification
@@ -96,12 +97,12 @@ class SampleCNN(nn.Module):
     def __init__(self, num_classes: int = NUM_CLASSES) -> None:
         super().__init__()
 
-        # 4 residual conv blocks: 1 -> 32 -> 64 -> 128 -> 256
+        # 4 residual conv blocks: 1 -> 64 -> 128 -> 256 -> 512
         self.features = nn.Sequential(
-            ConvBlock(1, 32),
-            ConvBlock(32, 64),
+            ConvBlock(1, 64),
             ConvBlock(64, 128),
             ConvBlock(128, 256),
+            ConvBlock(256, 512),
         )
 
         # Global average pooling
@@ -109,16 +110,19 @@ class SampleCNN(nn.Module):
 
         # Shared backbone output
         self.backbone_fc = nn.Sequential(
-            nn.Linear(256, 256),
+            nn.Linear(512, 512),
             nn.ReLU(inplace=True),
             nn.Dropout(0.3),
         )
 
         # Classification head
-        self.classifier = nn.Linear(256, num_classes)
+        self.classifier = nn.Linear(512, num_classes)
 
-        # Embedding head
+        # 2-layer projection head (SimCLR-style)
         self.embedding = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm1d(256),
             nn.Linear(256, CNN_EMBEDDING_DIM),
         )
 
