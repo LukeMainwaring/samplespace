@@ -210,14 +210,10 @@ async def _match_to_context(
             result.skipped_reasons
         )
 
-    return _format_match_result(result, target_key, target_bpm)
+    return _format_match_result(result)
 
 
-def _format_match_result(
-    result: TransformResult,
-    target_key: str | None,
-    target_bpm: int | None,
-) -> str:
+def _format_match_result(result: TransformResult) -> str:
     parts: list[str] = []
 
     # Description of what was done
