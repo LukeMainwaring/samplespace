@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
 interface KitSlotPayload {
@@ -47,6 +48,11 @@ function ScoreBadge({ score, label }: { score: number; label?: string }) {
 }
 
 export function KitBlock({ code, isIncomplete }: KitBlockProps) {
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const handleTogglePlay = useCallback((id: string) => {
+    setPlayingId((prev) => (prev === id ? null : id));
+  }, []);
+
   if (isIncomplete) {
     return (
       <div className="my-3 space-y-2">
@@ -104,7 +110,11 @@ export function KitBlock({ code, isIncomplete }: KitBlockProps) {
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <SampleCard sample={slot.sample} />
+              <SampleCard
+                sample={slot.sample}
+                isPlaying={playingId === slot.sample.id}
+                onTogglePlay={handleTogglePlay}
+              />
             </div>
           </div>
         ))}

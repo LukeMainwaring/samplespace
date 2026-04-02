@@ -1,5 +1,6 @@
 "use client";
 
+import { Pause, Play } from "lucide-react";
 import { WaveformViz } from "@/components/waveform-viz";
 
 const BACKEND_URL =
@@ -14,7 +15,17 @@ export interface SamplePayload {
   bpm?: number;
 }
 
-export function SampleCard({ sample }: { sample: SamplePayload }) {
+interface SampleCardProps {
+  sample: SamplePayload;
+  isPlaying?: boolean;
+  onTogglePlay?: (id: string) => void;
+}
+
+export function SampleCard({
+  sample,
+  isPlaying,
+  onTogglePlay,
+}: SampleCardProps) {
   const audioUrl = sample.audio_url.startsWith("http")
     ? sample.audio_url
     : `${BACKEND_URL}${sample.audio_url}`;
@@ -25,8 +36,23 @@ export function SampleCard({ sample }: { sample: SamplePayload }) {
   if (sample.bpm) pills.push(`${sample.bpm} BPM`);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+    <div
+      className={`flex min-w-0 flex-1 flex-col gap-2 rounded-lg border p-3 ${
+        isPlaying
+          ? "border-primary/50 bg-primary/5"
+          : "border-border bg-muted/30"
+      }`}
+    >
       <div className="flex items-center gap-2">
+        {onTogglePlay && (
+          <button
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+            onClick={() => onTogglePlay(sample.id)}
+            type="button"
+          >
+            {isPlaying ? <Pause size={11} /> : <Play size={11} />}
+          </button>
+        )}
         <span className="truncate font-medium text-sm">{sample.filename}</span>
       </div>
       {pills.length > 0 && (
@@ -41,7 +67,15 @@ export function SampleCard({ sample }: { sample: SamplePayload }) {
           ))}
         </div>
       )}
-      <WaveformViz audioUrl={audioUrl} height={36} />
+      <WaveformViz
+        audioUrl={audioUrl}
+        height={36}
+        playing={isPlaying}
+        onPlay={() => onTogglePlay?.(sample.id)}
+        onFinish={() => {
+          if (isPlaying) onTogglePlay?.(sample.id);
+        }}
+      />
     </div>
   );
 }
