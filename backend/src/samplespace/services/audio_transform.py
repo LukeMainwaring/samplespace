@@ -13,8 +13,8 @@ from samplespace.services import music_theory as music_theory_service
 
 logger = logging.getLogger(__name__)
 
-# librosa sample rate for loading audio
-_SR = 22050
+# STFT resolution for pitch/time operations (higher = better frequency definition)
+_N_FFT = 4096
 
 # Only allow safe characters in cache path components
 _SAFE_FILENAME_RE = re.compile(r"[^a-zA-Z0-9_-]")
@@ -71,21 +71,21 @@ def transform_sample(
         logger.info(f"Cache hit: {cache_path.name}")
         return cache_path
 
-    y, sr = librosa.load(str(source_path), sr=_SR, mono=True)
+    y, sr = librosa.load(str(source_path), sr=None, mono=False)
 
     # Pitch shift
     if source_key and target_key:
         n_steps = music_theory_service.semitone_delta(source_key, target_key)
         if n_steps is not None and n_steps != 0:
             logger.info(f"Pitch shifting {sample_id} by {n_steps:+d} semitones")
-            y = librosa.effects.pitch_shift(y, sr=sr, n_steps=n_steps)
+            y = librosa.effects.pitch_shift(y, sr=sr, n_steps=n_steps, n_fft=_N_FFT)
 
     # Time stretch
     if source_bpm and target_bpm:
         rate = target_bpm / source_bpm
         if abs(rate - 1.0) > 0.01:
             logger.info(f"Time stretching {sample_id} by rate {rate:.3f}")
-            y = librosa.effects.time_stretch(y, rate=rate)
+            y = librosa.effects.time_stretch(y, rate=rate, n_fft=_N_FFT)
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +94,7 @@ def transform_sample(
     fd, tmp_path = tempfile.mkstemp(dir=cache_path.parent, suffix=".wav")
     try:
         os.close(fd)
-        sf.write(tmp_path, y, sr)
+        sf.write(tmp_path, y.T if y.ndim == 2 else y, sr, subtype="PCM_24")
         os.rename(tmp_path, cache_path)
     except BaseException:
         # Clean up temp file on any failure

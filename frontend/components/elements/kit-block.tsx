@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
 interface KitSlotPayload {
@@ -29,6 +30,8 @@ interface KitBlockProps {
 }
 
 function ScoreBadge({ score, label }: { score: number; label?: string }) {
+  if (score == null) return null;
+
   const color =
     score >= 0.7
       ? "text-green-600 dark:text-green-400 border-green-300 dark:border-green-700"
@@ -47,6 +50,11 @@ function ScoreBadge({ score, label }: { score: number; label?: string }) {
 }
 
 export function KitBlock({ code, isIncomplete }: KitBlockProps) {
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const handleTogglePlay = useCallback((id: string) => {
+    setPlayingId((prev) => (prev === id ? null : id));
+  }, []);
+
   if (isIncomplete) {
     return (
       <div className="my-3 space-y-2">
@@ -93,18 +101,24 @@ export function KitBlock({ code, isIncomplete }: KitBlockProps) {
       </div>
 
       <div className="space-y-2">
-        {payload.slots.map((slot) => (
-          <div className="flex items-start gap-2" key={slot.position}>
+        {payload.slots.map((slot, i) => (
+          <div className="flex items-start gap-2" key={slot.sample?.id ?? i}>
             <div className="flex w-14 shrink-0 flex-col items-center gap-0.5 pt-3">
               <span className="font-medium text-xs capitalize">
                 {slot.requested_type}
               </span>
-              <span className="text-muted-foreground text-[10px]">
-                {slot.compatibility_score.toFixed(2)}
-              </span>
+              {slot.compatibility_score != null && (
+                <span className="text-muted-foreground text-[10px]">
+                  {slot.compatibility_score.toFixed(2)}
+                </span>
+              )}
             </div>
             <div className="min-w-0 flex-1">
-              <SampleCard sample={slot.sample} />
+              <SampleCard
+                sample={slot.sample}
+                isPlaying={playingId === slot.sample.id}
+                onTogglePlay={handleTogglePlay}
+              />
             </div>
           </div>
         ))}

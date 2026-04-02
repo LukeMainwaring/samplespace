@@ -1,7 +1,7 @@
 "use client";
 
 import { ThumbsDown, ThumbsUp } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useChatActions } from "@/components/chat-actions-provider";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
@@ -25,6 +25,10 @@ export function PairVerdictBlock({
   const [submitted, setSubmitted] = useState<"approved" | "rejected" | null>(
     null,
   );
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const handleTogglePlay = useCallback((id: string) => {
+    setPlayingId((prev) => (prev === id ? null : id));
+  }, []);
 
   if (isIncomplete) {
     return (
@@ -62,8 +66,16 @@ export function PairVerdictBlock({
   return (
     <div className="my-3 space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <SampleCard sample={payload.sample_a} />
-        <SampleCard sample={payload.sample_b} />
+        <SampleCard
+          sample={payload.sample_a}
+          isPlaying={playingId === payload.sample_a.id}
+          onTogglePlay={handleTogglePlay}
+        />
+        <SampleCard
+          sample={payload.sample_b}
+          isPlaying={playingId === payload.sample_b.id}
+          onTogglePlay={handleTogglePlay}
+        />
       </div>
 
       <div className="flex items-center justify-between px-1">

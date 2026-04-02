@@ -14,7 +14,7 @@ from transformers import ClapModel, ClapProcessor
 from samplespace.models.sample import Sample
 from samplespace.schemas.kit import KitResult, KitSlot, PairwiseEntry
 from samplespace.schemas.sample import SampleSchema
-from samplespace.schemas.sample_type import SampleType
+from samplespace.schemas.sample_type import SAMPLE_TYPES, SampleType
 from samplespace.schemas.thread import SongContext
 from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
@@ -24,11 +24,33 @@ from samplespace.services.pair_scoring import DEFAULT_TYPE_SCORE, TYPE_COMPLEMEN
 
 logger = logging.getLogger(__name__)
 
+_VALID_TYPES = set(SAMPLE_TYPES)
+
+
+def _resolve_type(raw: str) -> str | None:
+    """Resolve a free-form type string to a valid SampleType value.
+
+    Handles cases like "drum loop" -> "drum", "synth lead" -> "synth".
+    """
+    normalized = raw.strip().lower()
+    if normalized in _VALID_TYPES:
+        return normalized
+    # Check if any valid type is a prefix of the input (e.g. "drum loop" -> "drum")
+    for t in _VALID_TYPES:
+        if normalized.startswith(t):
+            return t
+    logger.warning(f"Kit builder: unrecognized type '{raw}', skipping")
+    return None
+
+
 # Default kit template
 DEFAULT_TYPES = [SampleType.KICK, SampleType.SNARE, SampleType.HIHAT, SampleType.BASS, SampleType.PAD]
 
-# Candidates to retrieve per type slot
-CANDIDATES_PER_TYPE = 10
+# Candidates to retrieve per type slot (larger pool for re-ranking)
+CANDIDATES_PER_TYPE = 20
+
+# Final candidates per type after re-ranking with song context
+RERANK_LIMIT = 10
 
 # Weight for CNN diversity penalty during greedy selection
 DIVERSITY_ALPHA = 0.15
@@ -65,23 +87,52 @@ async def build_kit(
     song_context: SongContext | None = None,
     vibe: str | None = None,
     genre: str | None = None,
+    replacements: dict[str, str] | None = None,
 ) -> KitResult:
     """Assemble a kit using greedy pairwise optimization.
 
-    Phase 1: Retrieve candidates per type via CLAP search.
+    Phase 1: Retrieve candidates per type via CLAP search (or use pinned samples).
     Phase 2: Greedy assembly using fast inline scoring.
     Phase 3: Final scoring via full pair_scoring service.
+
+    Args:
+        replacements: Map of {sample_type: sample_id} to pin specific samples
+                      into slots, skipping CLAP search for those types.
     """
-    kit_types = types or DEFAULT_TYPES
+    # Resolve free-form type names to valid SampleType values
+    raw_types = types or DEFAULT_TYPES
+    kit_types = []
+    for t in raw_types:
+        resolved = _resolve_type(t)
+        if resolved and resolved not in kit_types:
+            kit_types.append(resolved)
 
     effective_vibe = vibe or (song_context.vibe if song_context else None)
     effective_genre = genre or (song_context.genre if song_context else None)
+
+    # Resolve pinned replacements upfront
+    pinned: dict[str, SampleSchema] = {}
+    if replacements:
+        for sample_type, sample_id in replacements.items():
+            sample = await Sample.get(db, sample_id)
+            if sample:
+                pinned[sample_type.lower()] = SampleSchema.model_validate(sample)
+            else:
+                logger.warning(
+                    f"Kit builder: pinned sample '{sample_id}' for type '{sample_type}' not found, will search"
+                )
 
     candidates_by_type: dict[str, list[SampleSchema]] = {}
     all_candidate_ids: list[str] = []
     skipped_types: list[str] = []
 
     for sample_type in kit_types:
+        # Use pinned sample if provided for this type
+        if sample_type.lower() in pinned:
+            candidates_by_type[sample_type] = [pinned[sample_type.lower()]]
+            all_candidate_ids.append(pinned[sample_type.lower()].id)
+            continue
+
         query = _build_clap_query(sample_type, effective_vibe, effective_genre, song_context)
         query_embedding = embedding_service.embed_text(query, clap_model, clap_processor)
 
@@ -89,6 +140,7 @@ async def build_kit(
             db,
             query_embedding=query_embedding,
             sample_type=sample_type,
+            is_loop=True,
             exclude_source="upload",
             limit=CANDIDATES_PER_TYPE,
         )
@@ -98,6 +150,7 @@ async def build_kit(
             logger.info(f"Kit builder: no candidates found for type '{sample_type}', skipping")
             continue
 
+        results = _rerank_candidates(results, sample_type, song_context)
         candidates_by_type[sample_type] = results
         all_candidate_ids.extend(r.id for r in results)
 
@@ -182,6 +235,95 @@ async def build_kit(
         genre=effective_genre,
         skipped_types=skipped_types,
     )
+
+
+# Re-ranking weight profiles: (clap, bpm, key)
+_TONAL_WEIGHTS = (0.4, 0.25, 0.35)
+_PERCUSSIVE_WEIGHTS = (0.5, 0.5, 0.0)
+
+# Max semitone shift before heavy penalty — beyond this, transforms sound bad
+_MAX_CLEAN_SEMITONES = 3
+
+
+def _rerank_candidates(
+    candidates: list[SampleSchema],
+    sample_type: str,
+    song_context: SongContext | None,
+) -> list[SampleSchema]:
+    """Re-rank CLAP results using song context BPM/key compatibility."""
+    if not song_context or len(candidates) <= RERANK_LIMIT:
+        return candidates[:RERANK_LIMIT]
+
+    has_bpm = song_context.bpm is not None
+    has_key = song_context.key is not None
+    is_tonal = sample_type.lower() not in _ONE_SHOT_TYPES
+
+    w_clap, w_bpm, w_key = _TONAL_WEIGHTS if is_tonal else _PERCUSSIVE_WEIGHTS
+
+    # Redistribute unavailable dimension weights to CLAP
+    if not has_bpm:
+        w_clap += w_bpm
+        w_bpm = 0.0
+    if not has_key or not is_tonal:
+        w_clap += w_key
+        w_key = 0.0
+
+    scored: list[tuple[float, SampleSchema]] = []
+    n = len(candidates)
+
+    for i, sample in enumerate(candidates):
+        clap_score = 1.0 - (i / n)
+
+        bpm_score = 0.0
+        if has_bpm and sample.bpm:
+            bpm_score = _bpm_compatibility(song_context.bpm, sample.bpm)  # type: ignore[arg-type]
+
+        key_score = 0.0
+        if has_key and sample.key and is_tonal:
+            key_score = _semitone_key_score(song_context.key, sample.key)  # type: ignore[arg-type]
+
+        composite = w_clap * clap_score + w_bpm * bpm_score + w_key * key_score
+        scored.append((composite, sample))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [s for _, s in scored[:RERANK_LIMIT]]
+
+
+def _semitone_key_score(target_key: str, sample_key: str) -> float:
+    """Score key compatibility based on semitone distance and mode match.
+
+    Semitone distance: 0 = 1.0, 1-3 = gradual falloff, 4+ = 0.15.
+    Mode penalty: same mode or relative pair = no penalty, wrong mode = 0.3x.
+    """
+    delta = music_theory_service.semitone_delta(target_key, sample_key)
+    if delta is None:
+        return 0.5
+    abs_delta = abs(delta)
+    if abs_delta == 0:
+        score = 1.0
+    elif abs_delta <= _MAX_CLEAN_SEMITONES:
+        score = 1.0 - (abs_delta * 0.15)
+    else:
+        score = 0.15
+
+    # Mode compatibility: same mode or relative pair is fine, else heavy penalty
+    if not _modes_compatible(target_key, sample_key):
+        score *= 0.3
+
+    return score
+
+
+def _modes_compatible(key_a: str, key_b: str) -> bool:
+    """Check if two keys share a compatible mode (same mode or relative pair)."""
+    if key_a == key_b:
+        return True
+    if music_theory_service.are_relative_pairs(key_a, key_b):
+        return True
+    parts_a = key_a.split()
+    parts_b = key_b.split()
+    if len(parts_a) == 2 and len(parts_b) == 2:
+        return parts_a[1] == parts_b[1]
+    return True  # can't determine mode — don't penalize
 
 
 def _pick_best_candidate(
@@ -281,8 +423,11 @@ def _build_clap_query(
 
     parts.append(f"{sample_type} sample")
 
-    if sample_type.lower() not in _ONE_SHOT_TYPES and song_context and song_context.key:
-        parts.append(song_context.key)
+    if song_context:
+        if sample_type.lower() not in _ONE_SHOT_TYPES and song_context.key:
+            parts.append(song_context.key)
+        if song_context.bpm:
+            parts.append(f"{song_context.bpm} BPM")
 
     if vibe:
         parts.append(vibe)
