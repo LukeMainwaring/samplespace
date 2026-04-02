@@ -14,7 +14,7 @@ from transformers import ClapModel, ClapProcessor
 from samplespace.models.sample import Sample
 from samplespace.schemas.kit import KitResult, KitSlot, PairwiseEntry
 from samplespace.schemas.sample import SampleSchema
-from samplespace.schemas.sample_type import SampleType
+from samplespace.schemas.sample_type import SAMPLE_TYPES, SampleType
 from samplespace.schemas.thread import SongContext
 from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
@@ -23,6 +23,25 @@ from samplespace.services import sample as sample_service
 from samplespace.services.pair_scoring import DEFAULT_TYPE_SCORE, TYPE_COMPLEMENTARITY
 
 logger = logging.getLogger(__name__)
+
+_VALID_TYPES = set(SAMPLE_TYPES)
+
+
+def _resolve_type(raw: str) -> str | None:
+    """Resolve a free-form type string to a valid SampleType value.
+
+    Handles cases like "drum loop" -> "drum", "synth lead" -> "synth".
+    """
+    normalized = raw.strip().lower()
+    if normalized in _VALID_TYPES:
+        return normalized
+    # Check if any valid type is a prefix of the input (e.g. "drum loop" -> "drum")
+    for t in _VALID_TYPES:
+        if normalized.startswith(t):
+            return t
+    logger.warning(f"Kit builder: unrecognized type '{raw}', skipping")
+    return None
+
 
 # Default kit template
 DEFAULT_TYPES = [SampleType.KICK, SampleType.SNARE, SampleType.HIHAT, SampleType.BASS, SampleType.PAD]
@@ -68,23 +87,52 @@ async def build_kit(
     song_context: SongContext | None = None,
     vibe: str | None = None,
     genre: str | None = None,
+    replacements: dict[str, str] | None = None,
 ) -> KitResult:
     """Assemble a kit using greedy pairwise optimization.
 
-    Phase 1: Retrieve candidates per type via CLAP search.
+    Phase 1: Retrieve candidates per type via CLAP search (or use pinned samples).
     Phase 2: Greedy assembly using fast inline scoring.
     Phase 3: Final scoring via full pair_scoring service.
+
+    Args:
+        replacements: Map of {sample_type: sample_id} to pin specific samples
+                      into slots, skipping CLAP search for those types.
     """
-    kit_types = types or DEFAULT_TYPES
+    # Resolve free-form type names to valid SampleType values
+    raw_types = types or DEFAULT_TYPES
+    kit_types = []
+    for t in raw_types:
+        resolved = _resolve_type(t)
+        if resolved and resolved not in kit_types:
+            kit_types.append(resolved)
 
     effective_vibe = vibe or (song_context.vibe if song_context else None)
     effective_genre = genre or (song_context.genre if song_context else None)
+
+    # Resolve pinned replacements upfront
+    pinned: dict[str, SampleSchema] = {}
+    if replacements:
+        for sample_type, sample_id in replacements.items():
+            sample = await Sample.get(db, sample_id)
+            if sample:
+                pinned[sample_type.lower()] = SampleSchema.model_validate(sample)
+            else:
+                logger.warning(
+                    f"Kit builder: pinned sample '{sample_id}' for type '{sample_type}' not found, will search"
+                )
 
     candidates_by_type: dict[str, list[SampleSchema]] = {}
     all_candidate_ids: list[str] = []
     skipped_types: list[str] = []
 
     for sample_type in kit_types:
+        # Use pinned sample if provided for this type
+        if sample_type.lower() in pinned:
+            candidates_by_type[sample_type] = [pinned[sample_type.lower()]]
+            all_candidate_ids.append(pinned[sample_type.lower()].id)
+            continue
+
         query = _build_clap_query(sample_type, effective_vibe, effective_genre, song_context)
         query_embedding = embedding_service.embed_text(query, clap_model, clap_processor)
 

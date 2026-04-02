@@ -16,6 +16,7 @@ async def build_kit(
     vibe: str | None = None,
     genre: str | None = None,
     types: list[str] | None = None,
+    replacements: dict[str, str] | None = None,
 ) -> str:
     """Assemble a multi-sample kit optimized for pairwise compatibility.
 
@@ -33,6 +34,10 @@ async def build_kit(
                Falls back to song context genre if not provided.
         types: List of sample types to include (e.g., ["kick", "snare", "bass"]).
                Defaults to ["kick", "snare", "hihat", "bass", "pad"].
+        replacements: Pin specific samples into slots by type, e.g.
+                      {"snare": "abc-123", "bass": "def-456"}.
+                      Pinned slots skip CLAP search and use the given sample directly.
+                      Use this when the user wants to swap samples in an existing kit.
     """
     try:
         kit = await kit_builder_service.build_kit(
@@ -43,6 +48,7 @@ async def build_kit(
             song_context=ctx.deps.song_context,
             vibe=vibe,
             genre=genre,
+            replacements=replacements,
         )
 
         if not kit.slots:

@@ -26,9 +26,10 @@ export function SampleCard({
   isPlaying,
   onTogglePlay,
 }: SampleCardProps) {
-  const audioUrl = sample.audio_url.startsWith("http")
-    ? sample.audio_url
-    : `${BACKEND_URL}${sample.audio_url}`;
+  const rawUrl = sample.audio_url || `/api/samples/${sample.id}/audio`;
+  const audioUrl = rawUrl.startsWith("http")
+    ? rawUrl
+    : `${BACKEND_URL}${rawUrl}`;
 
   const pills: string[] = [];
   if (sample.type) pills.push(sample.type);
