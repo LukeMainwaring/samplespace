@@ -135,14 +135,14 @@ Custom hooks in `api/hooks/` wrap the generated code with cleaner APIs.
 Audio sample files are gitignored. To populate:
 
 ```bash
-# Seed sample data (place audio files in data/samples/, organized by subdirectory)
-uv run --directory backend seed-db
+# Seed sample data (set SAMPLE_LIBRARY_DIR in .env to your local sample library)
+uv run --directory backend seed-samples
 
 # Generate CLAP embeddings for all seeded samples
 uv run --directory backend embed-samples
 ```
 
-Audio files are stored in `data/samples/`. The database stores metadata (key, BPM, duration, type) and embedding vectors (CLAP 512-dim, CNN 128-dim).
+Audio files live in your local sample library directory (configured via `SAMPLE_LIBRARY_DIR`). The database stores metadata (key, BPM, duration, type) and embedding vectors (CLAP 512-dim, CNN 128-dim).
 
 ## ML Development
 

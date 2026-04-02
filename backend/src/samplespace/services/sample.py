@@ -18,7 +18,7 @@ async def create_sample(
     filename: str,
     file_path: str,
     relative_path: str,
-    source: str = "local",
+    source: str = "library",
     sample_type: str | None = None,
     pack_name: str | None = None,
 ) -> Sample:
@@ -113,8 +113,8 @@ def find_audio_file(sample: Sample) -> Path | None:
     """Locate an audio file using source-aware path resolution."""
     settings = get_settings()
 
-    if sample.source == "splice" and settings.SPLICE_DIR:
-        candidate = Path(settings.SPLICE_DIR) / sample.relative_path
+    if sample.source == "library" and settings.SAMPLE_LIBRARY_DIR:
+        candidate = Path(settings.SAMPLE_LIBRARY_DIR) / sample.relative_path
         if candidate.exists():
             return candidate
         return None

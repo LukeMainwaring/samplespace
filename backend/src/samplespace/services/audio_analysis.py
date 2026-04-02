@@ -49,14 +49,12 @@ def analyze_and_classify(file_path: str) -> AnalysisResult:
     # Tier 1: Filepath keywords (word-boundary matching to avoid false positives)
     loop_match = _LOOP_PATTERN.search(file_path)
     if loop_match:
-        logger.info(f"Inferred is_loop=True for {file_path} (keyword: {loop_match.group()})")
         return AnalysisResult(
             is_loop=True,
             metadata=_analyze_audio(file_path),
         )
     one_shot_match = _ONE_SHOT_PATTERN.search(file_path)
     if one_shot_match:
-        logger.info(f"Inferred is_loop=False for {file_path} (keyword: {one_shot_match.group()})")
         return AnalysisResult(
             is_loop=False,
             metadata=_analyze_duration_only(file_path),
@@ -71,7 +69,6 @@ def analyze_and_classify(file_path: str) -> AnalysisResult:
     else:
         duration = round(float(librosa.get_duration(y=y, sr=sr)), 2)
         metadata = AudioMetadata(key=None, bpm=None, duration=duration)
-        logger.info(f"Analyzed {file_path}: one-shot, duration={duration:.1f}s (skipped key/BPM)")
 
     return AnalysisResult(is_loop=is_loop, metadata=metadata)
 
@@ -100,8 +97,6 @@ def _infer_from_audio(file_path: str, y: np.ndarray, sr: int) -> bool:
         result = True
     else:
         result = False  # Default to one-shot for ambiguous cases
-
-    logger.info(f"Inferred is_loop={result} for {file_path} (duration={duration:.1f}s, onsets={num_onsets}, heuristic)")
     return result
 
 
@@ -113,7 +108,6 @@ def _analyze_audio(file_path: str) -> AudioMetadata:
 def _analyze_duration_only(file_path: str) -> AudioMetadata:
     y, sr = librosa.load(file_path, sr=22050, mono=True)
     duration = round(float(librosa.get_duration(y=y, sr=sr)), 2)
-    logger.info(f"Analyzed {file_path}: one-shot, duration={duration:.1f}s (skipped key/BPM)")
     return AudioMetadata(key=None, bpm=None, duration=duration)
 
 
@@ -133,7 +127,6 @@ def _extract_bpm_from_filename(filename: str) -> int | None:
     if keyword_match:
         value = int(keyword_match.group(1) or keyword_match.group(2))
         if 50 <= value <= 200:
-            logger.info(f"BPM={value} from filename keyword: {filename}")
             return value
 
     # Tier 2: positional heuristics for bare numbers
@@ -150,7 +143,6 @@ def _extract_bpm_from_filename(filename: str) -> int | None:
         candidates.append(value)
 
     if len(candidates) == 1:
-        logger.info(f"BPM={candidates[0]} from filename heuristic: {filename}")
         return candidates[0]
 
     return None
@@ -210,11 +202,9 @@ def _extract_full_metadata(file_path: str, y: np.ndarray, sr: int) -> AudioMetad
     filename_key = _extract_key_from_filename(filename)
     if filename_key is not None:
         key: str | None = filename_key
-        logger.info(f"Key={key} from filename: {filename}")
     else:
         key = _detect_key(y, sr)
 
-    logger.info(f"Analyzed {file_path}: key={key}, bpm={bpm}, duration={duration:.1f}s")
     return AudioMetadata(key=key, bpm=bpm, duration=round(duration, 2))
 
 

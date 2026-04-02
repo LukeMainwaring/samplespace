@@ -28,7 +28,7 @@ class Sample(Base):
     id: Mapped[str] = mapped_column(primary_key=True, index=True)
     filename: Mapped[str] = mapped_column(String(255))
     relative_path: Mapped[str] = mapped_column(String(512))
-    source: Mapped[str] = mapped_column(String(20), server_default=text("'local'"))
+    source: Mapped[str] = mapped_column(String(20), server_default=text("'library'"))
     pack_name: Mapped[str | None] = mapped_column(String(255))
     key: Mapped[str | None] = mapped_column(String(10))
     bpm: Mapped[int | None]
