@@ -1,0 +1,81 @@
+"""Kit preview service — mix multiple audio files into a single layered preview."""
+
+import contextlib
+import hashlib
+import logging
+import os
+import tempfile
+from pathlib import Path
+
+import librosa
+import numpy as np
+import soundfile as sf
+
+from samplespace.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+_SR = 22050
+
+
+def _preview_cache_dir() -> Path:
+    settings = get_settings()
+    return Path(settings.TRANSFORM_CACHE_DIR).resolve() / "kit_previews"
+
+
+def _cache_path_for_id(preview_id: str) -> Path:
+    return _preview_cache_dir() / f"{preview_id}.wav"
+
+
+def get_cached_preview(preview_id: str) -> Path | None:
+    path = _cache_path_for_id(preview_id)
+    return path if path.exists() else None
+
+
+def generate_preview_id(audio_paths: list[str]) -> str:
+    key = "|".join(sorted(audio_paths))
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
+def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
+    """Mix multiple audio files into a single layered WAV.
+
+    Returns (preview_id, cache_path).
+    """
+    path_strings = [str(p) for p in file_paths]
+    preview_id = generate_preview_id(path_strings)
+    cache_path = _cache_path_for_id(preview_id)
+
+    if cache_path.exists():
+        logger.info(f"Kit preview cache hit: {preview_id}")
+        return preview_id, cache_path
+
+    arrays: list[np.ndarray] = []
+    for p in file_paths:
+        y, _ = librosa.load(str(p), sr=_SR, mono=True)
+        arrays.append(y)
+
+    max_len = max(len(y) for y in arrays)
+    padded = [np.pad(y, (0, max_len - len(y))) for y in arrays]
+
+    mixed: np.ndarray = np.sum(padded, axis=0) / len(padded)
+
+    # Normalize to prevent clipping
+    peak = float(np.max(np.abs(mixed)))
+    if peak > 0:
+        mixed = mixed * (0.9 / peak)
+
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(dir=cache_path.parent, suffix=".wav")
+    try:
+        os.close(fd)
+        sf.write(tmp_path, mixed, _SR)
+        os.rename(tmp_path, cache_path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_path)
+        raise
+
+    logger.info(f"Cached kit preview: {preview_id} ({len(file_paths)} samples, {max_len / _SR:.1f}s)")
+    return preview_id, cache_path

@@ -241,6 +241,9 @@ async def build_kit(
 _TONAL_WEIGHTS = (0.4, 0.25, 0.35)
 _PERCUSSIVE_WEIGHTS = (0.5, 0.5, 0.0)
 
+# Max semitone shift before heavy penalty — beyond this, transforms sound bad
+_MAX_CLEAN_SEMITONES = 3
+
 
 def _rerank_candidates(
     candidates: list[SampleSchema],
@@ -277,13 +280,50 @@ def _rerank_candidates(
 
         key_score = 0.0
         if has_key and sample.key and is_tonal:
-            key_score, _ = music_theory_service.key_compatibility_score(song_context.key, sample.key)  # type: ignore[arg-type]
+            key_score = _semitone_key_score(song_context.key, sample.key)  # type: ignore[arg-type]
 
         composite = w_clap * clap_score + w_bpm * bpm_score + w_key * key_score
         scored.append((composite, sample))
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [s for _, s in scored[:RERANK_LIMIT]]
+
+
+def _semitone_key_score(target_key: str, sample_key: str) -> float:
+    """Score key compatibility based on semitone distance and mode match.
+
+    Semitone distance: 0 = 1.0, 1-3 = gradual falloff, 4+ = 0.15.
+    Mode penalty: same mode or relative pair = no penalty, wrong mode = 0.3x.
+    """
+    delta = music_theory_service.semitone_delta(target_key, sample_key)
+    if delta is None:
+        return 0.5
+    abs_delta = abs(delta)
+    if abs_delta == 0:
+        score = 1.0
+    elif abs_delta <= _MAX_CLEAN_SEMITONES:
+        score = 1.0 - (abs_delta * 0.15)
+    else:
+        score = 0.15
+
+    # Mode compatibility: same mode or relative pair is fine, else heavy penalty
+    if not _modes_compatible(target_key, sample_key):
+        score *= 0.3
+
+    return score
+
+
+def _modes_compatible(key_a: str, key_b: str) -> bool:
+    """Check if two keys share a compatible mode (same mode or relative pair)."""
+    if key_a == key_b:
+        return True
+    if music_theory_service.are_relative_pairs(key_a, key_b):
+        return True
+    parts_a = key_a.split()
+    parts_b = key_b.split()
+    if len(parts_a) == 2 and len(parts_b) == 2:
+        return parts_a[1] == parts_b[1]
+    return True  # can't determine mode — don't penalize
 
 
 def _pick_best_candidate(

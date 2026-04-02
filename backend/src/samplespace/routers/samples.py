@@ -11,6 +11,7 @@ from samplespace.models.sample import AudioFileNotFound, SampleNotFound
 from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema, SampleSearchRequest
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
+from samplespace.services import kit_preview as kit_preview_service
 from samplespace.services import sample as sample_service
 from samplespace.services import upload as upload_service
 
@@ -18,6 +19,20 @@ samples_router = APIRouter(
     prefix="/samples",
     tags=["samples"],
 )
+
+
+@samples_router.get("/kit-preview/{preview_id}")
+async def get_kit_preview(preview_id: str) -> FileResponse:
+    """Serve a cached kit preview mixdown."""
+    cached = kit_preview_service.get_cached_preview(preview_id)
+    if cached is None:
+        raise HTTPException(status_code=404, detail="Kit preview not found in cache")
+
+    return FileResponse(
+        path=str(cached),
+        media_type="audio/wav",
+        filename=cached.name,
+    )
 
 
 @samples_router.get("/")
