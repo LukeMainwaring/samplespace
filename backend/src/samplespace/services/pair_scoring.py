@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.models.sample import Sample
 from samplespace.schemas.pair import DimensionScore, PairScore
+from samplespace.schemas.sample_type import SampleType
 from samplespace.services import music_theory as music_theory_service
 
 logger = logging.getLogger(__name__)
@@ -21,31 +22,31 @@ DEFAULT_WEIGHTS: dict[str, float] = {
 # Higher scores mean the types naturally complement each other.
 TYPE_COMPLEMENTARITY: dict[frozenset[str], float] = {
     # High complementarity — different frequency ranges / roles
-    frozenset({"kick", "hihat"}): 0.9,
-    frozenset({"bass", "synth"}): 0.9,
-    frozenset({"kick", "snare"}): 0.85,
-    frozenset({"pad", "synth"}): 0.85,
-    frozenset({"pad", "vocals"}): 0.85,
+    frozenset({SampleType.KICK, SampleType.HIHAT}): 0.9,
+    frozenset({SampleType.BASS, SampleType.SYNTH}): 0.9,
+    frozenset({SampleType.KICK, SampleType.SNARE}): 0.85,
+    frozenset({SampleType.PAD, SampleType.SYNTH}): 0.85,
+    frozenset({SampleType.PAD, SampleType.VOCAL}): 0.85,
     # Medium complementarity
-    frozenset({"bass", "pad"}): 0.8,
-    frozenset({"snare", "hihat"}): 0.8,
-    frozenset({"kick", "bass"}): 0.75,
-    frozenset({"kick", "synth"}): 0.75,
-    frozenset({"kick", "pad"}): 0.75,
-    frozenset({"snare", "bass"}): 0.7,
-    frozenset({"snare", "synth"}): 0.7,
-    frozenset({"snare", "pad"}): 0.7,
-    frozenset({"hihat", "bass"}): 0.7,
-    frozenset({"hihat", "synth"}): 0.7,
-    frozenset({"hihat", "pad"}): 0.7,
+    frozenset({SampleType.BASS, SampleType.PAD}): 0.8,
+    frozenset({SampleType.SNARE, SampleType.HIHAT}): 0.8,
+    frozenset({SampleType.KICK, SampleType.BASS}): 0.75,
+    frozenset({SampleType.KICK, SampleType.SYNTH}): 0.75,
+    frozenset({SampleType.KICK, SampleType.PAD}): 0.75,
+    frozenset({SampleType.SNARE, SampleType.BASS}): 0.7,
+    frozenset({SampleType.SNARE, SampleType.SYNTH}): 0.7,
+    frozenset({SampleType.SNARE, SampleType.PAD}): 0.7,
+    frozenset({SampleType.HIHAT, SampleType.BASS}): 0.7,
+    frozenset({SampleType.HIHAT, SampleType.SYNTH}): 0.7,
+    frozenset({SampleType.HIHAT, SampleType.PAD}): 0.7,
     # Low complementarity — same type
-    frozenset({"kick"}): 0.2,
-    frozenset({"snare"}): 0.2,
-    frozenset({"hihat"}): 0.2,
-    frozenset({"bass"}): 0.2,
-    frozenset({"synth"}): 0.3,
-    frozenset({"pad"}): 0.3,
-    frozenset({"vocals"}): 0.3,
+    frozenset({SampleType.KICK}): 0.2,
+    frozenset({SampleType.SNARE}): 0.2,
+    frozenset({SampleType.HIHAT}): 0.2,
+    frozenset({SampleType.BASS}): 0.2,
+    frozenset({SampleType.SYNTH}): 0.3,
+    frozenset({SampleType.PAD}): 0.3,
+    frozenset({SampleType.VOCAL}): 0.3,
 }
 DEFAULT_TYPE_SCORE = 0.5
 

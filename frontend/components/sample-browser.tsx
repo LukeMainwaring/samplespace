@@ -4,26 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Pause, Play } from "lucide-react";
 import { useCallback, useState } from "react";
 import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
-import type { SampleSchema } from "@/api/generated/types.gen";
+import type { SampleSchema, SampleType } from "@/api/generated/types.gen";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
+import { SAMPLE_TYPES } from "@/lib/constants";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
-
-const SAMPLE_TYPES = [
-  "kick",
-  "snare",
-  "hihat",
-  "clap",
-  "percussion",
-  "bass",
-  "pad",
-  "lead",
-  "keys",
-  "fx",
-  "vocal",
-] as const;
 
 function SampleCard({
   sample,
@@ -92,7 +79,7 @@ export function SampleBrowser() {
   const [activeCategory, setActiveCategory] = useState<
     "all" | "one-shot" | "loop"
   >("all");
-  const [activeType, setActiveType] = useState<string | null>(null);
+  const [activeType, setActiveType] = useState<SampleType | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery(

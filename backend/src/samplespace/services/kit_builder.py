@@ -14,6 +14,7 @@ from transformers import ClapModel, ClapProcessor
 from samplespace.models.sample import Sample
 from samplespace.schemas.kit import KitResult, KitSlot, PairwiseEntry
 from samplespace.schemas.sample import SampleSchema
+from samplespace.schemas.sample_type import SampleType
 from samplespace.schemas.thread import SongContext
 from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
@@ -24,7 +25,7 @@ from samplespace.services.pair_scoring import DEFAULT_TYPE_SCORE, TYPE_COMPLEMEN
 logger = logging.getLogger(__name__)
 
 # Default kit template
-DEFAULT_TYPES = ["kick", "snare", "hihat", "bass", "pad"]
+DEFAULT_TYPES = [SampleType.KICK, SampleType.SNARE, SampleType.HIHAT, SampleType.BASS, SampleType.PAD]
 
 # Candidates to retrieve per type slot
 CANDIDATES_PER_TYPE = 10
@@ -35,17 +36,24 @@ DIVERSITY_ALPHA = 0.15
 # Tonal types that have meaningful key/BPM — used for greedy ordering tiebreaker.
 # Lower index = filled earlier (more constrained).
 _TONAL_PRIORITY: dict[str, int] = {
-    "pad": 0,
-    "bass": 1,
-    "synth": 2,
-    "vocals": 3,
-    "kick": 4,
-    "snare": 5,
-    "hihat": 6,
+    SampleType.PAD: 0,
+    SampleType.BASS: 1,
+    SampleType.SYNTH: 2,
+    SampleType.VOCAL: 3,
+    SampleType.KICK: 4,
+    SampleType.SNARE: 5,
+    SampleType.HIHAT: 6,
 }
 
 # Types that are typically one-shots (no meaningful key)
-_ONE_SHOT_TYPES = {"kick", "snare", "hihat", "clap", "perc", "fx"}
+_ONE_SHOT_TYPES = {
+    SampleType.KICK,
+    SampleType.SNARE,
+    SampleType.HIHAT,
+    SampleType.CLAP,
+    SampleType.PERCUSSION,
+    SampleType.FX,
+}
 
 
 async def build_kit(
