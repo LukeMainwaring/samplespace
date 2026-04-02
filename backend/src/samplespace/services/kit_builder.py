@@ -7,7 +7,6 @@ while maintaining spectral diversity.
 
 import logging
 
-import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession
 from transformers import ClapModel, ClapProcessor
 
@@ -20,7 +19,8 @@ from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
 from samplespace.services import pair_scoring as pair_scoring_service
 from samplespace.services import sample as sample_service
-from samplespace.services.pair_scoring import DEFAULT_TYPE_SCORE, TYPE_COMPLEMENTARITY
+from samplespace.services.music_theory import normalize_bpm, semitone_key_score
+from samplespace.services.pair_scoring import DEFAULT_TYPE_SCORE, TYPE_COMPLEMENTARITY, cosine_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -241,9 +241,6 @@ async def build_kit(
 _TONAL_WEIGHTS = (0.4, 0.25, 0.35)
 _PERCUSSIVE_WEIGHTS = (0.5, 0.5, 0.0)
 
-# Max semitone shift before heavy penalty — beyond this, transforms sound bad
-_MAX_CLEAN_SEMITONES = 3
-
 
 def _rerank_candidates(
     candidates: list[SampleSchema],
@@ -280,50 +277,13 @@ def _rerank_candidates(
 
         key_score = 0.0
         if has_key and sample.key and is_tonal:
-            key_score = _semitone_key_score(song_context.key, sample.key)  # type: ignore[arg-type]
+            key_score = semitone_key_score(song_context.key, sample.key)  # type: ignore[arg-type]
 
         composite = w_clap * clap_score + w_bpm * bpm_score + w_key * key_score
         scored.append((composite, sample))
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [s for _, s in scored[:RERANK_LIMIT]]
-
-
-def _semitone_key_score(target_key: str, sample_key: str) -> float:
-    """Score key compatibility based on semitone distance and mode match.
-
-    Semitone distance: 0 = 1.0, 1-3 = gradual falloff, 4+ = 0.15.
-    Mode penalty: same mode or relative pair = no penalty, wrong mode = 0.3x.
-    """
-    delta = music_theory_service.semitone_delta(target_key, sample_key)
-    if delta is None:
-        return 0.5
-    abs_delta = abs(delta)
-    if abs_delta == 0:
-        score = 1.0
-    elif abs_delta <= _MAX_CLEAN_SEMITONES:
-        score = 1.0 - (abs_delta * 0.15)
-    else:
-        score = 0.15
-
-    # Mode compatibility: same mode or relative pair is fine, else heavy penalty
-    if not _modes_compatible(target_key, sample_key):
-        score *= 0.3
-
-    return score
-
-
-def _modes_compatible(key_a: str, key_b: str) -> bool:
-    """Check if two keys share a compatible mode (same mode or relative pair)."""
-    if key_a == key_b:
-        return True
-    if music_theory_service.are_relative_pairs(key_a, key_b):
-        return True
-    parts_a = key_a.split()
-    parts_b = key_b.split()
-    if len(parts_a) == 2 and len(parts_b) == 2:
-        return parts_a[1] == parts_b[1]
-    return True  # can't determine mode — don't penalize
 
 
 def _pick_best_candidate(
@@ -347,7 +307,7 @@ def _pick_best_candidate(
             for _, sel_sample in selected:
                 sel_cnn = cnn_embeddings.get(sel_sample.id)
                 if sel_cnn is not None:
-                    diversity_penalty += _cosine_similarity(cand_cnn, sel_cnn)
+                    diversity_penalty += cosine_similarity(cand_cnn, sel_cnn)
 
         composite = avg_compat - DIVERSITY_ALPHA * diversity_penalty
         if composite > best_score:
@@ -378,32 +338,11 @@ def _fast_compatibility(sample_a: SampleSchema, sample_b: SampleSchema) -> float
 
 
 def _bpm_compatibility(bpm_a: int, bpm_b: int) -> float:
-    norm_a = _normalize_bpm(bpm_a)
-    norm_b = _normalize_bpm(bpm_b)
+    norm_a = normalize_bpm(bpm_a)
+    norm_b = normalize_bpm(bpm_b)
     if max(norm_a, norm_b) == 0:
         return 0.5
     return 1.0 - abs(norm_a - norm_b) / max(norm_a, norm_b)
-
-
-def _normalize_bpm(bpm: int) -> int:
-    if bpm <= 0:
-        return 0
-    normalized = bpm
-    while normalized > 180:
-        normalized //= 2
-    while normalized < 60:
-        normalized *= 2
-    return normalized
-
-
-def _cosine_similarity(a: list[float], b: list[float]) -> float:
-    arr_a = np.array(a, dtype=np.float32)
-    arr_b = np.array(b, dtype=np.float32)
-    norm_a = float(np.linalg.norm(arr_a))
-    norm_b = float(np.linalg.norm(arr_b))
-    if norm_a == 0.0 or norm_b == 0.0:
-        return 0.0
-    return float(np.dot(arr_a, arr_b) / (norm_a * norm_b))
 
 
 def _build_clap_query(

@@ -108,7 +108,7 @@ The agent resolves the target key/BPM from the persisted song context, computes 
 
 ### Full Production Session
 
-A 5-step workflow demonstrating conversational memory and context-awareness across an entire session.
+A 6-step workflow demonstrating conversational memory and context-awareness across an entire session.
 
 **Step 1 — Set the vibe:**
 
@@ -140,15 +140,26 @@ A 5-step workflow demonstrating conversational memory and context-awareness acro
 - Kit block renders with slots, compatibility scores, and genre/vibe badges
 - Song context badge still visible in header from step 1
 
-**Step 5 — Fix a mismatch:**
+**Step 5 — Transform the kit:**
 
-> "The pad is great but it's in C minor — transpose it to match my song"
+> "Transform the kit to match my song context"
 
-- Agent calls `match_to_context`, resolving target from song context (A minor)
-- Audio block renders with transformed waveform for preview
-- Response shows the semitone shift applied
+- Agent calls `transform_kit` with the slots from step 4, resolving targets from song context (A minor, 85 BPM)
+- Kit block re-renders with transformed audio URLs — each loop is pitch-shifted and/or time-stretched
+- Response lists per-slot transforms (e.g., "bass: D minor → A minor (-5 semitones), 90 → 85 BPM")
+- One-shots are included as-is (no transform needed)
 
-**What to watch for across the session:** Song context persists through all 5 steps without repetition. Refresh the page mid-session — the context badge reappears because it's stored in the thread's JSONB column, not the browser session.
+**Step 6 — Preview the full kit:**
+
+> "Let me hear the full kit together"
+
+- Agent calls `preview_kit` with the transformed slots
+- Audio block renders with a single mixed preview — all samples layered together
+- Click to play the full kit as one track
+
+**What to watch for across the session:** Song context persists through all 6 steps without repetition. Refresh the page mid-session — the context badge reappears because it's stored in the thread's JSONB column, not the browser session.
+
+**Tip:** `match_to_context` is also available for transforming individual samples outside of a kit workflow.
 
 ### Sample Curation and Pair Training
 
@@ -225,6 +236,10 @@ Attach a WAV via the paperclip button, then:
 **Quick kit:** *"Build me a minimal techno kit — just kick, hihat, and bass"* — 3-slot kit block with fast rendering.
 
 **Context-aware search:** *"I'm in G major at 140 BPM. Find me an uplifting lead"* — sets song context then searches with vibe enrichment, all in one turn.
+
+**Transform a kit:** *"Transform the kit to match my song context"* — pitch-shifts and time-stretches all loops in the kit to the target key/BPM. One-shots pass through unchanged.
+
+**Preview a kit:** *"Let me hear the full kit together"* — layers all kit samples into a single mixed audio preview for auditioning the full arrangement.
 
 ---
 

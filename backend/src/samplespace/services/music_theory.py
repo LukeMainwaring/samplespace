@@ -110,6 +110,59 @@ def key_compatibility_score(key1: str, key2: str) -> tuple[float, str]:
     return score, f"{label} (distance {distance})"
 
 
+def normalize_bpm(bpm: int) -> int:
+    """Normalize BPM to the 60-180 range by halving or doubling."""
+    if bpm <= 0:
+        return 0
+    normalized = bpm
+    while normalized > 180:
+        normalized //= 2
+    while normalized < 60:
+        normalized *= 2
+    return normalized
+
+
+# Max semitone shift before heavy penalty — beyond this, transforms sound bad
+_MAX_CLEAN_SEMITONES = 3
+
+
+def semitone_key_score(target_key: str, sample_key: str) -> float:
+    """Score key compatibility based on semitone distance and mode match.
+
+    Finer-grained than key_compatibility_score — designed for numeric re-ranking.
+    Semitone distance: 0 = 1.0, 1-3 = gradual falloff, 4+ = 0.15.
+    Mode penalty: same mode or relative pair = no penalty, wrong mode = 0.3x.
+    """
+    delta = semitone_delta(target_key, sample_key)
+    if delta is None:
+        return 0.5
+    abs_delta = abs(delta)
+    if abs_delta == 0:
+        score = 1.0
+    elif abs_delta <= _MAX_CLEAN_SEMITONES:
+        score = 1.0 - (abs_delta * 0.15)
+    else:
+        score = 0.15
+
+    if not modes_compatible(target_key, sample_key):
+        score *= 0.3
+
+    return score
+
+
+def modes_compatible(key_a: str, key_b: str) -> bool:
+    """Check if two keys share a compatible mode (same mode or relative pair)."""
+    if key_a == key_b:
+        return True
+    if are_relative_pairs(key_a, key_b):
+        return True
+    parts_a = key_a.split()
+    parts_b = key_b.split()
+    if len(parts_a) == 2 and len(parts_b) == 2:
+        return parts_a[1] == parts_b[1]
+    return True  # can't determine mode — don't penalize
+
+
 def _parse_mode(key: str) -> str | None:
     parts = key.split()
     if len(parts) == 2 and parts[1] in ("major", "minor"):

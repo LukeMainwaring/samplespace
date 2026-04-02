@@ -3,6 +3,7 @@ import logging
 from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
+from samplespace.agents.tools.formatting import format_sample_results
 from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 
@@ -126,29 +127,25 @@ async def suggest_complement(
             reference_key = ctx.deps.song_context.key
 
         if source.is_loop:
-            header = f"Samples that complement **{source.filename}** (key: {source.key or 'unknown'}):\n"
+            header = f"Samples that complement **{source.filename}** (key: {source.key or 'unknown'}):"
         elif reference_key and reference_key != source.key:
             header = (
-                f"Samples that complement **{source.filename}** (one-shot, using song context key: {reference_key}):\n"
+                f"Samples that complement **{source.filename}** (one-shot, using song context key: {reference_key}):"
             )
         else:
-            header = f"Samples that complement **{source.filename}**:\n"
-        lines = [header]
-        for i, s in enumerate(filtered[:8], 1):
-            compat = ""
-            if reference_key and s.key:
-                if reference_key == s.key:
-                    compat = " ✓ same key"
-                elif music_theory_service.are_relative_pairs(reference_key, s.key):
-                    compat = " ✓ relative key"
-            parts = [f"{i}. **{s.filename}**"]
-            if s.sample_type:
-                parts.append(f"type={s.sample_type}")
-            if s.is_loop and s.key:
-                parts.append(f"key={s.key}{compat}")
-            parts.append(f"id={s.id}")
-            lines.append(" | ".join(parts))
-        return "\n".join(lines)
+            header = f"Samples that complement **{source.filename}**:"
+
+        # Build key compatibility annotations
+        annotations: dict[str, str] = {}
+        if reference_key:
+            for s in filtered[:8]:
+                if s.key:
+                    if reference_key == s.key:
+                        annotations[s.id] = " ✓ same key"
+                    elif music_theory_service.are_relative_pairs(reference_key, s.key):
+                        annotations[s.id] = " ✓ relative key"
+
+        return format_sample_results(filtered[:8], header, annotations=annotations)
     except Exception:
         logger.exception("Error suggesting complements")
         return "An error occurred while suggesting complements."
