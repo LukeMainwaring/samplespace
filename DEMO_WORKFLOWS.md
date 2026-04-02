@@ -6,14 +6,14 @@ Prompts and workflows that showcase what SampleSpace can do that general-purpose
 
 ## The Best Single Demo
 
-> "I'm producing a dark techno track in D minor at 130 BPM. Build me a kit with kick, snare, hihat, bass, and pad."
+> "I'm producing a funky tech house track in A minor at 126 BPM. Build me a kit with kick, snare, hihat, bass, and pad."
 
-This one prompt triggers the full system. The agent calls `set_song_context` to persist key/BPM/genre/vibe, then `build_kit` to run CLAP retrieval for each sample type (enriched with "dark" vibe), greedy pairwise optimization with CNN diversity penalties, and multi-dimensional compatibility scoring — all rendered as an interactive kit card.
+This one prompt triggers the full system. The agent calls `set_song_context` to persist key/BPM/genre/vibe, then `build_kit` to run CLAP retrieval for each sample type (enriched with "funky" vibe), greedy pairwise optimization with CNN diversity penalties, and multi-dimensional compatibility scoring — all rendered as an interactive kit card.
 
 **What to watch for:**
 
 - Tool call indicators appear with live spinner → green checkmark when complete
-- Song context badge appears in the chat header: pills for "D minor", "130 BPM", "techno", "dark"
+- Song context badge appears in the chat header: pills for "A minor", "126 BPM", "tech house", "funky"
 - Kit block renders as a multi-slot grid — each slot shows the sample type label, a compatibility score, and a sample card with waveform visualization
 - Kit score badge is color-coded: green (>=0.7), yellow (>=0.4), red (<0.4)
 - Genre and vibe pills display above the kit slots
