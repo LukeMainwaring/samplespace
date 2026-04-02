@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from samplespace.schemas.base import BaseSchema
+from samplespace.schemas.sample_type import SampleType
 
 
 class SampleSchema(BaseSchema):
@@ -13,7 +14,7 @@ class SampleSchema(BaseSchema):
     key: str | None = None
     bpm: int | None = None
     duration: float | None = None
-    sample_type: str | None = Field(None, description="Category of the sample (e.g., kick, snare, pad, synth)")
+    sample_type: SampleType | None = Field(None, description="Category of the sample (e.g., kick, snare, pad, synth)")
     is_loop: bool = False
     created_at: datetime
 
@@ -28,6 +29,6 @@ class SampleSearchRequest(BaseModel):
     key: str | None = Field(None, description="Filter by musical key (e.g., 'C major', 'A minor')")
     bpm_min: int | None = Field(None, description="Minimum BPM filter")
     bpm_max: int | None = Field(None, description="Maximum BPM filter")
-    sample_type: str | None = Field(None, description="Filter by sample type")
+    sample_type: SampleType | None = Field(None, description="Filter by sample type")
     is_loop: bool | None = Field(None, description="Filter by loop (True) or one-shot (False)")
     limit: int = Field(20, ge=1, le=100, description="Maximum number of results")

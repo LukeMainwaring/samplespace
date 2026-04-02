@@ -640,8 +640,7 @@
           "samples",
           "total"
         ],
-        "title": "SampleListResponse",
-        "description": "Paginated list of samples."
+        "title": "SampleListResponse"
       },
       "SampleSchema": {
         "properties": {
@@ -656,7 +655,7 @@
           "source": {
             "type": "string",
             "title": "Source",
-            "default": "local"
+            "default": "library"
           },
           "pack_name": {
             "anyOf": [
@@ -705,14 +704,13 @@
           "sample_type": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/SampleType"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Sample Type",
-            "description": "Category of the sample (e.g., kick, snare, pad, lead)"
+            "description": "Category of the sample (e.g., kick, snare, pad, synth)"
           },
           "is_loop": {
             "type": "boolean",
@@ -731,8 +729,7 @@
           "filename",
           "created_at"
         ],
-        "title": "SampleSchema",
-        "description": "Sample response schema."
+        "title": "SampleSchema"
       },
       "SampleSearchRequest": {
         "properties": {
@@ -787,13 +784,12 @@
           "sample_type": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/SampleType"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Sample Type",
             "description": "Filter by sample type"
           },
           "is_loop": {
@@ -818,8 +814,29 @@
           }
         },
         "type": "object",
-        "title": "SampleSearchRequest",
-        "description": "Search request with optional filters."
+        "title": "SampleSearchRequest"
+      },
+      "SampleType": {
+        "type": "string",
+        "enum": [
+          "bass",
+          "clap",
+          "cymbal",
+          "drum",
+          "fx",
+          "guitar",
+          "hihat",
+          "horn",
+          "keys",
+          "kick",
+          "pad",
+          "percussion",
+          "snare",
+          "strings",
+          "synth",
+          "vocal"
+        ],
+        "title": "SampleType"
       },
       "SongContext": {
         "properties": {
@@ -869,8 +886,7 @@
           }
         },
         "type": "object",
-        "title": "SongContext",
-        "description": "Song context metadata for a conversation thread."
+        "title": "SongContext"
       },
       "ThreadDeleteResponse": {
         "properties": {
@@ -883,8 +899,7 @@
         "required": [
           "message"
         ],
-        "title": "ThreadDeleteResponse",
-        "description": "Response for successful thread delete operations."
+        "title": "ThreadDeleteResponse"
       },
       "ThreadListResponse": {
         "properties": {
@@ -900,8 +915,7 @@
         "required": [
           "threads"
         ],
-        "title": "ThreadListResponse",
-        "description": "Response containing list of threads."
+        "title": "ThreadListResponse"
       },
       "ThreadMessagesResponse": {
         "properties": {
@@ -933,8 +947,7 @@
           "thread_id",
           "messages"
         ],
-        "title": "ThreadMessagesResponse",
-        "description": "Response containing thread messages."
+        "title": "ThreadMessagesResponse"
       },
       "ThreadRenameRequest": {
         "properties": {
@@ -949,8 +962,7 @@
         "required": [
           "title"
         ],
-        "title": "ThreadRenameRequest",
-        "description": "Request to rename a thread."
+        "title": "ThreadRenameRequest"
       },
       "ThreadRenameResponse": {
         "properties": {
@@ -968,8 +980,7 @@
           "thread_id",
           "title"
         ],
-        "title": "ThreadRenameResponse",
-        "description": "Response for successful thread rename operations."
+        "title": "ThreadRenameResponse"
       },
       "ThreadSummary": {
         "properties": {
@@ -1021,8 +1032,7 @@
           "created_at",
           "updated_at"
         ],
-        "title": "ThreadSummary",
-        "description": "Summary of a thread for list view."
+        "title": "ThreadSummary"
       },
       "ValidationError": {
         "properties": {

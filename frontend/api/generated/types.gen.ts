@@ -36,8 +36,6 @@ export type HealthCheckResponse = {
 
 /**
  * SampleListResponse
- *
- * Paginated list of samples.
  */
 export type SampleListResponse = {
     /**
@@ -52,8 +50,6 @@ export type SampleListResponse = {
 
 /**
  * SampleSchema
- *
- * Sample response schema.
  */
 export type SampleSchema = {
     /**
@@ -85,11 +81,9 @@ export type SampleSchema = {
      */
     duration?: number | null;
     /**
-     * Sample Type
-     *
-     * Category of the sample (e.g., kick, snare, pad, lead)
+     * Category of the sample (e.g., kick, snare, pad, synth)
      */
-    sample_type?: string | null;
+    sample_type?: SampleType | null;
     /**
      * Is Loop
      */
@@ -102,8 +96,6 @@ export type SampleSchema = {
 
 /**
  * SampleSearchRequest
- *
- * Search request with optional filters.
  */
 export type SampleSearchRequest = {
     /**
@@ -131,11 +123,9 @@ export type SampleSearchRequest = {
      */
     bpm_max?: number | null;
     /**
-     * Sample Type
-     *
      * Filter by sample type
      */
-    sample_type?: string | null;
+    sample_type?: SampleType | null;
     /**
      * Is Loop
      *
@@ -151,9 +141,12 @@ export type SampleSearchRequest = {
 };
 
 /**
+ * SampleType
+ */
+export type SampleType = 'bass' | 'clap' | 'cymbal' | 'drum' | 'fx' | 'guitar' | 'hihat' | 'horn' | 'keys' | 'kick' | 'pad' | 'percussion' | 'snare' | 'strings' | 'synth' | 'vocal';
+
+/**
  * SongContext
- *
- * Song context metadata for a conversation thread.
  */
 export type SongContext = {
     /**
@@ -176,8 +169,6 @@ export type SongContext = {
 
 /**
  * ThreadDeleteResponse
- *
- * Response for successful thread delete operations.
  */
 export type ThreadDeleteResponse = {
     /**
@@ -188,8 +179,6 @@ export type ThreadDeleteResponse = {
 
 /**
  * ThreadListResponse
- *
- * Response containing list of threads.
  */
 export type ThreadListResponse = {
     /**
@@ -200,8 +189,6 @@ export type ThreadListResponse = {
 
 /**
  * ThreadMessagesResponse
- *
- * Response containing thread messages.
  */
 export type ThreadMessagesResponse = {
     /**
@@ -219,8 +206,6 @@ export type ThreadMessagesResponse = {
 
 /**
  * ThreadRenameRequest
- *
- * Request to rename a thread.
  */
 export type ThreadRenameRequest = {
     /**
@@ -231,8 +216,6 @@ export type ThreadRenameRequest = {
 
 /**
  * ThreadRenameResponse
- *
- * Response for successful thread rename operations.
  */
 export type ThreadRenameResponse = {
     /**
@@ -247,8 +230,6 @@ export type ThreadRenameResponse = {
 
 /**
  * ThreadSummary
- *
- * Summary of a thread for list view.
  */
 export type ThreadSummary = {
     /**
