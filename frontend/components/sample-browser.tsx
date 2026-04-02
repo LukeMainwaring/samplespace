@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Pause, Play } from "lucide-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { useCallback, useState } from "react";
 import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
 import type { SampleSchema, SampleType } from "@/api/generated/types.gen";
@@ -11,6 +11,8 @@ import { SAMPLE_TYPES } from "@/lib/constants";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
+
+const ITEMS_PER_PAGE = 50;
 
 function SampleCard({
   sample,
@@ -81,20 +83,45 @@ export function SampleBrowser() {
   >("all");
   const [activeType, setActiveType] = useState<SampleType | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery(
-    listSamplesOptions({
-      query: { limit: 100 },
+  const isLoopParam =
+    activeCategory === "loop"
+      ? true
+      : activeCategory === "one-shot"
+        ? false
+        : undefined;
+
+  const { data, isLoading } = useQuery({
+    ...listSamplesOptions({
+      query: {
+        limit: ITEMS_PER_PAGE,
+        offset: (page - 1) * ITEMS_PER_PAGE,
+        sample_type: activeType ?? undefined,
+        is_loop: isLoopParam,
+      },
     }),
-  );
+    placeholderData: keepPreviousData,
+  });
 
   const samples = data?.samples ?? [];
-  const filteredSamples = samples.filter((s) => {
-    if (activeCategory === "one-shot" && s.is_loop) return false;
-    if (activeCategory === "loop" && !s.is_loop) return false;
-    if (activeType && s.sample_type !== activeType) return false;
-    return true;
-  });
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const handleCategoryChange = useCallback(
+    (cat: "all" | "one-shot" | "loop") => {
+      setActiveCategory(cat);
+      setPage(1);
+      setPlayingId(null);
+    },
+    [],
+  );
+
+  const handleTypeChange = useCallback((type: SampleType | null) => {
+    setActiveType(type);
+    setPage(1);
+    setPlayingId(null);
+  }, []);
 
   const handleTogglePlay = useCallback((sample: SampleSchema) => {
     setPlayingId((prev) => (prev === sample.id ? null : sample.id));
@@ -109,7 +136,7 @@ export function SampleBrowser() {
       <div className="border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Sample Library</h2>
         <p className="text-xs text-muted-foreground">
-          {filteredSamples.length} samples
+          {total.toLocaleString()} samples
           {activeType ? ` (${activeType})` : ""}
         </p>
       </div>
@@ -119,7 +146,7 @@ export function SampleBrowser() {
           <Button
             className="h-6 text-xs"
             key={cat}
-            onClick={() => setActiveCategory(cat)}
+            onClick={() => handleCategoryChange(cat)}
             size="sm"
             variant={activeCategory === cat ? "default" : "ghost"}
           >
@@ -131,7 +158,7 @@ export function SampleBrowser() {
       <div className="flex flex-wrap gap-1 border-b px-4 py-2">
         <Button
           className="h-6 text-xs"
-          onClick={() => setActiveType(null)}
+          onClick={() => handleTypeChange(null)}
           size="sm"
           variant={activeType === null ? "default" : "ghost"}
         >
@@ -141,7 +168,7 @@ export function SampleBrowser() {
           <Button
             className="h-6 text-xs"
             key={type}
-            onClick={() => setActiveType(activeType === type ? null : type)}
+            onClick={() => handleTypeChange(activeType === type ? null : type)}
             size="sm"
             variant={activeType === type ? "default" : "ghost"}
           >
@@ -155,13 +182,13 @@ export function SampleBrowser() {
           <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
             Loading samples...
           </div>
-        ) : filteredSamples.length === 0 ? (
+        ) : samples.length === 0 ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
             No samples found
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {filteredSamples.map((sample) => (
+            {samples.map((sample) => (
               <SampleCard
                 isPlaying={playingId === sample.id}
                 key={sample.id}
@@ -173,6 +200,40 @@ export function SampleBrowser() {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <Button
+            className="h-7 text-xs"
+            disabled={page <= 1}
+            onClick={() => {
+              setPage((p) => p - 1);
+              setPlayingId(null);
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            <ChevronLeft size={14} />
+            Previous
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {page} / {totalPages}
+          </span>
+          <Button
+            className="h-7 text-xs"
+            disabled={page >= totalPages}
+            onClick={() => {
+              setPage((p) => p + 1);
+              setPlayingId(null);
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            Next
+            <ChevronRight size={14} />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

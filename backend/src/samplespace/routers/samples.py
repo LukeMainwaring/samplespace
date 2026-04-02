@@ -1,13 +1,14 @@
 import mimetypes
+from typing import Annotated
 
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 
 from samplespace.dependencies.clap import ClapModelsDep
 from samplespace.dependencies.db import AsyncPostgresSessionDep
 from samplespace.models.sample import AudioFileNotFound, SampleNotFound
-from samplespace.schemas.sample import SampleListResponse, SampleSchema, SampleSearchRequest
+from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema, SampleSearchRequest
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
 from samplespace.services import sample as sample_service
@@ -22,12 +23,10 @@ samples_router = APIRouter(
 @samples_router.get("/")
 async def list_samples(
     db: AsyncPostgresSessionDep,
-    limit: int = 50,
-    offset: int = 0,
-    source: str | None = None,
+    params: Annotated[ListSamplesParams, Query()],
 ) -> SampleListResponse:
-    """List all samples with pagination. Optionally filter by source."""
-    return await sample_service.get_samples(db, limit=limit, offset=offset, source=source)
+    """List all samples with pagination and optional filters."""
+    return await sample_service.get_samples(db, params=params)
 
 
 @samples_router.post("/upload")

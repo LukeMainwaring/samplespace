@@ -46,7 +46,7 @@ export const dbHealthCheck = <ThrowOnError extends boolean = false>(options?: Op
 /**
  * List Samples
  *
- * List all samples with pagination. Optionally filter by source.
+ * List all samples with pagination and optional filters.
  */
 export const listSamples = <ThrowOnError extends boolean = false>(options?: Options<ListSamplesData, ThrowOnError>) => (options?.client ?? client).get<ListSamplesResponses, ListSamplesErrors, ThrowOnError>({
     responseType: 'json',
