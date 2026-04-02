@@ -7,6 +7,7 @@ from samplespace.models.sample import Sample
 from samplespace.schemas.pair import DimensionScore, PairScore
 from samplespace.schemas.sample_type import SampleType
 from samplespace.services import music_theory as music_theory_service
+from samplespace.services.music_theory import normalize_bpm
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +113,8 @@ def _compute_key_score(key_a: str, key_b: str) -> DimensionScore:
 
 
 def _compute_bpm_score(bpm_a: int, bpm_b: int) -> DimensionScore:
-    norm_a = _normalize_bpm(bpm_a)
-    norm_b = _normalize_bpm(bpm_b)
+    norm_a = normalize_bpm(bpm_a)
+    norm_b = normalize_bpm(bpm_b)
 
     if max(norm_a, norm_b) == 0:
         return DimensionScore(value=0.5, weight=0.0, explanation="BPM: could not compare")
@@ -150,6 +151,17 @@ def _compute_type_score(type_a: str, type_b: str) -> DimensionScore:
     return DimensionScore(value=value, weight=0.0, explanation=f"Type: {explanation}")
 
 
+def cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Cosine similarity between two embedding vectors."""
+    arr_a = np.array(a, dtype=np.float32)
+    arr_b = np.array(b, dtype=np.float32)
+    norm_a = float(np.linalg.norm(arr_a))
+    norm_b = float(np.linalg.norm(arr_b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return float(np.dot(arr_a, arr_b) / (norm_a * norm_b))
+
+
 def _compute_spectral_score(
     emb_a: list[float],
     emb_b: list[float],
@@ -160,15 +172,8 @@ def _compute_spectral_score(
     For complementary types, spectral difference is desirable (score = distance).
     For same/similar types, spectral similarity is desirable (score = 1 - distance).
     """
-    arr_a = np.array(emb_a, dtype=np.float32)
-    arr_b = np.array(emb_b, dtype=np.float32)
-    norm_a = float(np.linalg.norm(arr_a))
-    norm_b = float(np.linalg.norm(arr_b))
-    if norm_a == 0.0 or norm_b == 0.0:
-        cosine_distance = 1.0
-    else:
-        cosine_distance = float(1.0 - np.dot(arr_a, arr_b) / (norm_a * norm_b))
-    cosine_distance = max(0.0, min(cosine_distance, 1.0))  # clamp
+    similarity = cosine_similarity(emb_a, emb_b)
+    cosine_distance = max(0.0, min(1.0 - similarity, 1.0))
 
     if types_are_complementary:
         value = cosine_distance
@@ -184,17 +189,6 @@ def _compute_spectral_score(
             label = "spectrally different — less cohesive"
 
     return DimensionScore(value=round(value, 2), weight=0.0, explanation=f"Spectral: {label}")
-
-
-def _normalize_bpm(bpm: int) -> int:
-    if bpm <= 0:
-        return 0
-    normalized = bpm
-    while normalized > 180:
-        normalized //= 2
-    while normalized < 60:
-        normalized *= 2
-    return normalized
 
 
 def _are_types_complementary(type_a: str | None, type_b: str | None) -> bool:

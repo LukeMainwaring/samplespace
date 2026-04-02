@@ -2,17 +2,17 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
+from samplespace.agents.tools.formatting import sample_to_payload
+from samplespace.agents.tools.transform_tools import transform_single_sample
 from samplespace.schemas.kit import KitResult
-from samplespace.schemas.sample import SampleSchema
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import kit_builder as kit_builder_service
 from samplespace.services import kit_preview as kit_preview_service
-from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 
 logger = logging.getLogger(__name__)
@@ -119,107 +119,20 @@ async def _transform_kit(
         sample_id = slot.get("sample_id", "")
         slot_type = slot.get("type", "unknown")
 
-        raw_sample = await sample_service.get_sample_by_id(ctx.deps.db, sample_id)
-        if raw_sample is None:
+        result = await transform_single_sample(ctx.deps.db, sample_id, target_key, target_bpm)
+
+        if isinstance(result, str):
             transform_notes.append(f"{slot_type}: sample not found, skipped")
             continue
-        sample = SampleSchema.model_validate(raw_sample)
-
-        if not sample.is_loop:
-            # Include as-is with original audio
-            transformed_slots.append(
-                {
-                    "position": i,
-                    "requested_type": slot_type,
-                    "sample": _sample_to_payload(sample),
-                }
-            )
-            transform_notes.append(f"{slot_type}: one-shot, no transform needed")
-            continue
-
-        # Determine what transforms apply
-        will_pitch = target_key is not None and sample.key is not None
-        will_stretch = target_bpm is not None and sample.bpm is not None
-
-        actual_target_key: str | None = None
-        n_steps = 0
-        if will_pitch and sample.key and target_key:
-            actual_target_key = music_theory_service.compute_target_key(
-                sample.key,
-                target_key,
-            )
-            if actual_target_key is None or actual_target_key == sample.key:
-                will_pitch = False
-            elif sample.key:
-                n_steps = (
-                    music_theory_service.semitone_delta(
-                        sample.key,
-                        actual_target_key,
-                    )
-                    or 0
-                )
-
-        bpm_matches = not will_stretch or sample.bpm == target_bpm
-
-        if not will_pitch and bpm_matches:
-            # Already matches — include with original audio
-            transformed_slots.append(
-                {
-                    "position": i,
-                    "requested_type": slot_type,
-                    "sample": _sample_to_payload(sample),
-                }
-            )
-            transform_notes.append(f"{slot_type}: already matches")
-            continue
-
-        # Find audio file and transform
-        audio_path = sample_service.find_audio_file(raw_sample)
-        if audio_path is None:
-            transformed_slots.append(
-                {
-                    "position": i,
-                    "requested_type": slot_type,
-                    "sample": _sample_to_payload(sample),
-                }
-            )
-            transform_notes.append(f"{slot_type}: audio file not found, skipped")
-            continue
-
-        await asyncio.to_thread(
-            audio_transform_service.transform_sample,
-            audio_path,
-            sample_id,
-            source_key=sample.key if will_pitch else None,
-            target_key=actual_target_key if will_pitch else None,
-            source_bpm=sample.bpm if not bpm_matches else None,
-            target_bpm=target_bpm if not bpm_matches else None,
-        )
-
-        # Build transformed audio URL
-        query_parts: list[str] = []
-        if will_pitch and actual_target_key:
-            query_parts.append(f"key={quote(actual_target_key, safe='')}")
-        if not bpm_matches and target_bpm:
-            query_parts.append(f"bpm={target_bpm}")
-        query = "&".join(query_parts)
-        transformed_url = f"/api/samples/{sample_id}/audio/transformed?{query}"
 
         transformed_slots.append(
             {
                 "position": i,
                 "requested_type": slot_type,
-                "sample": _sample_to_payload(sample, audio_url=transformed_url),
+                "sample": sample_to_payload(result.sample, audio_url=result.audio_url),
             }
         )
-
-        # Build note
-        note_parts: list[str] = []
-        if will_pitch and actual_target_key:
-            note_parts.append(f"{sample.key} → {actual_target_key} ({n_steps:+d} semitones)")
-        if not bpm_matches:
-            note_parts.append(f"{sample.bpm} → {target_bpm} BPM")
-        transform_notes.append(f"{slot_type}: {', '.join(note_parts)}")
+        transform_notes.append(f"{slot_type}: {result.note}")
 
     if not transformed_slots:
         return "No samples could be transformed."
@@ -308,7 +221,7 @@ def _format_kit_result(kit: KitResult) -> str:
             {
                 "position": slot.position,
                 "requested_type": slot.requested_type,
-                "sample": _sample_to_payload(slot.sample),
+                "sample": sample_to_payload(slot.sample),
                 "compatibility_score": slot.compatibility_score,
             }
             for slot in kit.slots
@@ -341,19 +254,3 @@ def _format_kit_result(kit: KitResult) -> str:
         intro += f"\n\n*Could not find samples for: {', '.join(kit.skipped_types)}.*"
 
     return f"{intro}\n\n```kit\n{json_str}\n```"
-
-
-def _sample_to_payload(sample: SampleSchema, audio_url: str | None = None) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "id": sample.id,
-        "filename": sample.filename,
-        "audio_url": audio_url or f"/api/samples/{sample.id}/audio",
-    }
-    if sample.sample_type:
-        payload["type"] = sample.sample_type
-    if sample.is_loop:
-        if sample.key:
-            payload["key"] = sample.key
-        if sample.bpm and sample.bpm > 0:
-            payload["bpm"] = sample.bpm
-    return payload

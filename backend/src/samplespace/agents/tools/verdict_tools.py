@@ -10,6 +10,7 @@ import logging
 from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
+from samplespace.agents.tools.formatting import sample_to_payload
 from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.pair_verdict import PairVerdict
 from samplespace.models.sample import Sample
@@ -171,26 +172,10 @@ def _format_pair_verdict(
     summary: str,
 ) -> str:
     payload = {
-        "sample_a": _sample_to_payload(sample_a),
-        "sample_b": _sample_to_payload(sample_b),
+        "sample_a": sample_to_payload(sample_a),
+        "sample_b": sample_to_payload(sample_b),
         "pair_score": round(pair_score, 2),
         "summary": summary,
     }
     json_str = json.dumps(payload, indent=2)
     return f"Here's a pair to evaluate — listen to both and let me know if they work together:\n\n```pair-verdict\n{json_str}\n```"
-
-
-def _sample_to_payload(sample: SampleSchema) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "id": sample.id,
-        "filename": sample.filename,
-        "audio_url": f"/api/samples/{sample.id}/audio",
-    }
-    if sample.sample_type:
-        payload["type"] = sample.sample_type
-    if sample.is_loop:
-        if sample.key:
-            payload["key"] = sample.key
-        if sample.bpm and sample.bpm > 0:
-            payload["bpm"] = sample.bpm
-    return payload
