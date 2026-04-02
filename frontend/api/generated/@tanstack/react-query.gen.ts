@@ -87,7 +87,7 @@ export const listSamplesQueryKey = (options?: Options<ListSamplesData>) => creat
 /**
  * List Samples
  *
- * List all samples with pagination. Optionally filter by source.
+ * List all samples with pagination and optional filters.
  */
 export const listSamplesOptions = (options?: Options<ListSamplesData>) => queryOptions<ListSamplesResponse, AxiosError<ListSamplesError>, ListSamplesResponse, ReturnType<typeof listSamplesQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -136,7 +136,7 @@ export const listSamplesInfiniteQueryKey = (options?: Options<ListSamplesData>):
 /**
  * List Samples
  *
- * List all samples with pagination. Optionally filter by source.
+ * List all samples with pagination and optional filters.
  */
 export const listSamplesInfiniteOptions = (options?: Options<ListSamplesData>) => infiniteQueryOptions<ListSamplesResponse, AxiosError<ListSamplesError>, InfiniteData<ListSamplesResponse>, QueryKey<Options<ListSamplesData>>, number | Pick<QueryKey<Options<ListSamplesData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
 // @ts-ignore

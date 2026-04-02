@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.core.config import get_settings
 from samplespace.models.sample import Sample
-from samplespace.schemas.sample import SampleListResponse, SampleSchema
+from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema
 from samplespace.services.audio_analysis import analyze_and_classify
 
 logger = logging.getLogger(__name__)
@@ -46,11 +46,9 @@ async def create_sample(
 async def get_samples(
     db: AsyncSession,
     *,
-    limit: int = 50,
-    offset: int = 0,
-    source: str | None = None,
+    params: ListSamplesParams,
 ) -> SampleListResponse:
-    samples, total = await Sample.get_all(db, limit=limit, offset=offset, source=source)
+    samples, total = await Sample.get_all(db, params)
 
     return SampleListResponse(
         samples=[SampleSchema.model_validate(s) for s in samples],

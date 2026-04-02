@@ -53,7 +53,7 @@
           "samples"
         ],
         "summary": "List Samples",
-        "description": "List all samples with pagination. Optionally filter by source.",
+        "description": "List all samples with pagination and optional filters.",
         "operationId": "listSamples",
         "parameters": [
           {
@@ -62,6 +62,8 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
               "default": 50,
               "title": "Limit"
             }
@@ -72,24 +74,41 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "minimum": 0,
               "default": 0,
               "title": "Offset"
             }
           },
           {
-            "name": "source",
+            "name": "sample_type",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/SampleType"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Source"
+              "title": "Sample Type"
+            }
+          },
+          {
+            "name": "is_loop",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Loop"
             }
           }
         ],

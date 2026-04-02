@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
 from samplespace.models.base import Base
+from samplespace.schemas.sample import ListSamplesParams
 
 
 class SampleNotFound(HTTPException):
@@ -48,17 +49,18 @@ class Sample(Base):
     async def get_all(
         cls,
         db: AsyncSession,
-        *,
-        limit: int = 50,
-        offset: int = 0,
-        source: str | None = None,
+        params: ListSamplesParams,
     ) -> tuple[Sequence[Sample], int]:
         count_stmt = select(func.count()).select_from(cls)
-        data_stmt = select(cls).order_by(cls.created_at.desc()).limit(limit).offset(offset)
+        data_stmt = select(cls).order_by(cls.created_at.desc()).limit(params.limit).offset(params.offset)
 
-        if source is not None:
-            count_stmt = count_stmt.where(cls.source == source)
-            data_stmt = data_stmt.where(cls.source == source)
+        if params.sample_type is not None:
+            count_stmt = count_stmt.where(cls.sample_type == params.sample_type)
+            data_stmt = data_stmt.where(cls.sample_type == params.sample_type)
+
+        if params.is_loop is not None:
+            count_stmt = count_stmt.where(cls.is_loop == params.is_loop)
+            data_stmt = data_stmt.where(cls.is_loop == params.is_loop)
 
         total_result = await db.execute(count_stmt)
         total = total_result.scalar_one()

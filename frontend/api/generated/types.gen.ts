@@ -326,9 +326,13 @@ export type ListSamplesData = {
          */
         offset?: number;
         /**
-         * Source
+         * Sample Type
          */
-        source?: string | null;
+        sample_type?: SampleType | null;
+        /**
+         * Is Loop
+         */
+        is_loop?: boolean | null;
     };
     url: '/api/samples/';
 };

@@ -6,6 +6,20 @@ from samplespace.schemas.base import BaseSchema
 from samplespace.schemas.sample_type import SampleType
 
 
+class PaginationParams(BaseSchema):
+    limit: int = Field(50, ge=1, le=1000)
+    offset: int = Field(0, ge=0)
+
+
+class SampleFilterParams(BaseSchema):
+    sample_type: SampleType | None = None
+    is_loop: bool | None = None
+
+
+class ListSamplesParams(SampleFilterParams, PaginationParams):
+    pass
+
+
 class SampleSchema(BaseSchema):
     id: str
     filename: str
