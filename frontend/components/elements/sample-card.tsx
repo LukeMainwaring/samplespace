@@ -72,7 +72,6 @@ export function SampleCard({
         audioUrl={audioUrl}
         height={36}
         playing={isPlaying}
-        onPlay={() => onTogglePlay?.(sample.id)}
         onFinish={() => {
           if (isPlaying) onTogglePlay?.(sample.id);
         }}

@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote, urlparse
 
 from pydantic_ai import RunContext
 
@@ -274,8 +274,6 @@ async def _preview_kit(
         # Check if this is a transformed sample URL
         if "/audio/transformed" in audio_url:
             # Parse key/bpm from the URL query params
-            from urllib.parse import parse_qs, urlparse
-
             parsed = urlparse(audio_url)
             params = parse_qs(parsed.query)
             t_key = params.get("key", [None])[0]

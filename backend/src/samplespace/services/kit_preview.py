@@ -24,7 +24,11 @@ def _preview_cache_dir() -> Path:
 
 
 def _cache_path_for_id(preview_id: str) -> Path:
-    return _preview_cache_dir() / f"{preview_id}.wav"
+    cache_dir = _preview_cache_dir()
+    path = (cache_dir / f"{preview_id}.wav").resolve()
+    if not str(path).startswith(str(cache_dir)):
+        raise ValueError("Invalid preview ID")
+    return path
 
 
 def get_cached_preview(preview_id: str) -> Path | None:
@@ -72,8 +76,8 @@ def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
         y, _ = librosa.load(str(p), sr=_SR, mono=False)
         arrays.append(_to_stereo(y))
 
-    max_len = max(y.shape[1] for y in arrays)
-    tiled = [_tile_to_length(y, max_len) for y in arrays]
+    max_len = max(a.shape[1] for a in arrays)
+    tiled = [_tile_to_length(a, max_len) for a in arrays]
 
     mixed: np.ndarray = np.sum(tiled, axis=0) / len(tiled)
 

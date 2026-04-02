@@ -53,7 +53,7 @@ export function AudioBlock({ code, isIncomplete }: AudioBlockProps) {
             audioUrl={audioUrl}
             height={40}
             playing={isPlaying}
-            onFinish={handleToggle}
+            onFinish={() => setIsPlaying(false)}
           />
         </div>
       </div>
