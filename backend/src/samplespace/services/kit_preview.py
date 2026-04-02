@@ -15,7 +15,7 @@ from samplespace.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-_SR = 22050
+_SR = 44100
 
 
 def _preview_cache_dir() -> Path:
@@ -37,9 +37,26 @@ def generate_preview_id(audio_paths: list[str]) -> str:
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
-def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
-    """Mix multiple audio files into a single layered WAV.
+def _to_stereo(y: np.ndarray) -> np.ndarray:
+    """Normalize a mono or stereo array to stereo (2, samples)."""
+    if y.ndim == 1:
+        return np.stack([y, y])
+    return y
 
+
+def _tile_to_length(y: np.ndarray, target_len: int) -> np.ndarray:
+    """Tile (loop) a stereo array along the sample axis to fill target length."""
+    n_samples = y.shape[1]
+    if n_samples >= target_len:
+        return y[:, :target_len]
+    repeats = (target_len // n_samples) + 1
+    return np.tile(y, (1, repeats))[:, :target_len]
+
+
+def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
+    """Mix multiple audio files into a single layered stereo WAV.
+
+    Shorter samples are looped to fill the duration of the longest sample.
     Returns (preview_id, cache_path).
     """
     path_strings = [str(p) for p in file_paths]
@@ -52,13 +69,13 @@ def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
 
     arrays: list[np.ndarray] = []
     for p in file_paths:
-        y, _ = librosa.load(str(p), sr=_SR, mono=True)
-        arrays.append(y)
+        y, _ = librosa.load(str(p), sr=_SR, mono=False)
+        arrays.append(_to_stereo(y))
 
-    max_len = max(len(y) for y in arrays)
-    padded = [np.pad(y, (0, max_len - len(y))) for y in arrays]
+    max_len = max(y.shape[1] for y in arrays)
+    tiled = [_tile_to_length(y, max_len) for y in arrays]
 
-    mixed: np.ndarray = np.sum(padded, axis=0) / len(padded)
+    mixed: np.ndarray = np.sum(tiled, axis=0) / len(tiled)
 
     # Normalize to prevent clipping
     peak = float(np.max(np.abs(mixed)))
@@ -70,7 +87,7 @@ def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
     fd, tmp_path = tempfile.mkstemp(dir=cache_path.parent, suffix=".wav")
     try:
         os.close(fd)
-        sf.write(tmp_path, mixed, _SR)
+        sf.write(tmp_path, mixed.T, _SR, subtype="PCM_24")
         os.rename(tmp_path, cache_path)
     except BaseException:
         with contextlib.suppress(OSError):
