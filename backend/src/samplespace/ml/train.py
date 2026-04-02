@@ -180,7 +180,7 @@ def train(
     device = _get_device()
     logger.info(f"Training on {device}")
 
-    # Load samples from the database (supports all sources: local, splice, upload).
+    # Load samples from the database (supports all sources: library, upload).
     # Falls back to directory scan if the database is unavailable.
     # Using separate SampleDataset instances (not random_split) ensures validation
     # data is never augmented — critical for reliable model selection and LR scheduling.

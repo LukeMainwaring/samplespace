@@ -71,7 +71,7 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
 
 9. **find_similar_to_upload**: Find library samples similar to an uploaded reference track
    - Best for: "find samples like this song I uploaded", "what in the library matches my reference?"
-   - Uses the uploaded sample's CLAP audio embedding to search the splice library
+   - Uses the uploaded sample's CLAP audio embedding to search the sample library
    - Requires a sample ID of an uploaded sample (source="upload")
 
 10. **present_pair**: Present a sample pair for the user to evaluate
