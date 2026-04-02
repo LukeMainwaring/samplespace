@@ -117,6 +117,6 @@ Key patterns:
 -   Do not make any changes until you have 95% confidence that you know what to build -- ask me follow up questions using the AskUserQuestion tool until you have that confidence; but don't ask obvious questions, dig into the hard parts I might not have considered.
 -   Do not worry about running the pytest commands yet. I have not implemented unit tests and likely will not for a while.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
--   Audio sample files in `data/samples/` are gitignored -- use `uv run --directory backend seed-db` to populate.
+-   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`) -- use `uv run --directory backend seed-samples` to populate the database.
 -   CLAP model is ~600MB, loaded at startup via lifespan. Mock in tests.
 -   CNN training defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `data/runs/`.

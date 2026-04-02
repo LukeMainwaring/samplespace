@@ -1,13 +1,13 @@
-"""Seed the database with audio samples from a Splice library.
+"""Seed the database with audio samples from a local sample library.
 
-Scans the configured SPLICE_DIR for audio files, infers sample_type from
+Scans the configured SAMPLE_LIBRARY_DIR for audio files, infers sample_type from
 directory structure, analyzes metadata (key, BPM, duration), and inserts
-into the database with source="splice".
+into the database with source="library".
 
 Usage:
-    uv run seed-splice                  # ingest up to 100 samples (default)
-    uv run seed-splice --limit 500      # ingest up to 500 samples
-    uv run seed-splice --limit 0        # ingest all samples (no limit)
+    uv run seed-samples                  # ingest up to 100 samples (default)
+    uv run seed-samples --limit 500      # ingest up to 500 samples
+    uv run seed-samples --limit 0        # ingest all samples (no limit)
 """
 
 import argparse
@@ -31,31 +31,30 @@ AUDIO_EXTENSIONS = {".wav", ".mp3", ".flac", ".ogg", ".aiff"}
 BATCH_SIZE = 50
 
 
-def scan_splice_dir(splice_dir: Path) -> list[tuple[Path, str]]:
-    """Scan Splice directory for audio files.
+def scan_library_dir(library_dir: Path) -> list[tuple[Path, str]]:
+    """Scan sample library directory for audio files.
 
     Returns list of (absolute_path, relative_path) tuples.
     """
     found: list[tuple[Path, str]] = []
-    for path in sorted(splice_dir.rglob("*")):
+    for path in sorted(library_dir.rglob("*")):
         if path.suffix.lower() not in AUDIO_EXTENSIONS:
             continue
         if path.name.startswith("."):
             continue
-        relative = str(path.relative_to(splice_dir))
+        relative = str(path.relative_to(library_dir))
         found.append((path, relative))
 
-    logger.info(f"Found {len(found)} audio files in {splice_dir}")
+    logger.info(f"Found {len(found)} audio files in {library_dir}")
     return found
 
 
-async def seed_splice(samples: list[tuple[Path, str]], *, limit: int) -> int:
-    """Analyze Splice audio files and insert sample records into the database."""
+async def seed_samples(samples: list[tuple[Path, str]], *, limit: int) -> int:
+    """Analyze audio files and insert sample records into the database."""
     inserted = 0
     batch_count = 0
     async with get_async_sqlalchemy_session() as db:
-        # Get existing relative_paths for splice source to skip duplicates
-        result = await db.execute(select(Sample.relative_path).where(Sample.source == "splice"))
+        result = await db.execute(select(Sample.relative_path).where(Sample.source == "library"))
         existing = {row[0] for row in result.all()}
 
         for abs_path, relative_path in samples:
@@ -79,7 +78,7 @@ async def seed_splice(samples: list[tuple[Path, str]], *, limit: int) -> int:
                 id=str(uuid.uuid4()),
                 filename=abs_path.name,
                 relative_path=relative_path,
-                source="splice",
+                source="library",
                 pack_name=pack_name,
                 key=analysis.metadata.key,
                 bpm=analysis.metadata.bpm,
@@ -90,11 +89,14 @@ async def seed_splice(samples: list[tuple[Path, str]], *, limit: int) -> int:
             db.add(sample)
             inserted += 1
             batch_count += 1
+            loop_label = "loop" if analysis.is_loop else "one_shot"
             logger.info(
-                f"  [{inserted}] {abs_path.name} "
-                f"(type={sample_type}, pack={pack_name}, "
-                f"bpm={analysis.metadata.bpm}, key={analysis.metadata.key}, "
-                f"is_loop={analysis.is_loop})"
+                f"  [{inserted}] {abs_path.name}\n"
+                f"    sample_type: {sample_type}\n"
+                f"    bpm: {analysis.metadata.bpm}\n"
+                f"    key: {analysis.metadata.key}\n"
+                f"    category: {loop_label}\n"
+                f"    -------------------------"
             )
 
             if batch_count >= BATCH_SIZE:
@@ -102,12 +104,12 @@ async def seed_splice(samples: list[tuple[Path, str]], *, limit: int) -> int:
                 batch_count = 0
                 logger.info(f"  Committed batch ({inserted} total so far)")
 
-    logger.info(f"Seeded {inserted} new Splice samples (skipped {len(existing)} existing)")
+    logger.info(f"Seeded {inserted} new samples (skipped {len(existing)} existing)")
     return inserted
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed the database with Splice samples")
+    parser = argparse.ArgumentParser(description="Seed the database from a local sample library")
     parser.add_argument(
         "--limit",
         type=int,
@@ -117,21 +119,21 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
-    if not settings.SPLICE_DIR:
-        logger.error("SPLICE_DIR is not configured. Set it in .env or as an environment variable.")
+    if not settings.SAMPLE_LIBRARY_DIR:
+        logger.error("SAMPLE_LIBRARY_DIR is not configured. Set it in .env or as an environment variable.")
         return
 
-    splice_dir = Path(settings.SPLICE_DIR)
-    if not splice_dir.is_dir():
-        logger.error(f"SPLICE_DIR does not exist: {splice_dir}")
+    library_dir = Path(settings.SAMPLE_LIBRARY_DIR)
+    if not library_dir.is_dir():
+        logger.error(f"SAMPLE_LIBRARY_DIR does not exist: {library_dir}")
         return
 
-    samples = scan_splice_dir(splice_dir)
+    samples = scan_library_dir(library_dir)
     if not samples:
-        logger.warning(f"No audio files found in {splice_dir}")
+        logger.warning(f"No audio files found in {library_dir}")
         return
 
-    asyncio.run(seed_splice(samples, limit=args.limit))
+    asyncio.run(seed_samples(samples, limit=args.limit))
 
 
 if __name__ == "__main__":

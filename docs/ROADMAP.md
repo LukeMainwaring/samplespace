@@ -62,6 +62,15 @@ Assembles a complete multi-sample kit (kick + snare + hihat + bass + pad) using 
 
 ## Upcoming Features
 
+### Web-Based Sample Ingestion
+
+Currently, samples are ingested from a local directory (`SAMPLE_LIBRARY_DIR`) via the `seed-samples` CLI script. This works well for personal use but doesn't scale to a hosted, multi-user setup.
+
+Future direction:
+- Web UI for uploading individual samples or bulk-importing from cloud storage (S3, Google Drive)
+- Drag-and-drop ingestion with progress tracking and automatic metadata extraction
+- Deferred until auth is implemented
+
 ## UI Features
 
 ### Sample Detail View

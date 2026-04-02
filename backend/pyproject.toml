@@ -56,8 +56,7 @@ target-version = "py313"
 select = ["I", "F401"]
 
 [project.scripts]
-seed-db = "samplespace.scripts.seed:main"
-seed-splice = "samplespace.scripts.seed_splice:main"
+seed-samples = "samplespace.scripts.seed_samples:main"
 embed-samples = "samplespace.scripts.embed_samples:main"
 embed-cnn = "samplespace.scripts.embed_cnn:main"
 train-cnn = "samplespace.ml.train:main"

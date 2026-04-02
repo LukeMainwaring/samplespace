@@ -145,8 +145,8 @@ docker compose up -d
 uv sync --directory backend
 uv run --directory backend pre-commit install
 
-# Seed samples (place .wav files in data/samples/ organized by type)
-uv run --directory backend seed-db
+# Seed samples (set SAMPLE_LIBRARY_DIR in .env to your local sample library)
+uv run --directory backend seed-samples
 
 # Generate embeddings
 uv run --directory backend embed-samples    # CLAP embeddings (~2 min)

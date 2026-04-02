@@ -14,7 +14,7 @@ async def find_similar_to_upload(ctx: RunContext[AgentDeps], sample_id: str) -> 
     """Find library samples similar to an uploaded reference track using CLAP embeddings.
 
     Use this tool when the user has uploaded a WAV file (a song, snippet, or reference
-    track) and wants to find similar samples from the splice library. The search compares
+    track) and wants to find similar samples from the sample library. The search compares
     the uploaded sample's audio embedding against the library.
 
     Args:

@@ -8,7 +8,7 @@ from samplespace.schemas.base import BaseSchema
 class SampleSchema(BaseSchema):
     id: str
     filename: str
-    source: str = "local"
+    source: str = "library"
     pack_name: str | None = None
     key: str | None = None
     bpm: int | None = None
