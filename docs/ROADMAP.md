@@ -1,6 +1,6 @@
 # Roadmap
 
-Remaining features and improvements for SampleSpace. All features from the original brainstorm (phases 1-3) are complete — see `docs/feature-brainstorm.md` for design rationale.
+Remaining features and improvements for SampleSpace. All original features (phases 1-3) are complete. The next major initiative is preference learning — see `docs/feature-brainstorm.md` for the full design.
 
 ## Upcoming Features
 
@@ -67,19 +67,19 @@ Remaining directions to explore:
 - Replace global average pooling with attention pooling — learn which time-frequency regions matter most
 - Experiment with 1D convolutions on raw waveform (SampleCNN-style from the literature) as an alternative to mel spectrograms
 
+## Next Up: Preference Learning
+
+The pairing feedback loop (stages 1-3) collects verdicts and computes relational audio features. The next phase turns that data into a learning system. See `docs/feature-brainstorm.md` for the full design.
+
+- **Stage 4 — Preference Model**: sklearn logistic regression trained on 10-dimensional feature vectors (4 pair score dimensions + 6 relational audio features). Trains after ~15 verdicts, retrains every 5th verdict thereafter.
+- **Stage 5 — Active Learning**: `present_pair` selects candidates where the model is most uncertain (P closest to 0.5), maximizing information gain per verdict.
+- **Stage 6 — Preference-Aware Recommendations**: learned preferences feed into kit building (5th scoring dimension), agent system prompt (natural-language preference summary), and pair scoring (learned_preference dimension).
+- **Confidence-Gated Automation**: after 30+ verdicts with 70%+ accuracy, the kit builder auto-approves high-confidence pairings and only asks about uncertain ones.
+- **Explainable Preferences**: `show_preferences` agent tool surfaces feature importances as natural-language explanations ("You care most about timbral contrast at 34%").
+
 ## Deferred
 
-### Flywheel Stages 4-6
-
-The pairing feedback loop (Feature 5) has stages 1-3 live: pair presentation, verdict collection, and background relational feature extraction. Stages 4-6 are deferred until ~20+ verdicts are collected per type pair:
-
-- **Stage 4 (Pattern analysis)**: aggregate verdicts + features, find statistical patterns per type pair (e.g., "accepted kick+bass pairs have mean spectral overlap < 0.3")
-- **Stage 5 (Rule extraction)**: convert patterns into `PairRule` records with confidence scores. Requires a `services/pair_analysis.py` module and `uv run analyze-pairs` management command
-- **Stage 6 (Rule application)**: `inject_pair_rules` system prompt decorator is already wired up — just needs rules in the DB. Also integrate learned rules into `pair_scoring` service weights
-
-### Other Deferred Items
-
-- **`swap_kit_sample` agent tool** — swap a single slot in an existing kit. Users can rebuild kits or use search tools conversationally as a workaround
-- **`POST /pairs/verdict` REST endpoint** — direct API access to verdict recording (currently agent-tool only)
-- **`POST /pairs/score` REST endpoint** — direct API access to pair scoring (currently agent-tool only)
+- **`swap_kit_sample` agent tool** — swap a single slot in an existing kit
+- **`POST /pairs/verdict` and `POST /pairs/score` REST endpoints** — direct API access (currently agent-tool only)
 - **Auth system** — prerequisite for web-based sample ingestion and multi-user support
+- **Cross-session memory** — implicit preference learning from search/workflow patterns (exploratory, see brainstorm doc)
