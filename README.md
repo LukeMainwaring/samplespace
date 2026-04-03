@@ -89,6 +89,7 @@ samplespace/
 │   │   │   ├── sample.py           # CRUD + pgvector search
 │   │   │   ├── pair_features.py    # Relational audio features for sample pairs (6 librosa metrics)
 │   │   │   ├── kit_builder.py      # Greedy kit assembly (CLAP retrieval + pairwise optimization)
+│   │   │   ├── spectrogram.py      # Mel spectrogram PNG generation with disk caching (full + CNN view)
 │   │   │   └── upload.py           # WAV upload pipeline (validate, store, analyze, embed)
 │   │   ├── routers/                # REST + SSE streaming endpoints
 │   │   ├── models/                 # SQLAlchemy (Sample, Thread, PairVerdict, PairRule)
@@ -106,7 +107,8 @@ samplespace/
 │   │   ├── multimodal-input.tsx    # Chat input with file attachment + local storage persistence
 │   │   ├── greeting.tsx            # Animated empty state
 │   │   ├── song-context-badge.tsx  # Read-only song context display (key/BPM/genre/vibe)
-│   │   ├── sample-browser.tsx      # Sample grid with filters + audio playback
+│   │   ├── sample-browser.tsx      # Sample grid with filters; split-pane layout with inline detail panel
+│   │   ├── sample-detail-panel.tsx # Splice-style detail view (metadata, waveform, spectrogram, similar samples)
 │   │   ├── candidate-samples.tsx   # Upload page for reference tracks with CLAP similarity search
 │   │   ├── preview-attachment.tsx  # File attachment chip (loading/complete states)
 │   │   ├── chat-actions-provider.tsx # React context for threading sendMessage to nested renderers
@@ -115,6 +117,7 @@ samplespace/
 ├── data/
 │   ├── uploads/                    # Uploaded reference tracks (gitignored)
 │   ├── samples/                    # Audio files (gitignored)
+│   ├── spectrograms/               # Cached spectrogram PNGs (gitignored)
 │   └── checkpoints/                # CNN model checkpoints (gitignored)
 └── docker-compose.yml
 ```

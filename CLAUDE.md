@@ -49,7 +49,7 @@ FastAPI Python backend using async patterns throughout.
 -   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, song context management, upload similarity, pair presentation, verdict recording, and kit building; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`, `pair_tools.py`, `transform_tools.py`, `upload_tools.py`, `verdict_tools.py`, `kit_tools.py`, `formatting.py`)
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
--   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, kit building)
+-   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, kit building, spectrogram generation)
 -   **`src/samplespace/ml/`**: PyTorch CNN (4 residual blocks, SE attention, 1→64→128→256→512 channels, 2-layer projection head) -- model definition (`model.py`), torchaudio dataset with waveform + spectrogram augmentation (`dataset.py`), training script with SupCon + cross-entropy loss, cosine annealing, mixed precision, TensorBoard logging (`train.py`), inference wrapper with batch support (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
@@ -69,7 +69,8 @@ Next.js 16 with App Router.
 -   **`components/multimodal-input.tsx`**: Chat input with file attachment (paperclip button), local storage persistence, auto-focus, and memoization
 -   **`components/greeting.tsx`**: Animated empty state with Framer Motion fade-in
 -   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe) as pills
--   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters
+-   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters; split-pane layout driven by `selectedSampleId` — when a sample is selected, the list compresses to the left and a detail panel appears on the right
+-   **`components/sample-detail-panel.tsx`**: Splice-style inline detail panel showing full metadata, waveform, mel spectrogram (full/CNN toggle), and CNN-similar samples with similarity percentages; manages its own playback state independently from the sample list
 -   **`components/candidate-samples.tsx`**: Upload page for reference tracks with CLAP similarity search
 -   **`components/preview-attachment.tsx`**: File attachment chip with loading/complete states for chat input
 -   **`components/elements/sample-card.tsx`**: Shared sample card component (filename, metadata pills, WaveformViz) used by pair-verdict-block and kit-block

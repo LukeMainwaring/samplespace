@@ -1,6 +1,6 @@
 # Roadmap
 
-Remaining features and improvements for SampleSpace. All original features (phases 1-3) are complete. The next major initiative is preference learning — see `docs/feature-brainstorm.md` for the full design.
+Remaining features and improvements for SampleSpace. All original features (phases 1-3) and the sample detail view are complete. The next major initiative is preference learning — see `docs/feature-brainstorm.md` for the full design.
 
 ## Upcoming Features
 
@@ -14,18 +14,6 @@ Future direction:
 - Deferred until auth is implemented
 
 ## UI Features
-
-### Sample Detail View
-
-Splice-style inline detail panel within the `/samples` page. Clicking a sample splits the view — list compresses to the left, detail panel fills the right.
-
-- Click the detail button (magnifying glass) on a sample card → list shrinks to half width, detail panel appears alongside
-- Display: filename, type, key, BPM, duration, waveform, mel spectrogram (full + CNN view toggle)
-- Show CNN-similar samples with similarity % via `GET /api/samples/{id}/similar`
-- Clicking a similar sample swaps the detail view in place and auto-plays
-- Back button dismisses the panel, list returns to full width with preserved scroll/filter state
-- State-driven (no new route) — `selectedSampleId` controls which view renders
-- Spectrogram endpoint (`GET /api/samples/{id}/spectrogram?mode=full|cnn`) generates and caches mel spectrogram PNGs using the same parameters as the CNN pipeline
 
 ### Demo GIF
 
