@@ -207,14 +207,16 @@ function PureMultimodalInput({
               ref={fileInputRef}
               type="file"
             />
-            <button
-              className="mt-2.5 ml-1 flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+            <Button
+              className="mt-2.5 ml-1 size-6 shrink-0 rounded text-muted-foreground hover:text-foreground"
               onClick={() => fileInputRef.current?.click()}
               title="Attach WAV file"
               type="button"
+              variant="ghost"
+              size="icon"
             >
               <Paperclip size={16} />
-            </button>
+            </Button>
             <PromptInputTextarea
               className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
               disableAutoResize={true}

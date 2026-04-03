@@ -2,6 +2,7 @@
 
 import { FileAudio, Loader2, X } from "lucide-react";
 import type { SampleSchema } from "@/api/generated/types.gen";
+import { Button } from "@/components/ui/button";
 
 export type Attachment = {
   id: string;
@@ -45,13 +46,14 @@ export function PreviewAttachment({
         <span className="text-muted-foreground">Processing...</span>
       ) : null}
 
-      <button
-        className="ml-0.5 rounded p-0.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      <Button
+        className="ml-0.5 size-auto rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
         onClick={onRemove}
         type="button"
+        variant="ghost"
       >
         <X className="size-3" />
-      </button>
+      </Button>
     </div>
   );
 }

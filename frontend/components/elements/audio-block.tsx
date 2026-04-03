@@ -2,6 +2,7 @@
 
 import { Pause, Play } from "lucide-react";
 import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
 
 const BACKEND_URL =
@@ -41,13 +42,14 @@ export function AudioBlock({ code, isIncomplete }: AudioBlockProps) {
       }`}
     >
       <div className="flex items-center gap-3">
-        <button
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+        <Button
+          className="size-8 shrink-0 rounded-full"
           onClick={handleToggle}
           type="button"
+          size="icon"
         >
           {isPlaying ? <Pause size={13} /> : <Play size={13} />}
-        </button>
+        </Button>
         <div className="min-w-0 flex-1">
           <WaveformViz
             audioUrl={audioUrl}
