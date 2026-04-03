@@ -114,7 +114,11 @@ async def get_similar_samples(
     return await sample_service.find_similar_by_cnn(db, sample_id=sample_id, limit=limit)
 
 
-@samples_router.get("/{sample_id}/spectrogram")
+@samples_router.get(
+    "/{sample_id}/spectrogram",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/png": {}}}},
+)
 async def get_sample_spectrogram(
     sample_id: str,
     db: AsyncPostgresSessionDep,

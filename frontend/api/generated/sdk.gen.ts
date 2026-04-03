@@ -124,7 +124,7 @@ export const getSimilarSamples = <ThrowOnError extends boolean = false>(options:
  * Generate and serve a mel spectrogram PNG for a sample.
  */
 export const getSampleSpectrogram = <ThrowOnError extends boolean = false>(options: Options<GetSampleSpectrogramData, ThrowOnError>) => (options.client ?? client).get<GetSampleSpectrogramResponses, GetSampleSpectrogramErrors, ThrowOnError>({
-    responseType: 'json',
+    responseType: 'blob',
     url: '/api/samples/{sample_id}/spectrogram',
     ...options
 });

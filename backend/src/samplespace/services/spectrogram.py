@@ -91,11 +91,9 @@ async def generate_spectrogram(
         return cache_path
 
     lock_key = (sample_id, mode)
-    if lock_key not in _generation_locks:
-        _generation_locks[lock_key] = asyncio.Lock()
+    lock = _generation_locks.setdefault(lock_key, asyncio.Lock())
 
-    async with _generation_locks[lock_key]:
-        # Re-check after acquiring lock
+    async with lock:
         if cache_path.exists():
             return cache_path
 
@@ -104,5 +102,4 @@ async def generate_spectrogram(
         await asyncio.to_thread(_render_spectrogram, audio_path, cache_path, mode=mode)
         logger.info(f"Generated {mode} spectrogram for {sample_id}")
 
-    _generation_locks.pop(lock_key, None)
     return cache_path

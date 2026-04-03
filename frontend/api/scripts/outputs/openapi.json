@@ -418,9 +418,7 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "image/png": {}
             }
           },
           "422": {
