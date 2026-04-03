@@ -88,6 +88,56 @@
         }
       }
     },
+    "/api/samples/pair-preview/{sample_a_id}/{sample_b_id}": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Pair Preview",
+        "description": "Mix two samples together for audition. Reuses kit preview cache.",
+        "operationId": "getPairPreview",
+        "parameters": [
+          {
+            "name": "sample_a_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample A Id"
+            }
+          },
+          {
+            "name": "sample_b_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample B Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/samples/": {
       "get": {
         "tags": [

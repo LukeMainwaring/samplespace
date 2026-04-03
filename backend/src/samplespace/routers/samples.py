@@ -1,4 +1,6 @@
+import asyncio
 import mimetypes
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import HTTPException, Query, UploadFile
@@ -18,6 +20,7 @@ from samplespace.schemas.sample import (
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
 from samplespace.services import kit_preview as kit_preview_service
+from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 from samplespace.services import spectrogram as spectrogram_service
 from samplespace.services import upload as upload_service
@@ -40,6 +43,85 @@ async def get_kit_preview(preview_id: str) -> FileResponse:
         media_type="audio/wav",
         filename=cached.name,
     )
+
+
+@samples_router.get("/pair-preview/{sample_a_id}/{sample_b_id}")
+async def get_pair_preview(
+    sample_a_id: str,
+    sample_b_id: str,
+    db: AsyncPostgresSessionDep,
+    key: str | None = None,
+    bpm: int | None = None,
+) -> FileResponse:
+    """Mix two samples together for audition.
+
+    When key/bpm are provided, loops are pitch-shifted and time-stretched
+    to the target before mixing (aligns samples to song context).
+    """
+    sample_a = await sample_service.get_sample_by_id(db, sample_a_id)
+    sample_b = await sample_service.get_sample_by_id(db, sample_b_id)
+
+    if sample_a is None or sample_b is None:
+        raise HTTPException(status_code=404, detail="One or both samples not found")
+
+    paths: list[Path] = []
+    for sample in [sample_a, sample_b]:
+        audio_path = sample_service.find_audio_file(sample)
+        if audio_path is None:
+            raise HTTPException(status_code=404, detail=f"Audio file not found for {sample.filename}")
+
+        # Transform loops to target key/bpm when song context is provided
+        if (key or bpm) and sample.is_loop:
+            transformed = await _transform_for_preview(audio_path, sample, key, bpm)
+            paths.append(transformed)
+        else:
+            paths.append(audio_path)
+
+    preview_id, cache_path = await asyncio.to_thread(kit_preview_service.mix_audio, paths)
+
+    return FileResponse(
+        path=str(cache_path),
+        media_type="audio/wav",
+        filename=f"pair_preview_{preview_id}.wav",
+    )
+
+
+async def _transform_for_preview(
+    audio_path: Path,
+    sample: object,
+    target_key: str | None,
+    target_bpm: int | None,
+) -> Path:
+    """Transform a sample to the target key/bpm, returning the (cached) file path."""
+    sample_key: str | None = getattr(sample, "key", None)
+    sample_bpm: int | None = getattr(sample, "bpm", None)
+    sample_id: str = getattr(sample, "id", "")
+
+    actual_target_key: str | None = None
+    if target_key and sample_key:
+        actual_target_key = music_theory_service.compute_target_key(sample_key, target_key)
+        if actual_target_key == sample_key:
+            actual_target_key = None
+
+    effective_bpm = target_bpm if target_bpm and sample_bpm and sample_bpm != target_bpm else None
+
+    if actual_target_key is None and effective_bpm is None:
+        return audio_path
+
+    cached = audio_transform_service.get_cached_transform(sample_id, actual_target_key, effective_bpm)
+    if cached:
+        return cached
+
+    result = await asyncio.to_thread(
+        audio_transform_service.transform_sample,
+        audio_path,
+        sample_id,
+        source_key=sample_key if actual_target_key else None,
+        target_key=actual_target_key,
+        source_bpm=sample_bpm if effective_bpm else None,
+        target_bpm=effective_bpm,
+    )
+    return result
 
 
 @samples_router.get("/")

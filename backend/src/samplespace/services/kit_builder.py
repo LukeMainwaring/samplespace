@@ -19,7 +19,7 @@ from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
 from samplespace.services import pair_scoring as pair_scoring_service
 from samplespace.services import sample as sample_service
-from samplespace.services.music_theory import normalize_bpm, semitone_key_score
+from samplespace.services.candidate_search import bpm_compatibility, build_clap_query, rerank_candidates
 from samplespace.services.pair_scoring import DEFAULT_TYPE_SCORE, TYPE_COMPLEMENTARITY, cosine_similarity
 
 logger = logging.getLogger(__name__)
@@ -65,16 +65,6 @@ _TONAL_PRIORITY: dict[str, int] = {
     SampleType.KICK: 4,
     SampleType.SNARE: 5,
     SampleType.HIHAT: 6,
-}
-
-# Types that are typically one-shots (no meaningful key)
-_ONE_SHOT_TYPES = {
-    SampleType.KICK,
-    SampleType.SNARE,
-    SampleType.HIHAT,
-    SampleType.CLAP,
-    SampleType.PERCUSSION,
-    SampleType.FX,
 }
 
 
@@ -133,7 +123,7 @@ async def build_kit(
             all_candidate_ids.append(pinned[sample_type.lower()].id)
             continue
 
-        query = _build_clap_query(sample_type, effective_vibe, effective_genre, song_context)
+        query = build_clap_query(sample_type, effective_vibe, effective_genre, song_context)
         query_embedding = embedding_service.embed_text(query, clap_model, clap_processor)
 
         results = await sample_service.search_by_text(
@@ -150,7 +140,7 @@ async def build_kit(
             logger.info(f"Kit builder: no candidates found for type '{sample_type}', skipping")
             continue
 
-        results = _rerank_candidates(results, sample_type, song_context)
+        results = rerank_candidates(results, sample_type, song_context)
         candidates_by_type[sample_type] = results
         all_candidate_ids.extend(r.id for r in results)
 
@@ -237,55 +227,6 @@ async def build_kit(
     )
 
 
-# Re-ranking weight profiles: (clap, bpm, key)
-_TONAL_WEIGHTS = (0.4, 0.25, 0.35)
-_PERCUSSIVE_WEIGHTS = (0.5, 0.5, 0.0)
-
-
-def _rerank_candidates(
-    candidates: list[SampleSchema],
-    sample_type: str,
-    song_context: SongContext | None,
-) -> list[SampleSchema]:
-    """Re-rank CLAP results using song context BPM/key compatibility."""
-    if not song_context or len(candidates) <= RERANK_LIMIT:
-        return candidates[:RERANK_LIMIT]
-
-    has_bpm = song_context.bpm is not None
-    has_key = song_context.key is not None
-    is_tonal = sample_type.lower() not in _ONE_SHOT_TYPES
-
-    w_clap, w_bpm, w_key = _TONAL_WEIGHTS if is_tonal else _PERCUSSIVE_WEIGHTS
-
-    # Redistribute unavailable dimension weights to CLAP
-    if not has_bpm:
-        w_clap += w_bpm
-        w_bpm = 0.0
-    if not has_key or not is_tonal:
-        w_clap += w_key
-        w_key = 0.0
-
-    scored: list[tuple[float, SampleSchema]] = []
-    n = len(candidates)
-
-    for i, sample in enumerate(candidates):
-        clap_score = 1.0 - (i / n)
-
-        bpm_score = 0.0
-        if has_bpm and sample.bpm:
-            bpm_score = _bpm_compatibility(song_context.bpm, sample.bpm)  # type: ignore[arg-type]
-
-        key_score = 0.0
-        if has_key and sample.key and is_tonal:
-            key_score = semitone_key_score(song_context.key, sample.key)  # type: ignore[arg-type]
-
-        composite = w_clap * clap_score + w_bpm * bpm_score + w_key * key_score
-        scored.append((composite, sample))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [s for _, s in scored[:RERANK_LIMIT]]
-
-
 def _pick_best_candidate(
     candidates: list[SampleSchema],
     selected: list[tuple[str, SampleSchema]],
@@ -332,43 +273,6 @@ def _fast_compatibility(sample_a: SampleSchema, sample_b: SampleSchema) -> float
 
     # BPM compatibility (only for loops with BPMs)
     if sample_a.is_loop and sample_b.is_loop and sample_a.bpm and sample_b.bpm:
-        scores.append(_bpm_compatibility(sample_a.bpm, sample_b.bpm))
+        scores.append(bpm_compatibility(sample_a.bpm, sample_b.bpm))
 
     return sum(scores) / len(scores) if scores else 0.5
-
-
-def _bpm_compatibility(bpm_a: int, bpm_b: int) -> float:
-    norm_a = normalize_bpm(bpm_a)
-    norm_b = normalize_bpm(bpm_b)
-    if max(norm_a, norm_b) == 0:
-        return 0.5
-    return 1.0 - abs(norm_a - norm_b) / max(norm_a, norm_b)
-
-
-def _build_clap_query(
-    sample_type: str,
-    vibe: str | None,
-    genre: str | None,
-    song_context: SongContext | None,
-) -> str:
-    """Build a descriptive CLAP query for a kit slot.
-
-    Incorporates type, vibe, genre, and song context key for tonal types.
-    """
-    parts: list[str] = []
-
-    if genre:
-        parts.append(genre)
-
-    parts.append(f"{sample_type} sample")
-
-    if song_context:
-        if sample_type.lower() not in _ONE_SHOT_TYPES and song_context.key:
-            parts.append(song_context.key)
-        if song_context.bpm:
-            parts.append(f"{song_context.bpm} BPM")
-
-    if vibe:
-        parts.append(vibe)
-
-    return ", ".join(parts)

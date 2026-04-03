@@ -163,13 +163,14 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 
 ### Sample Curation and Pair Training
 
-A 4-step feedback loop: find samples, explore neighbors, evaluate pairs, build system knowledge.
+A feedback loop: find samples, explore neighbors, evaluate pairs, build system knowledge. Includes rapid pairing mode for fast verdict collection.
 
 **Step 1 — Find starting material:**
 
 > "Find me aggressive, distorted kicks"
 
 - Agent calls `search_by_description` — CLAP semantic search
+- Results render as playable sample cards with waveforms
 
 **Step 2 — Inspect in the detail view:**
 
@@ -180,30 +181,27 @@ Navigate to the Sample Library page and click the magnifying glass on the kick y
 - Scroll down to "Similar Samples" — these are the CNN's nearest spectral neighbors with similarity percentages
 - Play similar samples inline to audition them without leaving the panel
 
-**Step 3 — Explore via chat:**
-
-> "Find samples that sound similar to `[kick_id]`"
-
-- Agent calls `find_similar_samples` — CNN spectral matching
-- Results share frequency characteristics of the reference
-
-**Step 4 — Evaluate a pairing:**
+**Step 3 — Evaluate a pairing:**
 
 > "Show me a pair to evaluate with `[kick_id]` — try matching it with a snare"
 
 - Agent calls `present_pair` with candidate_type=snare
+- Candidates are found via CLAP search enriched with song context (vibe, genre, key, BPM)
 - Pair-verdict block renders with side-by-side cards and verdict buttons
+- **Play Together** button layers both samples for audition as a mix
 - Click "Works" or "Doesn't work"
 
-**Step 5 — Continue the loop:**
+**Step 4 — Rapid pairing mode:**
 
-> "Show me another pair"
+> "Start a pairing session with kicks and basses"
 
-- After the verdict auto-sends, agent calls `record_verdict` (background feature extraction fires)
-- Then `present_pair` generates a new pairing
-- Repeat to build up training data for the preference model
+- Agent calls `present_pair` with anchor_type=kick, candidate_type=bass (no specific sample ID)
+- A random kick is selected as anchor, bass candidate found via context-aware CLAP search
+- After clicking a verdict, click **Next Pair** to immediately get another pair
+- Each pair uses a new random anchor for diverse training data
+- Repeat rapidly to build up verdicts — the preference model auto-trains after 15+
 
-**Step 6 — Check what the system learned:**
+**Step 5 — Check what the system learned:**
 
 After 15+ verdicts (mix of approvals and rejections):
 

@@ -75,6 +75,23 @@ class Sample(Base):
         return samples, total
 
     @classmethod
+    async def get_random(
+        cls,
+        db: AsyncSession,
+        *,
+        sample_type: str | None = None,
+        exclude_ids: Sequence[str] = (),
+    ) -> Sample | None:
+        stmt = select(cls).where(cls.source != "upload")
+        if sample_type is not None:
+            stmt = stmt.where(cls.sample_type == sample_type)
+        if exclude_ids:
+            stmt = stmt.where(cls.id.notin_(exclude_ids))
+        stmt = stmt.order_by(func.random()).limit(1)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @classmethod
     async def get_many(cls, db: AsyncSession, sample_ids: list[str]) -> Sequence[Sample]:
         if not sample_ids:
             return []

@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetKitPreviewData, GetKitPreviewErrors, GetKitPreviewResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSampleSpectrogramData, GetSampleSpectrogramErrors, GetSampleSpectrogramResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses, UploadSampleData, UploadSampleErrors, UploadSampleResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetKitPreviewData, GetKitPreviewErrors, GetKitPreviewResponses, GetPairPreviewData, GetPairPreviewErrors, GetPairPreviewResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSampleSpectrogramData, GetSampleSpectrogramErrors, GetSampleSpectrogramResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses, UploadSampleData, UploadSampleErrors, UploadSampleResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -51,6 +51,17 @@ export const dbHealthCheck = <ThrowOnError extends boolean = false>(options?: Op
 export const getKitPreview = <ThrowOnError extends boolean = false>(options: Options<GetKitPreviewData, ThrowOnError>) => (options.client ?? client).get<GetKitPreviewResponses, GetKitPreviewErrors, ThrowOnError>({
     responseType: 'json',
     url: '/api/samples/kit-preview/{preview_id}',
+    ...options
+});
+
+/**
+ * Get Pair Preview
+ *
+ * Mix two samples together for audition. Reuses kit preview cache.
+ */
+export const getPairPreview = <ThrowOnError extends boolean = false>(options: Options<GetPairPreviewData, ThrowOnError>) => (options.client ?? client).get<GetPairPreviewResponses, GetPairPreviewErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/samples/pair-preview/{sample_a_id}/{sample_b_id}',
     ...options
 });
 

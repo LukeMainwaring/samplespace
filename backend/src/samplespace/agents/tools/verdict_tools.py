@@ -15,39 +15,55 @@ from samplespace.dependencies.db import get_async_sqlalchemy_session
 from samplespace.models.pair_verdict import PairVerdict
 from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleSchema
+from samplespace.schemas.sample_type import SampleType
+from samplespace.services import embedding as embedding_service
 from samplespace.services import pair_features as pair_features_service
 from samplespace.services import pair_scoring as pair_scoring_service
 from samplespace.services import preference as preference_service
 from samplespace.services import sample as sample_service
+from samplespace.services.candidate_search import build_clap_query, rerank_candidates
 
 logger = logging.getLogger(__name__)
 
 # Prevent background tasks from being garbage-collected before completion
 _background_tasks: set[asyncio.Task[None]] = set()
 
+_CANDIDATE_LIMIT = 15
+
 
 async def present_pair(
     ctx: RunContext[AgentDeps],
-    sample_id: str,
+    sample_id: str | None = None,
+    anchor_type: str | None = None,
     candidate_type: str | None = None,
 ) -> str:
     """Present a sample pair for the user to evaluate.
 
-    Finds a complementary candidate for the given sample using CNN similarity
-    and pair scoring, then returns a formatted pair-verdict block with
-    side-by-side playback for the user to approve or reject.
+    Finds a complementary candidate for the given (or random) anchor sample,
+    then returns a formatted pair-verdict block with side-by-side playback
+    for the user to approve or reject.
 
     Use when the user asks to evaluate pairs, rate combinations, or train
-    the system's pairing knowledge.
+    the system's pairing knowledge. For rapid pairing sessions, omit
+    sample_id to get a random anchor each time.
 
     Args:
-        sample_id: The anchor sample to find a pair for.
-        candidate_type: Optional sample type to look for (e.g., "pad", "synth").
+        sample_id: The anchor sample to find a pair for. If omitted, a random
+                   anchor is selected (filtered by anchor_type if provided).
+        anchor_type: Sample type for random anchor selection (e.g., "kick").
+                     Only used when sample_id is omitted.
+        candidate_type: Sample type to look for in the candidate (e.g., "snare").
     """
     try:
-        anchor = await Sample.get(ctx.deps.db, sample_id)
-        if anchor is None:
-            return f"Sample {sample_id} not found."
+        if sample_id:
+            anchor = await Sample.get(ctx.deps.db, sample_id)
+            if anchor is None:
+                return f"Sample {sample_id} not found."
+        else:
+            anchor = await _pick_random_anchor(ctx, anchor_type)
+            if anchor is None:
+                return f"No {anchor_type or 'library'} samples found to use as anchor."
+            sample_id = anchor.id
 
         candidates = await _find_candidates(ctx, sample_id, candidate_type)
 
@@ -73,11 +89,38 @@ async def present_pair(
             return "Could not find a suitable pairing candidate."
 
         anchor_schema = SampleSchema.model_validate(anchor)
-        return _format_pair_verdict(anchor_schema, best_candidate, best_score.overall, best_score.summary)
+        song_ctx = ctx.deps.song_context
+        return _format_pair_verdict(
+            anchor_schema,
+            best_candidate,
+            best_score.overall,
+            best_score.summary,
+            target_key=song_ctx.key if song_ctx else None,
+            target_bpm=song_ctx.bpm if song_ctx else None,
+        )
 
     except Exception:
         logger.exception("Error presenting pair")
         return "An error occurred while finding a pair to evaluate."
+
+
+async def _pick_random_anchor(
+    ctx: RunContext[AgentDeps],
+    anchor_type: str | None,
+) -> Sample | None:
+    """Pick a random anchor sample, avoiding recently evaluated samples."""
+    resolved_type: str | None = None
+    if anchor_type:
+        try:
+            resolved_type = SampleType(anchor_type.lower())
+        except ValueError:
+            pass
+
+    exclude_ids: list[str] = []
+    if ctx.deps.thread_id:
+        exclude_ids = list(await PairVerdict.get_recent_anchor_ids(ctx.deps.db, ctx.deps.thread_id))
+
+    return await Sample.get_random(ctx.deps.db, sample_type=resolved_type, exclude_ids=exclude_ids)
 
 
 async def _find_candidates(
@@ -87,35 +130,54 @@ async def _find_candidates(
 ) -> list[SampleSchema]:
     """Find candidate samples for pairing.
 
-    Strategy: start with CNN-similar samples, then filter by type. If the type
-    filter produces no results (common when the requested type is spectrally
-    different from the anchor), fall back to a type-filtered database query.
+    When candidate_type is specified, uses CLAP search with song context
+    (same approach as kit builder) for context-aware cross-type retrieval.
+    When no type is specified, falls back to CNN similarity for finding
+    interesting spectrally-related pairs.
     """
-    similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=15)
-    candidates = [r.sample for r in similar_results]
+    if candidate_type:
+        return await _find_candidates_by_clap(ctx, sample_id, candidate_type)
+    return await _find_candidates_by_cnn(ctx, sample_id)
 
-    if not candidate_type:
-        return candidates
 
-    # Try filtering CNN neighbors by requested type
-    type_lower = candidate_type.lower()
-    typed = [c for c in candidates if c.sample_type and c.sample_type.lower() == type_lower]
-    if typed:
-        return typed
+async def _find_candidates_by_clap(
+    ctx: RunContext[AgentDeps],
+    sample_id: str,
+    candidate_type: str,
+) -> list[SampleSchema]:
+    """CLAP-based retrieval with song context — used when a specific type is requested."""
+    song_ctx = ctx.deps.song_context
+    vibe = song_ctx.vibe if song_ctx else None
+    genre = song_ctx.genre if song_ctx else None
 
-    # CNN neighbors don't include the requested type (e.g., bass anchor → no drum neighbors).
-    # Fall back to querying samples of that type directly.
-    from samplespace.schemas.sample import ListSamplesParams
-    from samplespace.schemas.sample_type import SampleType
+    query = build_clap_query(candidate_type, vibe=vibe, genre=genre, song_context=song_ctx)
+    query_embedding = embedding_service.embed_text(query, ctx.deps.clap_model, ctx.deps.clap_processor)
 
-    try:
-        st = SampleType(type_lower)
-    except ValueError:
+    results = await sample_service.search_by_text(
+        ctx.deps.db,
+        query_embedding=query_embedding,
+        sample_type=candidate_type,
+        exclude_source="upload",
+        limit=_CANDIDATE_LIMIT,
+    )
+
+    if not results:
         return []
 
-    params = ListSamplesParams(sample_type=st, limit=15, offset=0)
-    type_samples, _ = await Sample.get_all(ctx.deps.db, params)
-    return [SampleSchema.model_validate(s) for s in type_samples if s.id != sample_id]
+    # Filter out the anchor itself
+    filtered = [r for r in results if r.id != sample_id]
+
+    # Rerank with song context BPM/key if available
+    return rerank_candidates(filtered, candidate_type, song_ctx, limit=_CANDIDATE_LIMIT)
+
+
+async def _find_candidates_by_cnn(
+    ctx: RunContext[AgentDeps],
+    sample_id: str,
+) -> list[SampleSchema]:
+    """CNN similarity — used when no specific type is requested."""
+    similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=_CANDIDATE_LIMIT)
+    return [r.sample for r in similar_results]
 
 
 async def record_verdict(
@@ -211,12 +273,17 @@ def _format_pair_verdict(
     sample_b: SampleSchema,
     pair_score: float,
     summary: str,
+    *,
+    target_key: str | None = None,
+    target_bpm: int | None = None,
 ) -> str:
-    payload = {
+    payload: dict[str, object] = {
         "sample_a": sample_to_payload(sample_a),
         "sample_b": sample_to_payload(sample_b),
         "pair_score": round(pair_score, 2),
         "summary": summary,
     }
+    if target_key or target_bpm:
+        payload["song_context"] = {"key": target_key, "bpm": target_bpm}
     json_str = json.dumps(payload, indent=2)
     return f"Here's a pair to evaluate — listen to both and let me know if they work together:\n\n```pair-verdict\n{json_str}\n```"

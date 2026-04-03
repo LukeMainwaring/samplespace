@@ -63,6 +63,7 @@ Remaining directions to explore:
 The pairing feedback loop collects verdicts and computes relational audio features. The preference learning system turns that data into a model that improves recommendations. See `docs/feature-brainstorm.md` for the full design and `docs/preference-learning-flow.md` for the data flow diagram.
 
 - **Stage 4 — Preference Model** (complete): sklearn logistic regression trained on 10-dimensional feature vectors (4 pair score dimensions + 6 relational audio features). Auto-retrains every 5th verdict after 15 verdicts. `show_preferences` agent tool surfaces learned feature importances as natural-language explanations. Preferences are injected into the agent's system prompt.
+- **Pair evaluation upgrades** (complete): CLAP-based context-aware retrieval (shared with kit builder), random anchor support for rapid pairing sessions, "Play Together" mixed audio preview, "Next Pair" button for fast verdict collection.
 - **Stage 5 — Active Learning**: `present_pair` selects candidates where the model is most uncertain (P closest to 0.5), maximizing information gain per verdict.
 - **Stage 6 — Preference-Aware Recommendations**: learned preferences feed into kit building (5th scoring dimension) and pair scoring (learned_preference dimension).
 - **Confidence-Gated Automation**: after 30+ verdicts with 70%+ accuracy, the kit builder auto-approves high-confidence pairings and only asks about uncertain ones.

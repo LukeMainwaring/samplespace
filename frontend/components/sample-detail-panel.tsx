@@ -11,9 +11,7 @@ import {
 import type { SimilarSampleSchema } from "@/api/generated/types.gen";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
+import { BACKEND_URL } from "@/lib/constants";
 
 interface SampleDetailPanelProps {
   sampleId: string;

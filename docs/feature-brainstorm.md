@@ -66,7 +66,7 @@ Retrain when: `verdict_count >= 15 AND verdict_count % 5 == 0` (every 5th verdic
 
 ### How It Works
 
-1. `present_pair` retrieves CNN-similar candidates (existing behavior)
+1. `present_pair` retrieves candidates via CLAP search (with song context) or CNN similarity (updated — uses shared `candidate_search` module)
 2. Score each candidate through pair scoring (existing behavior)
 3. **New**: if a preference model exists, also score each candidate through the model
 4. Select the candidate closest to P(accept) = 0.5 (maximum uncertainty), with a tiebreaker favoring the heuristic "interesting" range

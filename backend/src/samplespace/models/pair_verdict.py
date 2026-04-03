@@ -94,6 +94,11 @@ class PairVerdict(Base):
         return result.scalar_one()
 
     @classmethod
+    async def get_recent_anchor_ids(cls, db: AsyncSession, thread_id: str) -> Sequence[str]:
+        result = await db.execute(select(cls.sample_a_id).where(cls.thread_id == thread_id))
+        return result.scalars().all()
+
+    @classmethod
     async def update_features(
         cls,
         db: AsyncSession,

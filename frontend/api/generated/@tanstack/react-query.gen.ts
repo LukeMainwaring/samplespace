@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, deleteThread, getKitPreview, getSample, getSampleAudio, getSampleSpectrogram, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, uploadSample } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetKitPreviewData, GetKitPreviewError, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSampleSpectrogramData, GetSampleSpectrogramError, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
+import { dbHealthCheck, deleteThread, getKitPreview, getPairPreview, getSample, getSampleAudio, getSampleSpectrogram, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, uploadSample } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetKitPreviewData, GetKitPreviewError, GetPairPreviewData, GetPairPreviewError, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSampleSpectrogramData, GetSampleSpectrogramError, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
 
 /**
  * Stream Chat
@@ -100,6 +100,26 @@ export const getKitPreviewOptions = (options: Options<GetKitPreviewData>) => que
         return data;
     },
     queryKey: getKitPreviewQueryKey(options)
+});
+
+export const getPairPreviewQueryKey = (options: Options<GetPairPreviewData>) => createQueryKey('getPairPreview', options);
+
+/**
+ * Get Pair Preview
+ *
+ * Mix two samples together for audition. Reuses kit preview cache.
+ */
+export const getPairPreviewOptions = (options: Options<GetPairPreviewData>) => queryOptions<unknown, AxiosError<GetPairPreviewError>, unknown, ReturnType<typeof getPairPreviewQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getPairPreview({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getPairPreviewQueryKey(options)
 });
 
 export const listSamplesQueryKey = (options?: Options<ListSamplesData>) => createQueryKey('listSamples', options);
