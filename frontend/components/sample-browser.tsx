@@ -160,12 +160,12 @@ export function SampleBrowser() {
   }, []);
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
       {/* Sample list */}
       <div
         className={cn(
-          "flex h-full flex-col transition-[width] duration-200",
-          selectedSampleId ? "w-1/2 border-r" : "w-full",
+          "flex h-full min-w-0 flex-col transition-[width] duration-200",
+          selectedSampleId ? "w-2/5 border-r" : "w-full",
         )}
       >
         <div className="border-b px-4 py-3">
@@ -281,7 +281,7 @@ export function SampleBrowser() {
 
       {/* Detail panel */}
       {selectedSampleId && (
-        <div className="flex w-1/2 flex-col overflow-hidden">
+        <div className="flex min-w-0 w-3/5 flex-col">
           <SampleDetailPanel
             onClose={() => setSelectedSampleId(null)}
             sampleId={selectedSampleId}

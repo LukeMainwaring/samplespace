@@ -159,7 +159,7 @@ export function SampleDetailPanel({
   const spectrogramUrl = `${BACKEND_URL}/api/samples/${sampleId}/spectrogram?mode=${spectrogramMode}`;
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div className="flex h-full min-w-0 flex-col overflow-y-auto overflow-x-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <Button
@@ -175,7 +175,7 @@ export function SampleDetailPanel({
         </h2>
       </div>
 
-      <div className="flex flex-col gap-5 p-4">
+      <div className="flex min-w-0 w-full flex-col gap-5 p-4">
         {/* Waveform */}
         <div>
           <div className="mb-2 flex items-center gap-2">
@@ -255,14 +255,16 @@ export function SampleDetailPanel({
             )}
             <Image
               alt={`${spectrogramMode === "cnn" ? "CNN input" : "Full"} mel spectrogram`}
-              className={spectrogramLoaded ? "block w-full" : "hidden"}
-              height={250}
+              className={spectrogramLoaded ? "block w-full h-auto" : "hidden"}
+              height={0}
               key={spectrogramUrl}
               onError={() => setSpectrogramLoaded(true)}
               onLoad={() => setSpectrogramLoaded(true)}
+              sizes="100%"
               src={spectrogramUrl}
+              style={{ width: "100%", height: "auto" }}
               unoptimized
-              width={600}
+              width={0}
             />
           </div>
           {spectrogramMode === "cnn" && (
