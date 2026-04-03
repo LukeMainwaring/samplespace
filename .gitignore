@@ -21,6 +21,7 @@ data/samples/
 data/checkpoints/
 data/transforms/
 data/runs/
+data/spectrograms/
 *.h5
 *.pt
 *.pth

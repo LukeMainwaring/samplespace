@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Pause, Play } from "lucide-react";
+import { ArrowLeft, Loader2, Pause, Play } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useState } from "react";
 import {
@@ -115,7 +115,6 @@ export function SampleDetailPanel({
     "full",
   );
   const [spectrogramLoaded, setSpectrogramLoaded] = useState(false);
-  const [spectrogramError, setSpectrogramError] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const { data: sample, isLoading: sampleLoading } = useQuery(
@@ -133,7 +132,6 @@ export function SampleDetailPanel({
     (mode: "full" | "cnn") => {
       if (mode !== spectrogramMode) {
         setSpectrogramLoaded(false);
-        setSpectrogramError(false);
         setSpectrogramMode(mode);
       }
     },
@@ -249,28 +247,21 @@ export function SampleDetailPanel({
               </Button>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-md border bg-black/20">
-            {!spectrogramLoaded && !spectrogramError && (
-              <div className="flex h-[100px] items-center justify-center text-xs text-muted-foreground">
-                Generating spectrogram...
-              </div>
-            )}
-            {spectrogramError && (
-              <div className="flex h-[100px] items-center justify-center text-xs text-muted-foreground">
-                Failed to load spectrogram
+          <div className="relative aspect-[2.4/1] w-full overflow-hidden rounded-md border bg-black/20">
+            {!spectrogramLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
             )}
             <Image
               alt={`${spectrogramMode === "cnn" ? "CNN input" : "Full"} mel spectrogram`}
-              className={spectrogramLoaded ? "block w-full h-auto" : "hidden"}
-              height={0}
+              className={spectrogramLoaded ? "object-contain" : "opacity-0"}
+              fill
               key={spectrogramUrl}
-              onError={() => setSpectrogramError(true)}
+              onError={() => setSpectrogramLoaded(true)}
               onLoad={() => setSpectrogramLoaded(true)}
               src={spectrogramUrl}
-              style={{ width: "100%", height: "auto" }}
               unoptimized
-              width={0}
             />
           </div>
           {spectrogramMode === "cnn" && (
@@ -286,7 +277,8 @@ export function SampleDetailPanel({
             Similar Samples
           </h3>
           {similarLoading ? (
-            <div className="py-4 text-center text-xs text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
               Finding similar samples...
             </div>
           ) : !similarSamples || similarSamples.length === 0 ? (

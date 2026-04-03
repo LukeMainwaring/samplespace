@@ -39,7 +39,7 @@ services:
       - .env
     volumes:
       - ./backend/src:/app/src
-      - ./data/samples:/app/data/samples
+      - ./data:/app/data
       - ${SAMPLE_LIBRARY_DIR:-/dev/null}:/app/sample-library:ro
     depends_on:
       postgres:
