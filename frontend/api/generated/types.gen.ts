@@ -146,6 +146,17 @@ export type SampleSearchRequest = {
 export type SampleType = 'bass' | 'clap' | 'cymbal' | 'drum' | 'fx' | 'guitar' | 'hihat' | 'horn' | 'keys' | 'kick' | 'pad' | 'percussion' | 'snare' | 'strings' | 'synth' | 'vocal';
 
 /**
+ * SimilarSampleSchema
+ */
+export type SimilarSampleSchema = {
+    sample: SampleSchema;
+    /**
+     * Distance
+     */
+    distance: number;
+};
+
+/**
  * SongContext
  */
 export type SongContext = {
@@ -313,6 +324,34 @@ export type DbHealthCheckResponses = {
 
 export type DbHealthCheckResponse = DbHealthCheckResponses[keyof DbHealthCheckResponses];
 
+export type GetKitPreviewData = {
+    body?: never;
+    path: {
+        /**
+         * Preview Id
+         */
+        preview_id: string;
+    };
+    query?: never;
+    url: '/api/samples/kit-preview/{preview_id}';
+};
+
+export type GetKitPreviewErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetKitPreviewError = GetKitPreviewErrors[keyof GetKitPreviewErrors];
+
+export type GetKitPreviewResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type ListSamplesData = {
     body?: never;
     path?: never;
@@ -469,10 +508,43 @@ export type GetSimilarSamplesResponses = {
      *
      * Successful Response
      */
-    200: Array<SampleSchema>;
+    200: Array<SimilarSampleSchema>;
 };
 
 export type GetSimilarSamplesResponse = GetSimilarSamplesResponses[keyof GetSimilarSamplesResponses];
+
+export type GetSampleSpectrogramData = {
+    body?: never;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: {
+        /**
+         * Mode
+         */
+        mode?: 'full' | 'cnn';
+    };
+    url: '/api/samples/{sample_id}/spectrogram';
+};
+
+export type GetSampleSpectrogramErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSampleSpectrogramError = GetSampleSpectrogramErrors[keyof GetSampleSpectrogramErrors];
+
+export type GetSampleSpectrogramResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type GetTransformedAudioData = {
     body?: never;

@@ -33,6 +33,11 @@ class SampleSchema(BaseSchema):
     created_at: datetime
 
 
+class SimilarSampleSchema(BaseSchema):
+    sample: SampleSchema
+    distance: float
+
+
 class SampleListResponse(BaseModel):
     samples: list[SampleSchema]
     total: int

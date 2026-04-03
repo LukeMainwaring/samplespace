@@ -47,6 +47,47 @@
         }
       }
     },
+    "/api/samples/kit-preview/{preview_id}": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Kit Preview",
+        "description": "Serve a cached kit preview mixdown.",
+        "operationId": "getKitPreview",
+        "parameters": [
+          {
+            "name": "preview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Preview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/samples/": {
       "get": {
         "tags": [
@@ -304,10 +345,65 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SampleSchema"
+                    "$ref": "#/components/schemas/SimilarSampleSchema"
                   },
                   "title": "Response Getsimilarsamples"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/samples/{sample_id}/spectrogram": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Sample Spectrogram",
+        "description": "Generate and serve a mel spectrogram PNG for a sample.",
+        "operationId": "getSampleSpectrogram",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "full",
+                "cnn"
+              ],
+              "type": "string",
+              "default": "full",
+              "title": "Mode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -856,6 +952,23 @@
           "vocal"
         ],
         "title": "SampleType"
+      },
+      "SimilarSampleSchema": {
+        "properties": {
+          "sample": {
+            "$ref": "#/components/schemas/SampleSchema"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample",
+          "distance"
+        ],
+        "title": "SimilarSampleSchema"
       },
       "SongContext": {
         "properties": {

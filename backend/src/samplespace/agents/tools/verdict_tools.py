@@ -48,10 +48,12 @@ async def present_pair(
         if anchor is None:
             return f"Sample {sample_id} not found."
 
-        candidates = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=15)
+        similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=15)
 
-        if not candidates:
+        if not similar_results:
             return "No candidates found. The sample may not have a CNN embedding."
+
+        candidates = [r.sample for r in similar_results]
 
         if candidate_type:
             type_lower = candidate_type.lower()

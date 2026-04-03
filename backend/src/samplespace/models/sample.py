@@ -123,7 +123,7 @@ class Sample(Base):
         *,
         exclude_id: str | None = None,
         limit: int = 10,
-    ) -> Sequence[Sample]:
+    ) -> Sequence[tuple[Sample, float]]:
         distance = cls.cnn_embedding.cosine_distance(cast(cnn_embedding, Vector(128)))
 
         stmt = (
@@ -139,4 +139,4 @@ class Sample(Base):
         result = await db.execute(stmt)
         rows = result.all()
 
-        return [row.Sample for row in rows]
+        return [(row.Sample, float(row.distance)) for row in rows]

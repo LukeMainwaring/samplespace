@@ -1,13 +1,15 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, Search } from "lucide-react";
 import { useCallback, useState } from "react";
 import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
 import type { SampleSchema, SampleType } from "@/api/generated/types.gen";
+import { SampleDetailPanel } from "@/components/sample-detail-panel";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
 import { SAMPLE_TYPES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
@@ -17,24 +19,33 @@ const ITEMS_PER_PAGE = 50;
 function SampleCard({
   sample,
   isPlaying,
+  isSelected,
   onTogglePlay,
   onPlaybackEnd,
+  onSelect,
 }: {
   sample: SampleSchema;
   isPlaying: boolean;
+  isSelected: boolean;
   onTogglePlay: (sample: SampleSchema) => void;
   onPlaybackEnd: () => void;
+  onSelect: (sample: SampleSchema) => void;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-2 text-sm">
+    <div
+      className={cn(
+        "rounded-lg border bg-card p-2 text-sm",
+        isSelected && "ring-2 ring-primary",
+      )}
+    >
       <div className="flex items-center gap-2">
-        <button
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+        <Button
+          className="size-8 shrink-0 rounded-full"
           onClick={() => onTogglePlay(sample)}
-          type="button"
+          size="icon"
         >
           {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-        </button>
+        </Button>
 
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-xs" title={sample.filename}>
@@ -61,6 +72,16 @@ function SampleCard({
             )}
           </div>
         </div>
+
+        <Button
+          className="size-6 shrink-0"
+          onClick={() => onSelect(sample)}
+          size="icon"
+          title="Show similar sounds"
+          variant="ghost"
+        >
+          <Search size={12} />
+        </Button>
       </div>
 
       {isPlaying && (
@@ -84,6 +105,7 @@ export function SampleBrowser() {
   const [activeType, setActiveType] = useState<SampleType | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
 
   const isLoopParam =
     activeCategory === "loop"
@@ -127,111 +149,154 @@ export function SampleBrowser() {
     setPlayingId((prev) => (prev === sample.id ? null : sample.id));
   }, []);
 
+  const handleTogglePlayById = useCallback((id: string) => {
+    setPlayingId((prev) => (prev === id ? null : id));
+  }, []);
+
   const handlePlaybackEnd = useCallback(() => {
     setPlayingId(null);
   }, []);
 
+  const handleSelectSample = useCallback((sample: SampleSchema) => {
+    setSelectedSampleId(sample.id);
+  }, []);
+
+  const handleSelectSimilar = useCallback((id: string) => {
+    setSelectedSampleId(id);
+    setPlayingId(id);
+  }, []);
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b px-4 py-3">
-        <h2 className="text-sm font-semibold">Sample Library</h2>
-        <p className="text-xs text-muted-foreground">
-          {total.toLocaleString()} samples
-          {activeType ? ` (${activeType})` : ""}
-        </p>
-      </div>
+    <div className="flex h-full">
+      {/* Sample list */}
+      <div
+        className={cn(
+          "flex h-full flex-col transition-[width] duration-200",
+          selectedSampleId ? "w-1/2 border-r" : "w-full",
+        )}
+      >
+        <div className="border-b px-4 py-3">
+          <h2 className="text-sm font-semibold">Sample Library</h2>
+          <p className="text-xs text-muted-foreground">
+            {total.toLocaleString()} samples
+            {activeType ? ` (${activeType})` : ""}
+          </p>
+        </div>
 
-      <div className="flex gap-1 border-b px-4 py-2">
-        {(["all", "one-shot", "loop"] as const).map((cat) => (
+        <div className="flex gap-1 border-b px-4 py-2">
+          {(["all", "one-shot", "loop"] as const).map((cat) => (
+            <Button
+              className="h-6 text-xs"
+              key={cat}
+              onClick={() => handleCategoryChange(cat)}
+              size="sm"
+              variant={activeCategory === cat ? "default" : "ghost"}
+            >
+              {cat === "all"
+                ? "All"
+                : cat === "one-shot"
+                  ? "One-shots"
+                  : "Loops"}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-1 border-b px-4 py-2">
           <Button
             className="h-6 text-xs"
-            key={cat}
-            onClick={() => handleCategoryChange(cat)}
+            onClick={() => handleTypeChange(null)}
             size="sm"
-            variant={activeCategory === cat ? "default" : "ghost"}
+            variant={activeType === null ? "default" : "ghost"}
           >
-            {cat === "all" ? "All" : cat === "one-shot" ? "One-shots" : "Loops"}
+            All
           </Button>
-        ))}
-      </div>
+          {SAMPLE_TYPES.map((type) => (
+            <Button
+              className="h-6 text-xs"
+              key={type}
+              onClick={() =>
+                handleTypeChange(activeType === type ? null : type)
+              }
+              size="sm"
+              variant={activeType === type ? "default" : "ghost"}
+            >
+              {type}
+            </Button>
+          ))}
+        </div>
 
-      <div className="flex flex-wrap gap-1 border-b px-4 py-2">
-        <Button
-          className="h-6 text-xs"
-          onClick={() => handleTypeChange(null)}
-          size="sm"
-          variant={activeType === null ? "default" : "ghost"}
-        >
-          All
-        </Button>
-        {SAMPLE_TYPES.map((type) => (
-          <Button
-            className="h-6 text-xs"
-            key={type}
-            onClick={() => handleTypeChange(activeType === type ? null : type)}
-            size="sm"
-            variant={activeType === type ? "default" : "ghost"}
-          >
-            {type}
-          </Button>
-        ))}
-      </div>
+        <div className="flex-1 overflow-y-auto p-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+              Loading samples...
+            </div>
+          ) : samples.length === 0 ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+              No samples found
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {samples.map((sample) => (
+                <SampleCard
+                  isPlaying={playingId === sample.id}
+                  isSelected={selectedSampleId === sample.id}
+                  key={sample.id}
+                  onPlaybackEnd={handlePlaybackEnd}
+                  onSelect={handleSelectSample}
+                  onTogglePlay={handleTogglePlay}
+                  sample={sample}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
-            Loading samples...
-          </div>
-        ) : samples.length === 0 ? (
-          <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
-            No samples found
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {samples.map((sample) => (
-              <SampleCard
-                isPlaying={playingId === sample.id}
-                key={sample.id}
-                onPlaybackEnd={handlePlaybackEnd}
-                onTogglePlay={handleTogglePlay}
-                sample={sample}
-              />
-            ))}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t px-4 py-2">
+            <Button
+              className="h-7 text-xs"
+              disabled={page <= 1}
+              onClick={() => {
+                setPage((p) => p - 1);
+                setPlayingId(null);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <ChevronLeft size={14} />
+              Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <Button
+              className="h-7 text-xs"
+              disabled={page >= totalPages}
+              onClick={() => {
+                setPage((p) => p + 1);
+                setPlayingId(null);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              Next
+              <ChevronRight size={14} />
+            </Button>
           </div>
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t px-4 py-2">
-          <Button
-            className="h-7 text-xs"
-            disabled={page <= 1}
-            onClick={() => {
-              setPage((p) => p - 1);
-              setPlayingId(null);
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            <ChevronLeft size={14} />
-            Previous
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {page} / {totalPages}
-          </span>
-          <Button
-            className="h-7 text-xs"
-            disabled={page >= totalPages}
-            onClick={() => {
-              setPage((p) => p + 1);
-              setPlayingId(null);
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            Next
-            <ChevronRight size={14} />
-          </Button>
+      {/* Detail panel */}
+      {selectedSampleId && (
+        <div className="flex w-1/2 flex-col overflow-hidden">
+          <SampleDetailPanel
+            onClose={() => setSelectedSampleId(null)}
+            onPlaybackEnd={handlePlaybackEnd}
+            onSelectSample={handleSelectSimilar}
+            onTogglePlay={handleTogglePlayById}
+            playingId={playingId}
+            sampleId={selectedSampleId}
+          />
         </div>
       )}
     </div>
