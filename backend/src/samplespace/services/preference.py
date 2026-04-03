@@ -102,7 +102,7 @@ MIN_VERDICTS = 15
 MIN_PER_CLASS = 3
 RETRAIN_INTERVAL = 5
 
-_DATA_DIR = Path(__file__).parent.parent.parent.parent / "data" / "models"
+_DATA_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "models"
 MODEL_PATH = _DATA_DIR / "preference_model.joblib"
 META_PATH = _DATA_DIR / "preference_meta.json"
 
@@ -192,10 +192,6 @@ async def train(db: AsyncSession) -> PreferenceMeta | None:
     result = await db.execute(stmt)
     verdicts = result.scalars().all()
 
-    if len(verdicts) < MIN_VERDICTS:
-        logger.info(f"Only {len(verdicts)} verdicts with features (need {MIN_VERDICTS})")
-        return None
-
     X: list[list[float]] = []
     y: list[int] = []
 
@@ -204,6 +200,10 @@ async def train(db: AsyncSession) -> PreferenceMeta | None:
             continue
         X.append(build_feature_vector(v.pair_score_detail, v.pair_features))
         y.append(1 if v.verdict else 0)
+
+    if len(X) < MIN_VERDICTS:
+        logger.info(f"Only {len(X)} complete verdicts with features (need {MIN_VERDICTS})")
+        return None
 
     y_arr = np.array(y)
     class_counts = np.bincount(y_arr, minlength=2)

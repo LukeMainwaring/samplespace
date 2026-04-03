@@ -14,6 +14,7 @@ import { useChatActions } from "@/components/chat-actions-provider";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
 import { BACKEND_URL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
 interface PairVerdictPayload {
@@ -118,11 +119,12 @@ export function PairVerdictBlock({
 
       {/* Mixed preview — always visible */}
       <div
-        className={`rounded-lg border p-3 ${
+        className={cn(
+          "rounded-lg border p-3",
           mixPlaying
             ? "border-primary/50 bg-primary/5"
-            : "border-border bg-muted/30"
-        }`}
+            : "border-border bg-muted/30",
+        )}
       >
         <div className="mb-2 flex items-center gap-2">
           <Button

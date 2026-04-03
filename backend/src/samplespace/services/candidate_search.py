@@ -21,8 +21,8 @@ ONE_SHOT_TYPES: set[str] = {
 }
 
 # Re-ranking weight profiles: (clap, bpm, key)
-TONAL_WEIGHTS = (0.4, 0.25, 0.35)
-PERCUSSIVE_WEIGHTS = (0.5, 0.5, 0.0)
+_TONAL_WEIGHTS = (0.4, 0.25, 0.35)
+_PERCUSSIVE_WEIGHTS = (0.5, 0.5, 0.0)
 
 # Default number of candidates to keep after reranking
 DEFAULT_RERANK_LIMIT = 10
@@ -69,7 +69,7 @@ def rerank_candidates(
     has_key = song_context.key is not None
     is_tonal = sample_type.lower() not in ONE_SHOT_TYPES
 
-    w_clap, w_bpm, w_key = TONAL_WEIGHTS if is_tonal else PERCUSSIVE_WEIGHTS
+    w_clap, w_bpm, w_key = _TONAL_WEIGHTS if is_tonal else _PERCUSSIVE_WEIGHTS
 
     # Redistribute unavailable dimension weights to CLAP
     if not has_bpm:

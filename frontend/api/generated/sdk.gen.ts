@@ -57,7 +57,10 @@ export const getKitPreview = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Get Pair Preview
  *
- * Mix two samples together for audition. Reuses kit preview cache.
+ * Mix two samples together for audition.
+ *
+ * When key/bpm are provided, loops are pitch-shifted and time-stretched
+ * to the target before mixing (aligns samples to song context).
  */
 export const getPairPreview = <ThrowOnError extends boolean = false>(options: Options<GetPairPreviewData, ThrowOnError>) => (options.client ?? client).get<GetPairPreviewResponses, GetPairPreviewErrors, ThrowOnError>({
     responseType: 'json',

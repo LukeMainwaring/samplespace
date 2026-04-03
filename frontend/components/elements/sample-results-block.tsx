@@ -56,16 +56,13 @@ export function SampleResultsBlock({
   return (
     <div className="my-3 space-y-2">
       {payload.samples.map((sample) => (
-        <div className="flex items-start gap-2" key={sample.id}>
-          <div className="min-w-0 flex-1">
-            <SampleCard
-              sample={sample}
-              isPlaying={playingId === sample.id}
-              onTogglePlay={handleTogglePlay}
-              annotation={sample.annotation}
-            />
-          </div>
-        </div>
+        <SampleCard
+          key={sample.id}
+          sample={sample}
+          isPlaying={playingId === sample.id}
+          onTogglePlay={handleTogglePlay}
+          annotation={sample.annotation}
+        />
       ))}
     </div>
   );

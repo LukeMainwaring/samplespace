@@ -118,7 +118,7 @@ async def _pick_random_anchor(
 
     exclude_ids: list[str] = []
     if ctx.deps.thread_id:
-        exclude_ids = list(await PairVerdict.get_recent_anchor_ids(ctx.deps.db, ctx.deps.thread_id))
+        exclude_ids = list(await PairVerdict.get_recent_sample_ids(ctx.deps.db, ctx.deps.thread_id))
 
     return await Sample.get_random(ctx.deps.db, sample_type=resolved_type, exclude_ids=exclude_ids)
 

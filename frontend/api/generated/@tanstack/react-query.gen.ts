@@ -107,7 +107,10 @@ export const getPairPreviewQueryKey = (options: Options<GetPairPreviewData>) => 
 /**
  * Get Pair Preview
  *
- * Mix two samples together for audition. Reuses kit preview cache.
+ * Mix two samples together for audition.
+ *
+ * When key/bpm are provided, loops are pitch-shifted and time-stretched
+ * to the target before mixing (aligns samples to song context).
  */
 export const getPairPreviewOptions = (options: Options<GetPairPreviewData>) => queryOptions<unknown, AxiosError<GetPairPreviewError>, unknown, ReturnType<typeof getPairPreviewQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

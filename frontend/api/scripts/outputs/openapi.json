@@ -94,7 +94,7 @@
           "samples"
         ],
         "summary": "Get Pair Preview",
-        "description": "Mix two samples together for audition. Reuses kit preview cache.",
+        "description": "Mix two samples together for audition.\n\nWhen key/bpm are provided, loops are pitch-shifted and time-stretched\nto the target before mixing (aligns samples to song context).",
         "operationId": "getPairPreview",
         "parameters": [
           {
@@ -113,6 +113,38 @@
             "schema": {
               "type": "string",
               "title": "Sample B Id"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Key"
+            }
+          },
+          {
+            "name": "bpm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bpm"
             }
           }
         ],

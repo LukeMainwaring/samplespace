@@ -9,7 +9,7 @@ from fastapi.routing import APIRouter
 
 from samplespace.dependencies.clap import ClapModelsDep
 from samplespace.dependencies.db import AsyncPostgresSessionDep
-from samplespace.models.sample import AudioFileNotFound, SampleNotFound
+from samplespace.models.sample import AudioFileNotFound, Sample, SampleNotFound
 from samplespace.schemas.sample import (
     ListSamplesParams,
     SampleListResponse,
@@ -88,14 +88,14 @@ async def get_pair_preview(
 
 async def _transform_for_preview(
     audio_path: Path,
-    sample: object,
+    sample: Sample,
     target_key: str | None,
     target_bpm: int | None,
 ) -> Path:
     """Transform a sample to the target key/bpm, returning the (cached) file path."""
-    sample_key: str | None = getattr(sample, "key", None)
-    sample_bpm: int | None = getattr(sample, "bpm", None)
-    sample_id: str = getattr(sample, "id", "")
+    sample_key = sample.key
+    sample_bpm = sample.bpm
+    sample_id = sample.id
 
     actual_target_key: str | None = None
     if target_key and sample_key:

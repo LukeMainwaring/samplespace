@@ -366,7 +366,16 @@ export type GetPairPreviewData = {
          */
         sample_b_id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Key
+         */
+        key?: string | null;
+        /**
+         * Bpm
+         */
+        bpm?: number | null;
+    };
     url: '/api/samples/pair-preview/{sample_a_id}/{sample_b_id}';
 };
 
