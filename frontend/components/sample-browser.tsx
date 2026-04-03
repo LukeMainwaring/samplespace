@@ -7,6 +7,12 @@ import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
 import type { SampleSchema, SampleType } from "@/api/generated/types.gen";
 import { SampleDetailPanel } from "@/components/sample-detail-panel";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { WaveformViz } from "@/components/waveform-viz";
 import { SAMPLE_TYPES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -73,15 +79,21 @@ function SampleCard({
           </div>
         </div>
 
-        <Button
-          className="size-6 shrink-0"
-          onClick={() => onSelect(sample)}
-          size="icon"
-          title="Show similar sounds"
-          variant="ghost"
-        >
-          <Search size={12} />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="size-6 shrink-0"
+                onClick={() => onSelect(sample)}
+                size="icon"
+                variant="ghost"
+              >
+                <Search size={12} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Show similar sounds</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {isPlaying && (

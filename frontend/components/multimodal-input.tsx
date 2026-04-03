@@ -24,6 +24,12 @@ import {
 } from "./elements/prompt-input";
 import { type Attachment, PreviewAttachment } from "./preview-attachment";
 import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 function PureMultimodalInput({
   chatId,
@@ -207,16 +213,22 @@ function PureMultimodalInput({
               ref={fileInputRef}
               type="file"
             />
-            <Button
-              className="mt-2.5 ml-1 size-6 shrink-0 rounded text-muted-foreground hover:text-foreground"
-              onClick={() => fileInputRef.current?.click()}
-              title="Attach WAV file"
-              type="button"
-              variant="ghost"
-              size="icon"
-            >
-              <Paperclip size={16} />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="mt-2.5 ml-1 size-6 shrink-0 rounded text-muted-foreground hover:text-foreground"
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                  >
+                    <Paperclip size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Attach WAV file</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <PromptInputTextarea
               className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
               disableAutoResize={true}
