@@ -42,9 +42,10 @@ graph TB
 4. **CNN similarity** uses a custom-trained dual-head CNN to find spectrally similar samples via 128-dim embeddings
 5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples, using song context key/BPM as fallback defaults
 6. **Sample upload** lets users upload WAV files (songs, snippets) as reference tracks. The system analyzes metadata, generates CLAP embeddings, and the agent finds similar library samples via audio-to-audio cosine similarity
-7. **Pair feedback** lets users evaluate sample pairs — the agent presents plausible pairs with side-by-side playback, collects thumbs up/down verdicts, and computes relational audio features (spectral overlap, onset alignment, timbral contrast, harmonic consonance, spectral centroid gap, RMS energy ratio) in the background
-8. **Kit builder** assembles a complete multi-sample kit (e.g., kick + snare + hihat + bass + pad) using a greedy algorithm that maximizes pairwise compatibility. Per-type CLAP search retrieves candidates, fast inline scoring selects samples, and CNN diversity penalties prevent spectral redundancy — all rendered as an interactive kit card with per-slot playback
-9. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
+7. **Pair feedback** lets users evaluate sample pairs — the agent presents plausible pairs with side-by-side playback and a "Play Together" mixed preview (aligned to song context key/BPM), collects thumbs up/down verdicts, and computes relational audio features in the background. Rapid pairing mode with random anchors and a "Next Pair" button enables fast verdict collection.
+8. **Preference learning** trains a logistic regression on 10-dimensional feature vectors (4 pair scores + 6 relational audio features) from accumulated verdicts. Auto-retrains every 5th verdict after 15 verdicts. Learned preferences are injected into the agent's system prompt and surfaced via the `show_preferences` tool as natural-language explanations.
+9. **Kit builder** assembles a complete multi-sample kit (e.g., kick + snare + hihat + bass + pad) using a greedy algorithm that maximizes pairwise compatibility. Per-type CLAP search retrieves candidates, fast inline scoring selects samples, and CNN diversity penalties prevent spectral redundancy — all rendered as an interactive kit card with per-slot playback
+10. **Agent streams response** back as SSE in Vercel AI SDK format, with transparent tool-call display and a song context badge in the chat header
 
 ### Why CLAP + CNN + Agent?
 
@@ -60,7 +61,7 @@ graph TB
 | Chat UI | Vercel AI SDK (`useChat`), Streamdown |
 | Backend | FastAPI, Pydantic v2, async SQLAlchemy |
 | Agent | Pydantic AI with OpenAI |
-| ML | PyTorch, torchaudio (CNN), HuggingFace transformers (CLAP) |
+| ML | PyTorch, torchaudio (CNN), HuggingFace transformers (CLAP), scikit-learn (preference model) |
 | Embeddings | CLAP (`laion/clap-htsat-unfused`) 512-dim, Custom CNN 128-dim |
 | Database | PostgreSQL + pgvector |
 | Audio Analysis | librosa (key/BPM detection), music21 |
@@ -77,7 +78,7 @@ samplespace/
 │   │   ├── agents/
 │   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic context/rules
 │   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)
-│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts, kit
+│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts, kit, preferences
 │   │   ├── ml/
 │   │   │   ├── model.py            # Dual-head CNN (512-ch backbone + 2-layer projection → 128-dim embedding)
 │   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset with augmentation
@@ -88,11 +89,13 @@ samplespace/
 │   │   │   ├── audio_analysis.py   # librosa key/BPM/duration extraction
 │   │   │   ├── sample.py           # CRUD + pgvector search
 │   │   │   ├── pair_features.py    # Relational audio features for sample pairs (6 librosa metrics)
+│   │   │   ├── preference.py       # Preference model training, prediction, and explainability
+│   │   │   ├── candidate_search.py # Shared CLAP query building + context-aware reranking
 │   │   │   ├── kit_builder.py      # Greedy kit assembly (CLAP retrieval + pairwise optimization)
 │   │   │   ├── spectrogram.py      # Mel spectrogram PNG generation with disk caching (full + CNN view)
 │   │   │   └── upload.py           # WAV upload pipeline (validate, store, analyze, embed)
 │   │   ├── routers/                # REST + SSE streaming endpoints
-│   │   ├── models/                 # SQLAlchemy (Sample, Thread, PairVerdict, PairRule)
+│   │   ├── models/                 # SQLAlchemy (Sample, Thread, PairVerdict)
 │   │   └── migrations/             # Alembic
 │   ├── scripts/                    # Shell scripts (migrations, Docker helpers)
 │   └── tests/
@@ -112,12 +115,13 @@ samplespace/
 │   │   ├── candidate-samples.tsx   # Upload page for reference tracks with CLAP similarity search
 │   │   ├── preview-attachment.tsx  # File attachment chip (loading/complete states)
 │   │   ├── chat-actions-provider.tsx # React context for threading sendMessage to nested renderers
-│   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block, kit-block, sample-card)
+│   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block, kit-block, sample-card, sample-results-block)
 │   └── api/generated/              # Auto-generated TypeScript client
 ├── data/
 │   ├── uploads/                    # Uploaded reference tracks (gitignored)
 │   ├── samples/                    # Audio files (gitignored)
 │   ├── spectrograms/               # Cached spectrogram PNGs (gitignored)
+│   ├── models/                     # Preference model artifacts (gitignored)
 │   └── checkpoints/                # CNN model checkpoints (gitignored)
 └── docker-compose.yml
 ```

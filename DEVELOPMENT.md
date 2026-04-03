@@ -162,6 +162,17 @@ Monitor training:
 uv run --directory backend tensorboard --logdir data/runs/
 ```
 
+### Preference Model
+
+The preference model learns pairing taste from pair verdicts. It trains automatically in the background after every 5th verdict (starting at 15 verdicts).
+
+```bash
+# Manual training
+uv run --directory backend train-preferences
+```
+
+Model artifacts are saved to `data/models/` (gitignored): `preference_model.joblib` (sklearn pipeline) and `preference_meta.json` (version, accuracy, feature importances). The model is a `Pipeline(StandardScaler, LogisticRegression)` trained on 10-dimensional feature vectors (4 pair scores + 6 relational audio features).
+
 ### CLAP Model
 
 The CLAP model (`laion/clap-htsat-unfused`) is ~600MB and cached by HuggingFace transformers in `~/.cache/huggingface/`. It is loaded once at startup via the FastAPI lifespan handler. Mock it in tests.
