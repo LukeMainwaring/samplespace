@@ -49,18 +49,12 @@ async def present_pair(
         if anchor is None:
             return f"Sample {sample_id} not found."
 
-        similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=15)
+        candidates = await _find_candidates(ctx, sample_id, candidate_type)
 
-        if not similar_results:
+        if not candidates:
+            if candidate_type:
+                return f"No {candidate_type} candidates found to pair with this sample."
             return "No candidates found. The sample may not have a CNN embedding."
-
-        candidates = [r.sample for r in similar_results]
-
-        if candidate_type:
-            type_lower = candidate_type.lower()
-            typed = [c for c in candidates if c.sample_type and c.sample_type.lower() == type_lower]
-            if typed:
-                candidates = typed
 
         best_candidate = None
         best_score = None
@@ -84,6 +78,44 @@ async def present_pair(
     except Exception:
         logger.exception("Error presenting pair")
         return "An error occurred while finding a pair to evaluate."
+
+
+async def _find_candidates(
+    ctx: RunContext[AgentDeps],
+    sample_id: str,
+    candidate_type: str | None,
+) -> list[SampleSchema]:
+    """Find candidate samples for pairing.
+
+    Strategy: start with CNN-similar samples, then filter by type. If the type
+    filter produces no results (common when the requested type is spectrally
+    different from the anchor), fall back to a type-filtered database query.
+    """
+    similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=15)
+    candidates = [r.sample for r in similar_results]
+
+    if not candidate_type:
+        return candidates
+
+    # Try filtering CNN neighbors by requested type
+    type_lower = candidate_type.lower()
+    typed = [c for c in candidates if c.sample_type and c.sample_type.lower() == type_lower]
+    if typed:
+        return typed
+
+    # CNN neighbors don't include the requested type (e.g., bass anchor → no drum neighbors).
+    # Fall back to querying samples of that type directly.
+    from samplespace.schemas.sample import ListSamplesParams
+    from samplespace.schemas.sample_type import SampleType
+
+    try:
+        st = SampleType(type_lower)
+    except ValueError:
+        return []
+
+    params = ListSamplesParams(sample_type=st, limit=15, offset=0)
+    type_samples, _ = await Sample.get_all(ctx.deps.db, params)
+    return [SampleSchema.model_validate(s) for s in type_samples if s.id != sample_id]
 
 
 async def record_verdict(
