@@ -14,11 +14,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { WaveformViz } from "@/components/waveform-viz";
-import { SAMPLE_TYPES } from "@/lib/constants";
+import { BACKEND_URL, SAMPLE_TYPES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
 
 const ITEMS_PER_PAGE = 50;
 

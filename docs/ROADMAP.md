@@ -1,6 +1,6 @@
 # Roadmap
 
-Remaining features and improvements for SampleSpace. All original features (phases 1-3) and the sample detail view are complete. The next major initiative is preference learning — see `docs/feature-brainstorm.md` for the full design.
+Remaining features and improvements for SampleSpace. All original features (phases 1-3), the sample detail view, and Stage 4 preference model are complete. The next steps are active learning and preference-aware recommendations — see `docs/feature-brainstorm.md` for the full design.
 
 ## Upcoming Features
 
@@ -58,15 +58,15 @@ Remaining directions to explore:
 - Replace global average pooling with attention pooling — learn which time-frequency regions matter most
 - Experiment with 1D convolutions on raw waveform (SampleCNN-style from the literature) as an alternative to mel spectrograms
 
-## Next Up: Preference Learning
+## Preference Learning
 
-The pairing feedback loop (stages 1-3) collects verdicts and computes relational audio features. The next phase turns that data into a learning system. See `docs/feature-brainstorm.md` for the full design.
+The pairing feedback loop collects verdicts and computes relational audio features. The preference learning system turns that data into a model that improves recommendations. See `docs/feature-brainstorm.md` for the full design and `docs/preference-learning-flow.md` for the data flow diagram.
 
-- **Stage 4 — Preference Model**: sklearn logistic regression trained on 10-dimensional feature vectors (4 pair score dimensions + 6 relational audio features). Trains after ~15 verdicts, retrains every 5th verdict thereafter.
+- **Stage 4 — Preference Model** (complete): sklearn logistic regression trained on 10-dimensional feature vectors (4 pair score dimensions + 6 relational audio features). Auto-retrains every 5th verdict after 15 verdicts. `show_preferences` agent tool surfaces learned feature importances as natural-language explanations. Preferences are injected into the agent's system prompt.
+- **Pair evaluation upgrades** (complete): CLAP-based context-aware retrieval (shared with kit builder), random anchor support for rapid pairing sessions, "Play Together" mixed audio preview, "Next Pair" button for fast verdict collection.
 - **Stage 5 — Active Learning**: `present_pair` selects candidates where the model is most uncertain (P closest to 0.5), maximizing information gain per verdict.
-- **Stage 6 — Preference-Aware Recommendations**: learned preferences feed into kit building (5th scoring dimension), agent system prompt (natural-language preference summary), and pair scoring (learned_preference dimension).
+- **Stage 6 — Preference-Aware Recommendations**: learned preferences feed into kit building (5th scoring dimension) and pair scoring (learned_preference dimension).
 - **Confidence-Gated Automation**: after 30+ verdicts with 70%+ accuracy, the kit builder auto-approves high-confidence pairings and only asks about uncertain ones.
-- **Explainable Preferences**: `show_preferences` agent tool surfaces feature importances as natural-language explanations ("You care most about timbral contrast at 34%").
 
 ## Deferred
 

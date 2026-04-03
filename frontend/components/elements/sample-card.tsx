@@ -3,9 +3,7 @@
 import { Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
+import { BACKEND_URL } from "@/lib/constants";
 
 export interface SamplePayload {
   id: string;
@@ -20,12 +18,14 @@ interface SampleCardProps {
   sample: SamplePayload;
   isPlaying?: boolean;
   onTogglePlay?: (id: string) => void;
+  annotation?: string;
 }
 
 export function SampleCard({
   sample,
   isPlaying,
   onTogglePlay,
+  annotation,
 }: SampleCardProps) {
   const rawUrl = sample.audio_url || `/api/samples/${sample.id}/audio`;
   const audioUrl = rawUrl.startsWith("http")
@@ -36,6 +36,7 @@ export function SampleCard({
   if (sample.type) pills.push(sample.type);
   if (sample.key) pills.push(sample.key);
   if (sample.bpm) pills.push(`${sample.bpm} BPM`);
+  if (annotation) pills.push(annotation);
 
   return (
     <div

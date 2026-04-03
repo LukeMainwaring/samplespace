@@ -1,9 +1,20 @@
 "use client";
 
-import { ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  Layers,
+  Pause,
+  Play,
+  SkipForward,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
+
 import { useCallback, useState } from "react";
 import { useChatActions } from "@/components/chat-actions-provider";
 import { Button } from "@/components/ui/button";
+import { WaveformViz } from "@/components/waveform-viz";
+import { BACKEND_URL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
 interface PairVerdictPayload {
@@ -11,6 +22,7 @@ interface PairVerdictPayload {
   sample_b: SamplePayload;
   pair_score: number;
   summary: string;
+  song_context?: { key?: string | null; bpm?: number | null };
 }
 
 interface PairVerdictBlockProps {
@@ -27,7 +39,10 @@ export function PairVerdictBlock({
     null,
   );
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [mixPlaying, setMixPlaying] = useState(false);
+
   const handleTogglePlay = useCallback((id: string) => {
+    setMixPlaying(false);
     setPlayingId((prev) => (prev === id ? null : id));
   }, []);
 
@@ -64,6 +79,29 @@ export function PairVerdictBlock({
     );
   };
 
+  const handleNextPair = () => {
+    if (!chatActions) return;
+    const anchorType = payload.sample_a.type || "";
+    const candidateType = payload.sample_b.type || "";
+    chatActions.sendMessage(
+      `[NEXT_PAIR] from ${anchorType} to ${candidateType}`,
+    );
+  };
+
+  const handleToggleMix = () => {
+    setPlayingId(null);
+    setMixPlaying((prev) => !prev);
+  };
+
+  let mixUrl = `${BACKEND_URL}/api/samples/pair-preview/${payload.sample_a.id}/${payload.sample_b.id}`;
+  if (payload.song_context?.key || payload.song_context?.bpm) {
+    const params = new URLSearchParams();
+    if (payload.song_context.key) params.set("key", payload.song_context.key);
+    if (payload.song_context.bpm)
+      params.set("bpm", String(payload.song_context.bpm));
+    mixUrl += `?${params.toString()}`;
+  }
+
   return (
     <div className="my-3 space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -79,21 +117,67 @@ export function PairVerdictBlock({
         />
       </div>
 
+      {/* Mixed preview — always visible */}
+      <div
+        className={cn(
+          "rounded-lg border p-3",
+          mixPlaying
+            ? "border-primary/50 bg-primary/5"
+            : "border-border bg-muted/30",
+        )}
+      >
+        <div className="mb-2 flex items-center gap-2">
+          <Button
+            className="size-7 shrink-0 rounded-full"
+            onClick={handleToggleMix}
+            type="button"
+            size="icon"
+          >
+            {mixPlaying ? <Pause size={11} /> : <Play size={11} />}
+          </Button>
+          <Layers size={13} className="text-muted-foreground" />
+          <span className="font-medium text-xs">
+            Mixed preview
+            {payload.song_context?.key || payload.song_context?.bpm
+              ? " (aligned)"
+              : ""}
+          </span>
+        </div>
+        <WaveformViz
+          audioUrl={mixUrl}
+          height={36}
+          playing={mixPlaying}
+          onFinish={() => setMixPlaying(false)}
+        />
+      </div>
+
       <div className="flex items-center justify-between px-1">
         <span className="text-muted-foreground text-xs">
           Compatibility: {payload.pair_score}/1.0
         </span>
 
         {submitted ? (
-          <span
-            className={`text-xs font-medium ${
-              submitted === "approved"
-                ? "text-green-600 dark:text-green-500"
-                : "text-red-600 dark:text-red-500"
-            }`}
-          >
-            {submitted === "approved" ? "Approved" : "Rejected"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-xs font-medium ${
+                submitted === "approved"
+                  ? "text-green-600 dark:text-green-500"
+                  : "text-red-600 dark:text-red-500"
+              }`}
+            >
+              {submitted === "approved" ? "Approved" : "Rejected"}
+            </span>
+            <Button
+              className="text-xs"
+              onClick={handleNextPair}
+              type="button"
+              variant="outline"
+              size="sm"
+            >
+              <SkipForward size={13} />
+              Next pair
+            </Button>
+          </div>
         ) : (
           <div className="flex gap-2">
             <Button

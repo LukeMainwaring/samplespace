@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
+import { BACKEND_URL } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();

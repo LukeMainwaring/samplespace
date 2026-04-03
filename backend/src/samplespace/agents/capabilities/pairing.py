@@ -6,22 +6,16 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.pair_tools import rate_pair
+from samplespace.agents.tools.preference_tools import show_preferences
 from samplespace.agents.tools.verdict_tools import present_pair, record_verdict
-from samplespace.models.pair_rule import PairRule
+from samplespace.services import preference as preference_service
 
 
-async def _inject_pair_rules(ctx: RunContext[AgentDeps]) -> str:
-    rules = await PairRule.get_active(ctx.deps.db)
-    if not rules:
+async def _inject_preferences(ctx: RunContext[AgentDeps]) -> str:
+    explanation = preference_service.explain()
+    if explanation is None:
         return ""
-    lines = ["\n\n## Learned Pairing Preferences"]
-    for rule in rules:
-        lines.append(
-            f"- For {rule.type_pair} pairs: prefer {rule.feature_name} "
-            f"{rule.direction} {rule.threshold:.2f} "
-            f"(confidence: {rule.confidence:.0%})"
-        )
-    return "\n".join(lines)
+    return f"\n\n## Learned Pairing Preferences\n\n{explanation.summary}"
 
 
 @dataclass
@@ -31,7 +25,8 @@ class PairingCapability(AbstractCapability[AgentDeps]):
         ts.tool(rate_pair)
         ts.tool(present_pair)
         ts.tool(record_verdict)
+        ts.tool(show_preferences)
         return ts
 
     def get_instructions(self) -> object:
-        return _inject_pair_rules
+        return _inject_preferences

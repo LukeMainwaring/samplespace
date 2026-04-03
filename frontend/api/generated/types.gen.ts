@@ -354,6 +354,47 @@ export type GetKitPreviewResponses = {
     200: unknown;
 };
 
+export type GetPairPreviewData = {
+    body?: never;
+    path: {
+        /**
+         * Sample A Id
+         */
+        sample_a_id: string;
+        /**
+         * Sample B Id
+         */
+        sample_b_id: string;
+    };
+    query?: {
+        /**
+         * Key
+         */
+        key?: string | null;
+        /**
+         * Bpm
+         */
+        bpm?: number | null;
+    };
+    url: '/api/samples/pair-preview/{sample_a_id}/{sample_b_id}';
+};
+
+export type GetPairPreviewErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetPairPreviewError = GetPairPreviewErrors[keyof GetPairPreviewErrors];
+
+export type GetPairPreviewResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type ListSamplesData = {
     body?: never;
     path?: never;

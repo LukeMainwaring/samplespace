@@ -9,10 +9,7 @@ import type { SampleSchema } from "@/api/generated/types.gen";
 import { useUploadSample } from "@/api/hooks/uploads";
 import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
-import { MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8002";
+import { BACKEND_URL, MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 
 function CandidateCard({
   sample,
