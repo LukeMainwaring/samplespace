@@ -1,6 +1,6 @@
 # Roadmap
 
-Remaining features and improvements for SampleSpace. All original features (phases 1-3) are complete. The next major initiative is preference learning — see `docs/feature-brainstorm.md` for the full design.
+Remaining features and improvements for SampleSpace. All original features (phases 1-3) and the sample detail view are complete. The next major initiative is preference learning — see `docs/feature-brainstorm.md` for the full design.
 
 ## Upcoming Features
 
@@ -14,15 +14,6 @@ Future direction:
 - Deferred until auth is implemented
 
 ## UI Features
-
-### Sample Detail View
-
-Dedicated view showing full metadata, similar samples, and audio visualization for a single sample.
-
-- Create a `/samples/[id]` dynamic route in the App Router
-- Display: filename, type, key, BPM, duration, waveform, mel spectrogram image
-- Show CNN-similar samples via `GET /api/samples/{id}/similar` (endpoint already exists)
-- Link from sample browser cards to the detail view
 
 ### Demo GIF
 

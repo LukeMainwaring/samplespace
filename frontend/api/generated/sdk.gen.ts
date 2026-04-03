@@ -2,9 +2,9 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses, UploadSampleData, UploadSampleErrors, UploadSampleResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetKitPreviewData, GetKitPreviewErrors, GetKitPreviewResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSampleSpectrogramData, GetSampleSpectrogramErrors, GetSampleSpectrogramResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses, UploadSampleData, UploadSampleErrors, UploadSampleResponses } from './types.gen';
 
-export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
+export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
      * You can provide a client instance returned by `createClient()` instead of
      * individual options. This might be also useful if you want to implement a
@@ -40,6 +40,17 @@ export const streamChat = <ThrowOnError extends boolean = false>(options?: Optio
 export const dbHealthCheck = <ThrowOnError extends boolean = false>(options?: Options<DbHealthCheckData, ThrowOnError>) => (options?.client ?? client).get<DbHealthCheckResponses, unknown, ThrowOnError>({
     responseType: 'json',
     url: '/api/health/db',
+    ...options
+});
+
+/**
+ * Get Kit Preview
+ *
+ * Serve a cached kit preview mixdown.
+ */
+export const getKitPreview = <ThrowOnError extends boolean = false>(options: Options<GetKitPreviewData, ThrowOnError>) => (options.client ?? client).get<GetKitPreviewResponses, GetKitPreviewErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/samples/kit-preview/{preview_id}',
     ...options
 });
 
@@ -104,6 +115,17 @@ export const getSample = <ThrowOnError extends boolean = false>(options: Options
 export const getSimilarSamples = <ThrowOnError extends boolean = false>(options: Options<GetSimilarSamplesData, ThrowOnError>) => (options.client ?? client).get<GetSimilarSamplesResponses, GetSimilarSamplesErrors, ThrowOnError>({
     responseType: 'json',
     url: '/api/samples/{sample_id}/similar',
+    ...options
+});
+
+/**
+ * Get Sample Spectrogram
+ *
+ * Generate and serve a mel spectrogram PNG for a sample.
+ */
+export const getSampleSpectrogram = <ThrowOnError extends boolean = false>(options: Options<GetSampleSpectrogramData, ThrowOnError>) => (options.client ?? client).get<GetSampleSpectrogramResponses, GetSampleSpectrogramErrors, ThrowOnError>({
+    responseType: 'blob',
+    url: '/api/samples/{sample_id}/spectrogram',
     ...options
 });
 

@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from samplespace.schemas.base import BaseSchema
+from samplespace.schemas.sample_source import SampleSource
 from samplespace.schemas.sample_type import SampleType
 
 
@@ -14,6 +15,7 @@ class PaginationParams(BaseSchema):
 class SampleFilterParams(BaseSchema):
     sample_type: SampleType | None = None
     is_loop: bool | None = None
+    source: SampleSource | None = None
 
 
 class ListSamplesParams(SampleFilterParams, PaginationParams):
@@ -23,7 +25,7 @@ class ListSamplesParams(SampleFilterParams, PaginationParams):
 class SampleSchema(BaseSchema):
     id: str
     filename: str
-    source: str = "library"
+    source: SampleSource = SampleSource.LIBRARY
     pack_name: str | None = None
     key: str | None = None
     bpm: int | None = None
@@ -31,6 +33,11 @@ class SampleSchema(BaseSchema):
     sample_type: SampleType | None = Field(None, description="Category of the sample (e.g., kick, snare, pad, synth)")
     is_loop: bool = False
     created_at: datetime
+
+
+class SimilarSampleSchema(BaseSchema):
+    sample: SampleSchema
+    distance: float
 
 
 class SampleListResponse(BaseModel):

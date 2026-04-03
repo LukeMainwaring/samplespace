@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, Loader2, Pause, Play, Upload } from "lucide-react";
+import { Loader2, Pause, Play, Upload } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
@@ -25,24 +25,16 @@ function CandidateCard({
   onTogglePlay: (sample: SampleSchema) => void;
   onPlaybackEnd: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  const copyId = useCallback(() => {
-    navigator.clipboard.writeText(sample.id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [sample.id]);
-
   return (
     <div className="rounded-lg border bg-card p-2 text-sm">
       <div className="flex items-center gap-2">
-        <button
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+        <Button
+          className="size-8 shrink-0 rounded-full"
           onClick={() => onTogglePlay(sample)}
-          type="button"
+          size="icon"
         >
           {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-        </button>
+        </Button>
 
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-xs" title={sample.filename}>
@@ -74,15 +66,6 @@ function CandidateCard({
             )}
           </div>
         </div>
-
-        <button
-          className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          onClick={copyId}
-          title="Copy sample ID"
-          type="button"
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-        </button>
       </div>
 
       {isPlaying && (

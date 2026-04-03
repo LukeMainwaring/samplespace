@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, deleteThread, getSample, getSampleAudio, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, uploadSample } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
+import { dbHealthCheck, deleteThread, getKitPreview, getSample, getSampleAudio, getSampleSpectrogram, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, uploadSample } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetKitPreviewData, GetKitPreviewError, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSampleSpectrogramData, GetSampleSpectrogramError, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
 
 /**
  * Stream Chat
@@ -80,6 +80,26 @@ export const dbHealthCheckOptions = (options?: Options<DbHealthCheckData>) => qu
         return data;
     },
     queryKey: dbHealthCheckQueryKey(options)
+});
+
+export const getKitPreviewQueryKey = (options: Options<GetKitPreviewData>) => createQueryKey('getKitPreview', options);
+
+/**
+ * Get Kit Preview
+ *
+ * Serve a cached kit preview mixdown.
+ */
+export const getKitPreviewOptions = (options: Options<GetKitPreviewData>) => queryOptions<unknown, AxiosError<GetKitPreviewError>, unknown, ReturnType<typeof getKitPreviewQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getKitPreview({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getKitPreviewQueryKey(options)
 });
 
 export const listSamplesQueryKey = (options?: Options<ListSamplesData>) => createQueryKey('listSamples', options);
@@ -236,6 +256,26 @@ export const getSimilarSamplesOptions = (options: Options<GetSimilarSamplesData>
         return data;
     },
     queryKey: getSimilarSamplesQueryKey(options)
+});
+
+export const getSampleSpectrogramQueryKey = (options: Options<GetSampleSpectrogramData>) => createQueryKey('getSampleSpectrogram', options);
+
+/**
+ * Get Sample Spectrogram
+ *
+ * Generate and serve a mel spectrogram PNG for a sample.
+ */
+export const getSampleSpectrogramOptions = (options: Options<GetSampleSpectrogramData>) => queryOptions<unknown, AxiosError<GetSampleSpectrogramError>, unknown, ReturnType<typeof getSampleSpectrogramQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getSampleSpectrogram({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getSampleSpectrogramQueryKey(options)
 });
 
 export const getTransformedAudioQueryKey = (options: Options<GetTransformedAudioData>) => createQueryKey('getTransformedAudio', options);

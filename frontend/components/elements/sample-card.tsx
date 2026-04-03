@@ -1,6 +1,7 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { WaveformViz } from "@/components/waveform-viz";
 
 const BACKEND_URL =
@@ -46,13 +47,14 @@ export function SampleCard({
     >
       <div className="flex items-center gap-2">
         {onTogglePlay && (
-          <button
-            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+          <Button
+            className="size-7 shrink-0 rounded-full"
             onClick={() => onTogglePlay(sample.id)}
             type="button"
+            size="icon"
           >
             {isPlaying ? <Pause size={11} /> : <Play size={11} />}
-          </button>
+          </Button>
         )}
         <span className="truncate font-medium text-sm">{sample.filename}</span>
       </div>

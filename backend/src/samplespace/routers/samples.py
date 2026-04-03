@@ -1,5 +1,5 @@
 import mimetypes
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -8,11 +8,18 @@ from fastapi.routing import APIRouter
 from samplespace.dependencies.clap import ClapModelsDep
 from samplespace.dependencies.db import AsyncPostgresSessionDep
 from samplespace.models.sample import AudioFileNotFound, SampleNotFound
-from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema, SampleSearchRequest
+from samplespace.schemas.sample import (
+    ListSamplesParams,
+    SampleListResponse,
+    SampleSchema,
+    SampleSearchRequest,
+    SimilarSampleSchema,
+)
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
 from samplespace.services import kit_preview as kit_preview_service
 from samplespace.services import sample as sample_service
+from samplespace.services import spectrogram as spectrogram_service
 from samplespace.services import upload as upload_service
 
 samples_router = APIRouter(
@@ -98,13 +105,42 @@ async def get_similar_samples(
     sample_id: str,
     db: AsyncPostgresSessionDep,
     limit: int = 10,
-) -> list[SampleSchema]:
+) -> list[SimilarSampleSchema]:
     """Find similar samples using CNN embedding nearest neighbors."""
     sample = await sample_service.get_sample_by_id(db, sample_id)
     if sample is None:
         raise SampleNotFound()
 
     return await sample_service.find_similar_by_cnn(db, sample_id=sample_id, limit=limit)
+
+
+@samples_router.get(
+    "/{sample_id}/spectrogram",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/png": {}}}},
+)
+async def get_sample_spectrogram(
+    sample_id: str,
+    db: AsyncPostgresSessionDep,
+    mode: Literal["full", "cnn"] = "full",
+) -> FileResponse:
+    """Generate and serve a mel spectrogram PNG for a sample."""
+    sample = await sample_service.get_sample_by_id(db, sample_id)
+    if sample is None:
+        raise SampleNotFound()
+
+    file_path = sample_service.find_audio_file(sample)
+    if file_path is None:
+        raise AudioFileNotFound()
+
+    spectrogram_path = await spectrogram_service.generate_spectrogram(file_path, sample_id, mode=mode)
+
+    return FileResponse(
+        path=str(spectrogram_path),
+        media_type="image/png",
+        filename=f"{sample_id}_{mode}_spectrogram.png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @samples_router.get("/{sample_id}/audio/transformed")

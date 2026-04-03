@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
 interface KitSlotPayload {
@@ -59,8 +60,8 @@ export function KitBlock({ code, isIncomplete }: KitBlockProps) {
     return (
       <div className="my-3 space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            className="h-20 animate-pulse rounded-lg border border-border bg-muted/30"
+          <Skeleton
+            className="h-20 rounded-lg border border-border bg-muted/30"
             key={`skeleton-${i}`}
           />
         ))}

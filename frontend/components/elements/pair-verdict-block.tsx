@@ -3,6 +3,7 @@
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useChatActions } from "@/components/chat-actions-provider";
+import { Button } from "@/components/ui/button";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
 interface PairVerdictPayload {
@@ -95,22 +96,26 @@ export function PairVerdictBlock({
           </span>
         ) : (
           <div className="flex gap-2">
-            <button
-              className="flex items-center gap-1 rounded-md border border-green-300 px-2.5 py-1 text-green-700 text-xs transition-colors hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30"
+            <Button
+              className="border-green-300 text-green-700 text-xs hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30"
               onClick={() => handleVerdict(true)}
               type="button"
+              variant="outline"
+              size="sm"
             >
               <ThumbsUp size={13} />
               Works
-            </button>
-            <button
-              className="flex items-center gap-1 rounded-md border border-red-300 px-2.5 py-1 text-red-700 text-xs transition-colors hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+            </Button>
+            <Button
+              className="border-red-300 text-red-700 text-xs hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
               onClick={() => handleVerdict(false)}
               type="button"
+              variant="outline"
+              size="sm"
             >
               <ThumbsDown size={13} />
               Doesn&apos;t work
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.core.config import get_settings
 from samplespace.models.sample import Sample
-from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema
+from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema, SimilarSampleSchema
 from samplespace.services.audio_analysis import analyze_and_classify
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ async def find_similar_by_cnn(
     *,
     sample_id: str,
     limit: int = 10,
-) -> list[SampleSchema]:
+) -> list[SimilarSampleSchema]:
     source = await Sample.get(db, sample_id)
     if source is None or source.cnn_embedding is None:
         return []
@@ -104,7 +104,7 @@ async def find_similar_by_cnn(
         limit=limit,
     )
 
-    return [SampleSchema.model_validate(s) for s in results]
+    return [SimilarSampleSchema(sample=SampleSchema.model_validate(s), distance=d) for s, d in results]
 
 
 def find_audio_file(sample: Sample) -> Path | None:

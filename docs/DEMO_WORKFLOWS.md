@@ -171,14 +171,23 @@ A 4-step feedback loop: find samples, explore neighbors, evaluate pairs, build s
 
 - Agent calls `search_by_description` — CLAP semantic search
 
-**Step 2 — Explore the spectral neighborhood:**
+**Step 2 — Inspect in the detail view:**
+
+Navigate to the Sample Library page and click the magnifying glass on the kick you found.
+
+- Detail panel opens alongside the list with full metadata, waveform, and mel spectrogram
+- Toggle to "CNN View" to see the exact 2-second, 128-mel-bin input the CNN processes
+- Scroll down to "Similar Samples" — these are the CNN's nearest spectral neighbors with similarity percentages
+- Play similar samples inline to audition them without leaving the panel
+
+**Step 3 — Explore via chat:**
 
 > "Find samples that sound similar to `[kick_id]`"
 
 - Agent calls `find_similar_samples` — CNN spectral matching
 - Results share frequency characteristics of the reference
 
-**Step 3 — Evaluate a pairing:**
+**Step 4 — Evaluate a pairing:**
 
 > "Show me a pair to evaluate with `[kick_id]` — try matching it with a snare"
 
@@ -186,7 +195,7 @@ A 4-step feedback loop: find samples, explore neighbors, evaluate pairs, build s
 - Pair-verdict block renders with side-by-side cards and verdict buttons
 - Click "Works" or "Doesn't work"
 
-**Step 4 — Continue the loop:**
+**Step 5 — Continue the loop:**
 
 > "Show me another pair"
 
@@ -232,6 +241,8 @@ Attach a WAV via the paperclip button, then:
 **Complement suggestion:** *"Suggest a bass that complements `[pad_id]`"* — CLAP search + key/BPM filtering. Results show key compatibility annotations (checkmarks for same/relative keys).
 
 **Rate a pair:** *"How compatible are `[sample_a_id]` and `[sample_b_id]`?"* — multi-dimensional breakdown showing key, BPM, type complementarity, and spectral scores with a natural-language summary.
+
+**Sample detail view:** Navigate to the Sample Library page, click the magnifying glass on any sample card. The list splits to reveal a detail panel with full metadata, interactive waveform, mel spectrogram (toggle between Full and CNN View to see what the model sees during inference), and CNN-similar samples ranked by similarity percentage. Play similar samples inline to audition them.
 
 **Quick kit:** *"Build me a minimal techno kit — just kick, hihat, and bass"* — 3-slot kit block with fast rendering.
 

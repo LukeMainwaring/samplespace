@@ -62,6 +62,10 @@ class Sample(Base):
             count_stmt = count_stmt.where(cls.is_loop == params.is_loop)
             data_stmt = data_stmt.where(cls.is_loop == params.is_loop)
 
+        if params.source is not None:
+            count_stmt = count_stmt.where(cls.source == params.source)
+            data_stmt = data_stmt.where(cls.source == params.source)
+
         total_result = await db.execute(count_stmt)
         total = total_result.scalar_one()
 
@@ -123,7 +127,7 @@ class Sample(Base):
         *,
         exclude_id: str | None = None,
         limit: int = 10,
-    ) -> Sequence[Sample]:
+    ) -> Sequence[tuple[Sample, float]]:
         distance = cls.cnn_embedding.cosine_distance(cast(cnn_embedding, Vector(128)))
 
         stmt = (
@@ -139,4 +143,4 @@ class Sample(Base):
         result = await db.execute(stmt)
         rows = result.all()
 
-        return [row.Sample for row in rows]
+        return [(row.Sample, float(row.distance)) for row in rows]

@@ -13,6 +13,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,7 +30,6 @@ import {
   PromptInputToolbar,
 } from "./elements/prompt-input";
 import { type Attachment, PreviewAttachment } from "./preview-attachment";
-import { Button } from "./ui/button";
 
 function PureMultimodalInput({
   chatId,
@@ -207,14 +213,22 @@ function PureMultimodalInput({
               ref={fileInputRef}
               type="file"
             />
-            <button
-              className="mt-2.5 ml-1 flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => fileInputRef.current?.click()}
-              title="Attach WAV file"
-              type="button"
-            >
-              <Paperclip size={16} />
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="mt-2.5 ml-1 size-6 shrink-0 rounded text-muted-foreground hover:text-foreground"
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                  >
+                    <Paperclip size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Attach WAV file</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <PromptInputTextarea
               className="grow resize-none border-0! border-none! bg-transparent p-2 text-base outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
               disableAutoResize={true}

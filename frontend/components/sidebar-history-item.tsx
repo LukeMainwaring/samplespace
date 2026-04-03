@@ -3,19 +3,20 @@
 import { MoreHorizontal, Pencil, Trash } from "lucide-react";
 import Link from "next/link";
 import { memo, useEffect, useRef, useState } from "react";
-import type { Chat } from "@/lib/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "./ui/sidebar";
+} from "@/components/ui/sidebar";
+import type { Chat } from "@/lib/types";
 
 const PureChatItem = ({
   chat,
@@ -61,8 +62,8 @@ const PureChatItem = ({
       <SidebarMenuButton asChild isActive={isActive}>
         {isRenaming ? (
           <div className="flex h-8 items-center px-2">
-            <input
-              className="h-6 w-full rounded bg-transparent px-1 text-sm outline-none ring-1 ring-ring"
+            <Input
+              className="h-6 w-full bg-transparent px-1 text-sm"
               onBlur={handleSubmit}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
