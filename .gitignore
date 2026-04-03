@@ -19,6 +19,7 @@ out/
 # Data & models
 data/samples/
 data/checkpoints/
+data/models/
 data/transforms/
 data/runs/
 data/spectrograms/

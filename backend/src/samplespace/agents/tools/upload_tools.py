@@ -46,7 +46,6 @@ async def find_similar_to_upload(ctx: RunContext[AgentDeps], sample_id: str) -> 
         return format_sample_results(
             formatted,
             f'Found {len(formatted)} library samples similar to uploaded file "{sample.filename}":',
-            include_duration=True,
         )
     except Exception:
         logger.exception("Error in upload similarity search")

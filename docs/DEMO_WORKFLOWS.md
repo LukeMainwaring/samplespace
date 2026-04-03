@@ -201,7 +201,19 @@ Navigate to the Sample Library page and click the magnifying glass on the kick y
 
 - After the verdict auto-sends, agent calls `record_verdict` (background feature extraction fires)
 - Then `present_pair` generates a new pairing
-- Repeat to build up training data for learned pairing rules
+- Repeat to build up training data for the preference model
+
+**Step 6 — Check what the system learned:**
+
+After 15+ verdicts (mix of approvals and rejections):
+
+> "What have you learned from my feedback?"
+
+- Agent calls `show_preferences`
+- Response includes a natural-language summary of learned feature importances
+- Example: "You strongly prefer pairs with **distinct timbral character** (importance: 28%) and favor pairs that occupy **different frequency registers** (importance: 19%)"
+- The preference model auto-trains in the background after every 5th verdict (starting at 15)
+- Learned preferences are also injected into the agent's system prompt, so future recommendations are informed by your taste
 
 ### Reference Track Workflow
 

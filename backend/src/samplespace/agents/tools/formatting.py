@@ -1,3 +1,5 @@
+import json
+
 from samplespace.schemas.sample import SampleSchema
 
 
@@ -5,33 +7,18 @@ def format_sample_results(
     results: list[SampleSchema],
     header: str,
     *,
-    include_duration: bool = False,
     annotations: dict[str, str] | None = None,
 ) -> str:
-    """Format a list of sample results as numbered markdown lines.
+    """Format a list of sample results as a playable sample-results code fence."""
+    samples: list[dict[str, object]] = []
+    for s in results:
+        payload = sample_to_payload(s)
+        if annotations and s.id in annotations:
+            payload["annotation"] = annotations[s.id]
+        samples.append(payload)
 
-    Args:
-        annotations: Optional map of sample_id -> annotation string
-                     (e.g., " ✓ same key") appended after metadata.
-    """
-    lines = [f"{header}\n"]
-    for i, s in enumerate(results, 1):
-        parts = [f"{i}. **{s.filename}**"]
-        if s.sample_type:
-            parts.append(f"type={s.sample_type}")
-        parts.append("loop" if s.is_loop else "one-shot")
-        if s.is_loop:
-            key_part = f"key={s.key}" if s.key else None
-            if key_part:
-                annotation = annotations.get(s.id, "") if annotations else ""
-                parts.append(f"{key_part}{annotation}")
-            if s.bpm and s.bpm > 0:
-                parts.append(f"bpm={s.bpm}")
-        if include_duration and s.duration:
-            parts.append(f"duration={s.duration:.1f}s")
-        parts.append(f"id={s.id}")
-        lines.append(" | ".join(parts))
-    return "\n".join(lines)
+    json_str = json.dumps({"samples": samples}, indent=2)
+    return f"{header}\n\n```sample-results\n{json_str}\n```"
 
 
 def sample_to_payload(sample: SampleSchema, audio_url: str | None = None) -> dict[str, object]:

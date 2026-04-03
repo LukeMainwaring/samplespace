@@ -17,6 +17,7 @@ from samplespace.models.sample import Sample
 from samplespace.schemas.sample import SampleSchema
 from samplespace.services import pair_features as pair_features_service
 from samplespace.services import pair_scoring as pair_scoring_service
+from samplespace.services import preference as preference_service
 from samplespace.services import sample as sample_service
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,12 @@ async def _extract_features_background(
 
             await PairVerdict.update_features(db, verdict_id, features)
             logger.info(f"Feature extraction complete for verdict {verdict_id}")
+
+            # Check if we should retrain the preference model
+            total = await PairVerdict.count_all(db)
+            if preference_service.should_retrain(total):
+                logger.info(f"Retrain threshold met ({total} verdicts), training preference model")
+                await preference_service.train(db)
 
     except Exception:
         logger.exception(f"Background feature extraction failed for verdict {verdict_id}")

@@ -18,6 +18,7 @@ dependencies = [
   "psycopg[binary,pool]>=3.3.3",
   "pydantic-ai>=1.76.0",
   "pydantic>=2.12.5",
+  "scikit-learn>=1.8.0",
   "sqlalchemy[asyncio,mypy]>=2.0.48",
   "torch>=2.11.0",
   "torchaudio>=2.11.0",
@@ -44,7 +45,7 @@ markers = [
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pgvector.*", "librosa.*", "music21.*", "transformers.*", "torchaudio.*", "soundfile", "soundfile.*"]
+module = ["pgvector.*", "librosa.*", "music21.*", "transformers.*", "torchaudio.*", "soundfile", "soundfile.*", "joblib", "joblib.*", "sklearn", "sklearn.*"]
 ignore_missing_imports = true
 
 
@@ -60,6 +61,7 @@ seed-samples = "samplespace.scripts.seed_samples:main"
 embed-samples = "samplespace.scripts.embed_samples:main"
 embed-cnn = "samplespace.scripts.embed_cnn:main"
 train-cnn = "samplespace.ml.train:main"
+train-preferences = "samplespace.scripts.train_preferences:main"
 
 [tool.uv]
 default-groups = ["dev"]

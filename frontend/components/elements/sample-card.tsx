@@ -20,12 +20,14 @@ interface SampleCardProps {
   sample: SamplePayload;
   isPlaying?: boolean;
   onTogglePlay?: (id: string) => void;
+  annotation?: string;
 }
 
 export function SampleCard({
   sample,
   isPlaying,
   onTogglePlay,
+  annotation,
 }: SampleCardProps) {
   const rawUrl = sample.audio_url || `/api/samples/${sample.id}/audio`;
   const audioUrl = rawUrl.startsWith("http")
@@ -36,6 +38,7 @@ export function SampleCard({
   if (sample.type) pills.push(sample.type);
   if (sample.key) pills.push(sample.key);
   if (sample.bpm) pills.push(`${sample.bpm} BPM`);
+  if (annotation) pills.push(annotation);
 
   return (
     <div

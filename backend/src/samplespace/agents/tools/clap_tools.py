@@ -34,7 +34,6 @@ async def search_by_description(ctx: RunContext[AgentDeps], query: str) -> str:
         return format_sample_results(
             results,
             f'Found {len(results)} samples matching "{query}":',
-            include_duration=True,
         )
     except Exception:
         logger.exception("Error in CLAP search")
