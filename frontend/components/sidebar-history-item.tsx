@@ -3,20 +3,20 @@
 import { MoreHorizontal, Pencil, Trash } from "lucide-react";
 import Link from "next/link";
 import { memo, useEffect, useRef, useState } from "react";
-import type { Chat } from "@/lib/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Input } from "./ui/input";
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "./ui/sidebar";
+} from "@/components/ui/sidebar";
+import type { Chat } from "@/lib/types";
 
 const PureChatItem = ({
   chat,

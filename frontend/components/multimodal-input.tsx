@@ -13,6 +13,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,13 +30,6 @@ import {
   PromptInputToolbar,
 } from "./elements/prompt-input";
 import { type Attachment, PreviewAttachment } from "./preview-attachment";
-import { Button } from "./ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
 
 function PureMultimodalInput({
   chatId,

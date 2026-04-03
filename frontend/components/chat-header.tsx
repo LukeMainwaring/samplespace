@@ -8,7 +8,7 @@ import { PlusIcon } from "@/components/icons";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { SongContextBadge } from "@/components/song-context-badge";
 import { Button } from "@/components/ui/button";
-import { useSidebar } from "./ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
 
 function PureChatHeader({ songContext }: { songContext?: SongContext | null }) {
   const router = useRouter();
