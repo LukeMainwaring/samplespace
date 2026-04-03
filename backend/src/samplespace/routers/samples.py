@@ -135,6 +135,7 @@ async def get_sample_spectrogram(
         path=str(spectrogram_path),
         media_type="image/png",
         filename=f"{sample_id}_{mode}_spectrogram.png",
+        headers={"Cache-Control": "public, max-age=86400"},
     )
 
 

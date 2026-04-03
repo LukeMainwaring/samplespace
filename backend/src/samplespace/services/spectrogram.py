@@ -18,11 +18,15 @@ from samplespace.ml.dataset import DURATION_SEC, HOP_LENGTH, N_FFT, N_MELS, SAMP
 
 logger = logging.getLogger(__name__)
 
-SPECTROGRAM_DIR = Path(get_settings().SAMPLES_DIR).parent / "spectrograms"
+_generation_locks: dict[tuple[str, str], asyncio.Lock] = {}
+
+
+def _get_spectrogram_dir() -> Path:
+    return Path(get_settings().SAMPLES_DIR).parent / "spectrograms"
 
 
 def _get_cache_path(sample_id: str, mode: str) -> Path:
-    return SPECTROGRAM_DIR / f"{sample_id}_{mode}.png"
+    return _get_spectrogram_dir() / f"{sample_id}_{mode}.png"
 
 
 def _render_spectrogram(
@@ -31,7 +35,7 @@ def _render_spectrogram(
     *,
     mode: Literal["full", "cnn"],
 ) -> None:
-    y, sr = librosa.load(str(audio_path), sr=SAMPLE_RATE, mono=True)
+    y, _ = librosa.load(str(audio_path), sr=SAMPLE_RATE, mono=True)
 
     if mode == "cnn":
         target_length = int(SAMPLE_RATE * DURATION_SEC)
@@ -86,9 +90,19 @@ async def generate_spectrogram(
     if cache_path.exists():
         return cache_path
 
-    SPECTROGRAM_DIR.mkdir(parents=True, exist_ok=True)
+    lock_key = (sample_id, mode)
+    if lock_key not in _generation_locks:
+        _generation_locks[lock_key] = asyncio.Lock()
 
-    await asyncio.to_thread(_render_spectrogram, audio_path, cache_path, mode=mode)
-    logger.info(f"Generated {mode} spectrogram for {sample_id}")
+    async with _generation_locks[lock_key]:
+        # Re-check after acquiring lock
+        if cache_path.exists():
+            return cache_path
 
+        _get_spectrogram_dir().mkdir(parents=True, exist_ok=True)
+
+        await asyncio.to_thread(_render_spectrogram, audio_path, cache_path, mode=mode)
+        logger.info(f"Generated {mode} spectrogram for {sample_id}")
+
+    _generation_locks.pop(lock_key, None)
     return cache_path

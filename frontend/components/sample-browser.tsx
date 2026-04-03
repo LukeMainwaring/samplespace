@@ -283,6 +283,7 @@ export function SampleBrowser() {
       {selectedSampleId && (
         <div className="flex min-w-0 w-3/5 flex-col">
           <SampleDetailPanel
+            key={selectedSampleId}
             onClose={() => setSelectedSampleId(null)}
             sampleId={selectedSampleId}
           />

@@ -42,7 +42,7 @@ function SimilarSampleRow({
   onTogglePlay: (id: string) => void;
   onPlaybackEnd: () => void;
 }) {
-  const similarity = Math.round((1 - item.distance) * 100);
+  const similarity = Math.max(0, Math.round((1 - item.distance) * 100));
   const { sample } = item;
 
   return (
@@ -115,6 +115,7 @@ export function SampleDetailPanel({
     "full",
   );
   const [spectrogramLoaded, setSpectrogramLoaded] = useState(false);
+  const [spectrogramError, setSpectrogramError] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   const { data: sample, isLoading: sampleLoading } = useQuery(
@@ -132,6 +133,7 @@ export function SampleDetailPanel({
     (mode: "full" | "cnn") => {
       if (mode !== spectrogramMode) {
         setSpectrogramLoaded(false);
+        setSpectrogramError(false);
         setSpectrogramMode(mode);
       }
     },
@@ -248,9 +250,14 @@ export function SampleDetailPanel({
             </div>
           </div>
           <div className="relative overflow-hidden rounded-md border bg-black/20">
-            {!spectrogramLoaded && (
+            {!spectrogramLoaded && !spectrogramError && (
               <div className="flex h-[100px] items-center justify-center text-xs text-muted-foreground">
                 Generating spectrogram...
+              </div>
+            )}
+            {spectrogramError && (
+              <div className="flex h-[100px] items-center justify-center text-xs text-muted-foreground">
+                Failed to load spectrogram
               </div>
             )}
             <Image
@@ -258,9 +265,8 @@ export function SampleDetailPanel({
               className={spectrogramLoaded ? "block w-full h-auto" : "hidden"}
               height={0}
               key={spectrogramUrl}
-              onError={() => setSpectrogramLoaded(true)}
+              onError={() => setSpectrogramError(true)}
               onLoad={() => setSpectrogramLoaded(true)}
-              sizes="100%"
               src={spectrogramUrl}
               style={{ width: "100%", height: "auto" }}
               unoptimized
