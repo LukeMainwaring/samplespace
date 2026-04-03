@@ -60,10 +60,7 @@ export type SampleSchema = {
      * Filename
      */
     filename: string;
-    /**
-     * Source
-     */
-    source?: string;
+    source?: SampleSource;
     /**
      * Pack Name
      */
@@ -139,6 +136,11 @@ export type SampleSearchRequest = {
      */
     limit?: number;
 };
+
+/**
+ * SampleSource
+ */
+export type SampleSource = 'library' | 'upload';
 
 /**
  * SampleType
@@ -372,6 +374,10 @@ export type ListSamplesData = {
          * Is Loop
          */
         is_loop?: boolean | null;
+        /**
+         * Source
+         */
+        source?: SampleSource | null;
     };
     url: '/api/samples/';
 };

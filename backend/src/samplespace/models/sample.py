@@ -62,6 +62,10 @@ class Sample(Base):
             count_stmt = count_stmt.where(cls.is_loop == params.is_loop)
             data_stmt = data_stmt.where(cls.is_loop == params.is_loop)
 
+        if params.source is not None:
+            count_stmt = count_stmt.where(cls.source == params.source)
+            data_stmt = data_stmt.where(cls.source == params.source)
+
         total_result = await db.execute(count_stmt)
         total = total_result.scalar_one()
 

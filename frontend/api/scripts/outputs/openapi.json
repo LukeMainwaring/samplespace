@@ -151,6 +151,22 @@
               ],
               "title": "Is Loop"
             }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SampleSource"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
           }
         ],
         "responses": {
@@ -768,8 +784,7 @@
             "title": "Filename"
           },
           "source": {
-            "type": "string",
-            "title": "Source",
+            "$ref": "#/components/schemas/SampleSource",
             "default": "library"
           },
           "pack_name": {
@@ -930,6 +945,14 @@
         },
         "type": "object",
         "title": "SampleSearchRequest"
+      },
+      "SampleSource": {
+        "type": "string",
+        "enum": [
+          "library",
+          "upload"
+        ],
+        "title": "SampleSource"
       },
       "SampleType": {
         "type": "string",

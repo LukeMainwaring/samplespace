@@ -121,6 +121,7 @@ export function SampleBrowser() {
         offset: (page - 1) * ITEMS_PER_PAGE,
         sample_type: activeType ?? undefined,
         is_loop: isLoopParam,
+        source: "library",
       },
     }),
     placeholderData: keepPreviousData,
