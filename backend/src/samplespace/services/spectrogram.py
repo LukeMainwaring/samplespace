@@ -7,13 +7,14 @@ from typing import Literal
 
 import librosa
 import matplotlib
-import matplotlib.pyplot as plt
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np
 
 from samplespace.core.config import get_settings
 from samplespace.ml.dataset import DURATION_SEC, HOP_LENGTH, N_FFT, N_MELS, SAMPLE_RATE
-
-matplotlib.use("Agg")
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +65,12 @@ def _render_spectrogram(
     for spine in ax.spines.values():
         spine.set_visible(False)
 
-    fig.patch.set_facecolor("transparent")
-    ax.set_facecolor("transparent")
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
     fig.savefig(
         output_path,
         bbox_inches="tight",
         pad_inches=0.1,
-        facecolor="transparent",
         transparent=True,
     )
     plt.close(fig)

@@ -150,21 +150,13 @@ export function SampleBrowser() {
     setPlayingId((prev) => (prev === sample.id ? null : sample.id));
   }, []);
 
-  const handleTogglePlayById = useCallback((id: string) => {
-    setPlayingId((prev) => (prev === id ? null : id));
-  }, []);
-
   const handlePlaybackEnd = useCallback(() => {
     setPlayingId(null);
   }, []);
 
   const handleSelectSample = useCallback((sample: SampleSchema) => {
     setSelectedSampleId(sample.id);
-  }, []);
-
-  const handleSelectSimilar = useCallback((id: string) => {
-    setSelectedSampleId(id);
-    setPlayingId(id);
+    setPlayingId(null);
   }, []);
 
   return (
@@ -292,10 +284,6 @@ export function SampleBrowser() {
         <div className="flex w-1/2 flex-col overflow-hidden">
           <SampleDetailPanel
             onClose={() => setSelectedSampleId(null)}
-            onPlaybackEnd={handlePlaybackEnd}
-            onSelectSample={handleSelectSimilar}
-            onTogglePlay={handleTogglePlayById}
-            playingId={playingId}
             sampleId={selectedSampleId}
           />
         </div>

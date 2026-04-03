@@ -18,10 +18,6 @@ const BACKEND_URL =
 interface SampleDetailPanelProps {
   sampleId: string;
   onClose: () => void;
-  onSelectSample: (id: string) => void;
-  playingId: string | null;
-  onTogglePlay: (sampleId: string) => void;
-  onPlaybackEnd: () => void;
 }
 
 function MetadataItem({ label, value }: { label: string; value: string }) {
@@ -39,49 +35,68 @@ function SimilarSampleRow({
   item,
   isPlaying,
   onTogglePlay,
-  onSelect,
+  onPlaybackEnd,
 }: {
   item: SimilarSampleSchema;
   isPlaying: boolean;
   onTogglePlay: (id: string) => void;
-  onSelect: (id: string) => void;
+  onPlaybackEnd: () => void;
 }) {
   const similarity = Math.round((1 - item.distance) * 100);
   const { sample } = item;
 
   return (
-    <div className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/30 p-2 text-sm">
-      <Button
-        className="size-7 shrink-0 rounded-full"
-        onClick={() => onTogglePlay(sample.id)}
-        size="icon"
-      >
-        {isPlaying ? <Pause size={11} /> : <Play size={11} />}
-      </Button>
-
-      <Button
-        className="min-w-0 flex-1 h-auto flex-col items-start py-0 text-left"
-        onClick={() => onSelect(sample.id)}
-        variant="ghost"
-      >
-        <div
-          className="w-full truncate font-medium text-xs"
-          title={sample.filename}
+    <div className="rounded-lg border border-border bg-muted/30 p-2 text-sm">
+      <div className="flex w-full items-center gap-2">
+        <Button
+          className="size-7 shrink-0 rounded-full"
+          onClick={() => onTogglePlay(sample.id)}
+          size="icon"
         >
-          {sample.filename}
-        </div>
-        <div className="mt-0.5 flex flex-wrap gap-1">
-          {sample.sample_type && (
-            <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
-              {sample.sample_type}
-            </span>
-          )}
-        </div>
-      </Button>
+          {isPlaying ? <Pause size={11} /> : <Play size={11} />}
+        </Button>
 
-      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-        {similarity}%
-      </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-xs" title={sample.filename}>
+            {sample.filename}
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            {sample.sample_type && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.sample_type}
+              </span>
+            )}
+            <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+              {sample.is_loop ? "loop" : "one-shot"}
+            </span>
+            {sample.key && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.key}
+              </span>
+            )}
+            {sample.bpm != null && sample.bpm > 0 && (
+              <span className="rounded bg-secondary px-1 py-0.5 text-[10px] text-muted-foreground">
+                {sample.bpm} BPM
+              </span>
+            )}
+          </div>
+        </div>
+
+        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+          {similarity}%
+        </span>
+      </div>
+
+      {isPlaying && (
+        <div className="mt-2">
+          <WaveformViz
+            audioUrl={`${BACKEND_URL}/api/samples/${sample.id}/audio`}
+            autoplay
+            height={36}
+            onFinish={onPlaybackEnd}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -95,15 +110,12 @@ function formatDuration(seconds: number): string {
 export function SampleDetailPanel({
   sampleId,
   onClose,
-  onSelectSample,
-  playingId,
-  onTogglePlay,
-  onPlaybackEnd,
 }: SampleDetailPanelProps) {
   const [spectrogramMode, setSpectrogramMode] = useState<"full" | "cnn">(
     "full",
   );
   const [spectrogramLoaded, setSpectrogramLoaded] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   const { data: sample, isLoading: sampleLoading } = useQuery(
     getSampleOptions({ path: { sample_id: sampleId } }),
@@ -125,6 +137,14 @@ export function SampleDetailPanel({
     },
     [spectrogramMode],
   );
+
+  const handleTogglePlay = useCallback((id: string) => {
+    setPlayingId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const handlePlaybackEnd = useCallback(() => {
+    setPlayingId(null);
+  }, []);
 
   if (sampleLoading || !sample) {
     return (
@@ -161,7 +181,7 @@ export function SampleDetailPanel({
           <div className="mb-2 flex items-center gap-2">
             <Button
               className="size-8 shrink-0 rounded-full"
-              onClick={() => onTogglePlay(sampleId)}
+              onClick={() => handleTogglePlay(sampleId)}
               size="icon"
             >
               {isPlaying ? <Pause size={12} /> : <Play size={12} />}
@@ -173,7 +193,7 @@ export function SampleDetailPanel({
           <WaveformViz
             audioUrl={audioUrl}
             height={64}
-            onFinish={onPlaybackEnd}
+            onFinish={handlePlaybackEnd}
             playing={isPlaying}
           />
         </div>
@@ -272,8 +292,8 @@ export function SampleDetailPanel({
                   isPlaying={playingId === item.sample.id}
                   item={item}
                   key={item.sample.id}
-                  onSelect={onSelectSample}
-                  onTogglePlay={onTogglePlay}
+                  onPlaybackEnd={handlePlaybackEnd}
+                  onTogglePlay={handleTogglePlay}
                 />
               ))}
             </div>
