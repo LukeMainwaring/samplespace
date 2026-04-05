@@ -12,6 +12,7 @@ export interface SamplePayload {
   type?: string;
   key?: string;
   bpm?: number;
+  index?: number;
 }
 
 interface SampleCardProps {
@@ -47,6 +48,11 @@ export function SampleCard({
       }`}
     >
       <div className="flex items-center gap-2">
+        {sample.index != null && (
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted font-medium text-muted-foreground text-xs">
+            {sample.index}
+          </span>
+        )}
         {onTogglePlay && (
           <Button
             className="size-7 shrink-0 rounded-full"

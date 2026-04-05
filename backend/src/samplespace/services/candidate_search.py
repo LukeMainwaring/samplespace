@@ -6,19 +6,9 @@ reranking, and BPM compatibility scoring.
 """
 
 from samplespace.schemas.sample import SampleSchema
-from samplespace.schemas.sample_type import SampleType
+from samplespace.schemas.sample_type import UNPITCHED_TYPES
 from samplespace.schemas.thread import SongContext
 from samplespace.services.music_theory import normalize_bpm, semitone_key_score
-
-# Types that are typically one-shots (no meaningful key)
-ONE_SHOT_TYPES: set[str] = {
-    SampleType.KICK,
-    SampleType.SNARE,
-    SampleType.HIHAT,
-    SampleType.CLAP,
-    SampleType.PERCUSSION,
-    SampleType.FX,
-}
 
 # Re-ranking weight profiles: (clap, bpm, key)
 _TONAL_WEIGHTS = (0.4, 0.25, 0.35)
@@ -43,7 +33,7 @@ def build_clap_query(
     parts.append(f"{sample_type} sample")
 
     if song_context:
-        if sample_type.lower() not in ONE_SHOT_TYPES and song_context.key:
+        if sample_type.lower() not in UNPITCHED_TYPES and song_context.key:
             parts.append(song_context.key)
         if song_context.bpm:
             parts.append(f"{song_context.bpm} BPM")
@@ -67,7 +57,7 @@ def rerank_candidates(
 
     has_bpm = song_context.bpm is not None
     has_key = song_context.key is not None
-    is_tonal = sample_type.lower() not in ONE_SHOT_TYPES
+    is_tonal = sample_type.lower() not in UNPITCHED_TYPES
 
     w_clap, w_bpm, w_key = _TONAL_WEIGHTS if is_tonal else _PERCUSSIVE_WEIGHTS
 

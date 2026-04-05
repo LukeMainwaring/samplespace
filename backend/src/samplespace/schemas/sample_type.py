@@ -28,6 +28,20 @@ class SampleType(StrEnum):
 
 SAMPLE_TYPES: list[str] = sorted(t.value for t in SampleType)
 
+# Sample types where pitch-shifting is harmful or meaningless.
+# Percussive/noise-based — even as loops, shifting their pitch
+# degrades quality without musical benefit. BPM time-stretching still applies.
+UNPITCHED_TYPES: set[str] = {
+    SampleType.KICK,
+    SampleType.SNARE,
+    SampleType.HIHAT,
+    SampleType.CLAP,
+    SampleType.CYMBAL,
+    SampleType.PERCUSSION,
+    SampleType.DRUM,
+    SampleType.FX,
+}
+
 # Keyword-to-type mapping for inferring sample type from file paths.
 # Keys are SampleType enum members; values are directory/segment keywords
 # that map to that type (checked against lowercased path segments).

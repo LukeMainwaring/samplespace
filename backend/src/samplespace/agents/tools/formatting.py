@@ -11,8 +11,8 @@ def format_sample_results(
 ) -> str:
     """Format a list of sample results as a playable sample-results code fence."""
     samples: list[dict[str, object]] = []
-    for s in results:
-        payload = sample_to_payload(s)
+    for i, s in enumerate(results, start=1):
+        payload = sample_to_payload(s, index=i)
         if annotations and s.id in annotations:
             payload["annotation"] = annotations[s.id]
         samples.append(payload)
@@ -21,13 +21,19 @@ def format_sample_results(
     return f"{header}\n\n```sample-results\n{json_str}\n```"
 
 
-def sample_to_payload(sample: SampleSchema, audio_url: str | None = None) -> dict[str, object]:
+def sample_to_payload(
+    sample: SampleSchema,
+    audio_url: str | None = None,
+    index: int | None = None,
+) -> dict[str, object]:
     """Build a JSON-serializable payload dict for a sample."""
     payload: dict[str, object] = {
         "id": sample.id,
         "filename": sample.filename,
         "audio_url": audio_url or f"/api/samples/{sample.id}/audio",
     }
+    if index is not None:
+        payload["index"] = index
     if sample.sample_type:
         payload["type"] = sample.sample_type
     if sample.is_loop:
