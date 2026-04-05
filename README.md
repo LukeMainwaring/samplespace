@@ -81,8 +81,8 @@ samplespace/
 │   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts, kit, preferences
 │   │   ├── ml/
 │   │   │   ├── model.py            # Dual-head CNN (512-ch backbone + 2-layer projection → 128-dim embedding)
-│   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset with augmentation
-│   │   │   ├── train.py            # Training (SupCon + CE, cosine annealing, AMP, TensorBoard)
+│   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset with augmentation (polarity, speed/pitch perturbation, noise, EQ, spectral masking)
+│   │   │   ├── train.py            # Training (SupCon + CE, mixup, class-weighted sampling, cosine annealing, AMP, TensorBoard)
 │   │   │   └── predict.py          # Inference wrapper
 │   │   ├── services/
 │   │   │   ├── embedding.py        # CLAP embed_audio() / embed_text()
@@ -195,6 +195,8 @@ Audio File (.wav)
     └── CNN ──→ 128-dim embedding + category prediction
                  4 residual conv blocks (SE attention, 1→64→128→256→512 channels)
                  Global avg pool → 2-layer projection head (SimCLR-style)
-                 Combined loss: cross-entropy + supervised contrastive (SupCon)
+                 Combined loss: cross-entropy (with mixup) + supervised contrastive (SupCon)
+                 Augmentation: polarity inversion, speed/pitch perturbation (fast resample),
+                   noise injection, random EQ, time/freq masking
                  Trained on mel spectrograms (128 mel bins, 2s fixed length)
 ```

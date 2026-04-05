@@ -1,19 +1,23 @@
 """Training script for the dual-head SampleCNN.
 
 Trains with a combined loss:
-  - Cross-entropy for the classification head
+  - Cross-entropy for the classification head (with mixup soft labels by default)
   - Supervised contrastive loss (SupCon) for the embedding head
 
 Features:
+  - Mixup augmentation (default alpha 0.2) with double forward pass
+  - Class-weighted sampling for balanced training across imbalanced classes
   - Cosine annealing LR with linear warmup
-  - Mixed precision training (CUDA/MPS)
+  - Mixed precision training (CUDA only)
   - Gradient accumulation for larger effective batch sizes
   - Early stopping with configurable patience
+  - Per-epoch timing breakdown (data loading, forward, backward, validation)
   - TensorBoard logging (loss curves, LR, per-class F1, embedding projector)
 
 Usage:
     uv run train-cnn
     uv run train-cnn --epochs 50 --lr 0.0005 --batch-size 32 --grad-accum 2
+    uv run train-cnn --mixup-alpha 0 --label-smoothing 0.1  # disable mixup
 """
 
 from __future__ import annotations

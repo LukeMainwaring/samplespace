@@ -151,10 +151,11 @@ Audio files live in your local sample library directory (configured via `SAMPLE_
 ```bash
 uv run --directory backend train-cnn
 uv run --directory backend train-cnn --epochs 50 --batch-size 32 --grad-accum 2
+uv run --directory backend train-cnn --mixup-alpha 0 --label-smoothing 0.1  # disable mixup, use label smoothing instead
 uv run --directory backend train-cnn --help  # all options
 ```
 
-Model checkpoints are saved to `backend/data/checkpoints/` (gitignored). TensorBoard logs go to `backend/data/runs/` (gitignored). Defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch linear warmup, early stopping (patience 15), mixed precision on CUDA.
+Model checkpoints are saved to `backend/data/checkpoints/` (gitignored). TensorBoard logs go to `backend/data/runs/` (gitignored). Defaults: 100 epochs, batch size 64, mixup (alpha 0.2), class-weighted sampling, cosine annealing with 5-epoch linear warmup, early stopping (patience 15), mixed precision on CUDA. Key flags: `--mixup-alpha` (0 to disable), `--label-smoothing` (only applies when mixup is off), `--no-balance` (disable class-weighted sampling).
 
 Monitor training:
 
