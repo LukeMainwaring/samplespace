@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from pydantic_ai import RunContext
@@ -26,7 +27,9 @@ async def search_by_description(ctx: RunContext[AgentDeps], query: str) -> str:
         if ctx.deps.song_context and ctx.deps.song_context.vibe:
             enriched_query = f"{query}, {ctx.deps.song_context.vibe}"
 
-        query_embedding = embedding_service.embed_text(enriched_query, ctx.deps.clap_model, ctx.deps.clap_processor)
+        query_embedding = await asyncio.to_thread(
+            embedding_service.embed_text, enriched_query, ctx.deps.clap_model, ctx.deps.clap_processor
+        )
         results = await sample_service.search_by_text(ctx.deps.db, query_embedding=query_embedding, limit=10)
         if not results:
             return "No samples found matching that description."

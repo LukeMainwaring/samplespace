@@ -5,6 +5,7 @@ then greedily selecting samples that maximize pairwise compatibility
 while maintaining spectral diversity.
 """
 
+import asyncio
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,7 +125,7 @@ async def build_kit(
             continue
 
         query = build_clap_query(sample_type, effective_vibe, effective_genre, song_context)
-        query_embedding = embedding_service.embed_text(query, clap_model, clap_processor)
+        query_embedding = await asyncio.to_thread(embedding_service.embed_text, query, clap_model, clap_processor)
 
         results = await sample_service.search_by_text(
             db,

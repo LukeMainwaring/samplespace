@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from pydantic_ai import RunContext
@@ -108,7 +109,7 @@ async def suggest_complement(
         if ctx.deps.song_context and ctx.deps.song_context.vibe:
             query = f"{query}, {ctx.deps.song_context.vibe}"
 
-        query_embedding = embed_text(query, ctx.deps.clap_model, ctx.deps.clap_processor)
+        query_embedding = await asyncio.to_thread(embed_text, query, ctx.deps.clap_model, ctx.deps.clap_processor)
 
         results = await sample_service.search_by_text(
             ctx.deps.db,
