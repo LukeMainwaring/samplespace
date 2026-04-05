@@ -49,4 +49,4 @@ flowchart TD
 | 9 | spectral_centroid_gap | pair_features | [0, 1] | Normalized centroid difference |
 | 10 | rms_energy_ratio | pair_features | [0, 1] | Normalized log energy ratio |
 
-Missing pair scores (e.g., key/BPM for one-shots) are imputed as 0.5 (neutral midpoint).
+Missing pair scores (e.g., key for one-shots or unpitched types, BPM for one-shots) are imputed as 0.5 (neutral midpoint).

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.models.sample import Sample
 from samplespace.schemas.pair import DimensionScore, PairScore
-from samplespace.schemas.sample_type import SampleType
+from samplespace.schemas.sample_type import UNPITCHED_TYPES, SampleType
 from samplespace.services import music_theory as music_theory_service
 from samplespace.services.music_theory import normalize_bpm
 
@@ -67,7 +67,9 @@ async def score_pair(db: AsyncSession, sample_a_id: str, sample_b_id: str) -> Pa
 
     dimensions: dict[str, DimensionScore] = {}
 
-    if sample_a.is_loop and sample_b.is_loop and sample_a.key and sample_b.key:
+    a_pitched = sample_a.sample_type and sample_a.sample_type.lower() not in UNPITCHED_TYPES
+    b_pitched = sample_b.sample_type and sample_b.sample_type.lower() not in UNPITCHED_TYPES
+    if sample_a.is_loop and sample_b.is_loop and sample_a.key and sample_b.key and a_pitched and b_pitched:
         dimensions["key"] = _compute_key_score(sample_a.key, sample_b.key)
 
     if sample_a.is_loop and sample_b.is_loop and sample_a.bpm and sample_b.bpm:

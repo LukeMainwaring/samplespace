@@ -33,8 +33,9 @@ The agent encodes this text description into a 512-dim CLAP embedding and finds 
 **What to watch for:**
 
 - "Searching samples..." spinner → checkmark
-- Results list with sample filenames, types, keys, BPMs, and IDs
+- Results list with numbered indices (#1, #2, #3...), sample filenames, types, keys, and BPMs
 - If song context is set, the query is automatically enriched with the vibe (expand the tool call to see the enriched query)
+- Users can reference results naturally: "find more like #3" or "the second one sounds great"
 
 **Variations:**
 
@@ -44,9 +45,9 @@ The agent encodes this text description into a 512-dim CLAP embedding and finds 
 
 ### Audio-to-Audio Similarity
 
-> "Find samples that sound like `[sample_id]`"
+> "Find samples that sound like #2"
 
-Uses a custom-trained CNN on mel spectrograms to find spectrally similar samples. This is true audio-to-audio similarity — the CNN learns library-specific spectral features that CLAP's text-audio space can't capture.
+Uses a custom-trained CNN on mel spectrograms to find spectrally similar samples. This is true audio-to-audio similarity — the CNN learns library-specific spectral features that CLAP's text-audio space can't capture. Reference any sample from a previous search result by its number.
 
 **What to watch for:**
 
@@ -73,9 +74,9 @@ The system generates a CLAP embedding for the upload and searches the library in
 
 ### Interactive Pair Evaluation
 
-> "Show me a pair to evaluate starting from `[sample_id]` — try matching it with a snare"
+> "Show me a pair to evaluate — match a kick with a snare"
 
-The agent finds candidates via CNN similarity (top 15), filters by the requested type, scores each candidate across key/BPM/type/spectral dimensions, and selects the candidate closest to a 0.6 score — plausible but not obvious, to make the evaluation interesting.
+The agent picks a kick from the library, finds snare candidates via CNN similarity (top 15), scores each candidate across key/BPM/type/spectral dimensions, and selects a candidate closest to a 0.6 score — plausible but not obvious, to make the evaluation interesting.
 
 **What to watch for:**
 
@@ -90,9 +91,11 @@ The agent finds candidates via CNN similarity (top 15), filters by the requested
 
 ### Pitch and Tempo Transformation
 
-> "That pad sounds great but it's in the wrong key. Match `[sample_id]` to my song context."
+After searching for samples:
 
-The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch.
+> "That pad sounds great but it's in the wrong key. Transform #4 to match my song context."
+
+The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch. Percussive types (kick, snare, hihat, clap, cymbal, percussion, drum, fx) skip pitch-shifting — only BPM time-stretching is applied — since pitch-shifting degrades transient-heavy content.
 
 **What to watch for:**
 
@@ -123,12 +126,13 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 
 - Agent calls `search_by_description` — expand the tool call to see the query enriched with "warm and dusty" vibe automatically
 - Results are influenced by the persisted vibe context
+- Each result is numbered (#1, #2, #3...) for easy reference
 
 **Step 3 — Analyze and check compatibility:**
 
-> "What key is `[bass_id]` in? Will it work with a pad in C major?"
+> "What key is #1 in? Will it work with a pad in C major?"
 
-- Agent calls `analyze_sample` then `check_key_compatibility`
+- Agent resolves #1 from the search results, then calls `analyze_sample` and `check_key_compatibility`
 - Two sequential tool calls, each with spinner → checkmark
 - Key compatibility explains the circle-of-fifths distance and whether the keys are relative major/minor pairs
 
@@ -145,9 +149,9 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 > "Transform the kit to match my song context"
 
 - Agent calls `transform_kit` with the slots from step 4, resolving targets from song context (A minor, 85 BPM)
-- Kit block re-renders with transformed audio URLs — each loop is pitch-shifted and/or time-stretched
+- Kit block re-renders with transformed audio URLs — tonal loops are pitch-shifted and/or time-stretched; percussive loops (drums, hihats, etc.) are only time-stretched (pitch-shifting is skipped to preserve transient quality)
 - Response lists per-slot transforms (e.g., "bass: D minor → A minor (-5 semitones), 90 → 85 BPM")
-- One-shots are included as-is (no transform needed)
+- One-shots are included as-is (no transform needed); percussive loops note "Pitch-shift skipped — percussive sample type."
 
 **Step 6 — Preview the full kit:**
 
@@ -170,20 +174,27 @@ A feedback loop: find samples, explore neighbors, evaluate pairs, build system k
 > "Find me aggressive, distorted kicks"
 
 - Agent calls `search_by_description` — CLAP semantic search
-- Results render as playable sample cards with waveforms
+- Results render as numbered, playable sample cards with waveforms
 
-**Step 2 — Inspect in the detail view:**
+**Step 2 — Explore neighbors:**
 
-Navigate to the Sample Library page and click the magnifying glass on the kick you found.
+> "Find more samples that sound like #1"
+
+- Agent resolves #1 from the previous results, then calls `find_similar_samples` — CNN audio-to-audio similarity
+- New results are also numbered for continued referencing
+
+**Step 3 — Inspect in the detail view:**
+
+Navigate to the Sample Library page and click the magnifying glass on one of the kicks.
 
 - Detail panel opens alongside the list with full metadata, waveform, and mel spectrogram
 - Toggle to "CNN View" to see the exact 2-second, 128-mel-bin input the CNN processes
 - Scroll down to "Similar Samples" — these are the CNN's nearest spectral neighbors with similarity percentages
 - Play similar samples inline to audition them without leaving the panel
 
-**Step 3 — Evaluate a pairing:**
+**Step 4 — Evaluate a pairing:**
 
-> "Show me a pair to evaluate with `[kick_id]` — try matching it with a snare"
+> "Show me a pair to evaluate — match that kick with a snare"
 
 - Agent calls `present_pair` with candidate_type=snare
 - Candidates are found via CLAP search enriched with song context (vibe, genre, key, BPM)
@@ -191,7 +202,7 @@ Navigate to the Sample Library page and click the magnifying glass on the kick y
 - **Play Together** button layers both samples for audition as a mix
 - Click "Works" or "Doesn't work"
 
-**Step 4 — Rapid pairing mode:**
+**Step 5 — Rapid pairing mode:**
 
 > "Start a pairing session with kicks and basses"
 
@@ -201,7 +212,7 @@ Navigate to the Sample Library page and click the magnifying glass on the kick y
 - Each pair uses a new random anchor for diverse training data
 - Repeat rapidly to build up verdicts — the preference model auto-trains after 15+
 
-**Step 5 — Check what the system learned:**
+**Step 6 — Check what the system learned:**
 
 After 15+ verdicts (mix of approvals and rejections):
 
@@ -248,9 +259,9 @@ Attach a WAV via the paperclip button, then:
 
 **Key compatibility:** *"Are D minor and F major compatible?"* — circle-of-fifths check. Response explains they're relative major/minor pairs (highly compatible, score 0.95).
 
-**Complement suggestion:** *"Suggest a bass that complements `[pad_id]`"* — CLAP search + key/BPM filtering. Results show key compatibility annotations (checkmarks for same/relative keys).
+**Complement by reference:** *"Suggest a bass that complements #3"* — after a search, reference any result by number. CLAP search + key/BPM filtering. Results show key compatibility annotations.
 
-**Rate a pair:** *"How compatible are `[sample_a_id]` and `[sample_b_id]`?"* — multi-dimensional breakdown showing key, BPM, type complementarity, and spectral scores with a natural-language summary.
+**Rate a pair:** *"How compatible are #1 and #5?"* — multi-dimensional breakdown showing key, BPM, type complementarity, and spectral scores with a natural-language summary.
 
 **Sample detail view:** Navigate to the Sample Library page, click the magnifying glass on any sample card. The list splits to reveal a detail panel with full metadata, interactive waveform, mel spectrogram (toggle between Full and CNN View to see what the model sees during inference), and CNN-similar samples ranked by similarity percentage. Play similar samples inline to audition them.
 
@@ -258,7 +269,9 @@ Attach a WAV via the paperclip button, then:
 
 **Context-aware search:** *"I'm in G major at 140 BPM. Find me an uplifting lead"* — sets song context then searches with vibe enrichment, all in one turn.
 
-**Transform a kit:** *"Transform the kit to match my song context"* — pitch-shifts and time-stretches all loops in the kit to the target key/BPM. One-shots pass through unchanged.
+**Transform by reference:** *"Transform #2 to match my song context"* — pitch-shifts and/or time-stretches the sample to the target key/BPM. Percussive types skip pitch-shifting (only BPM-stretched). Listen to the result inline.
+
+**Transform a kit:** *"Transform the kit to match my song context"* — pitch-shifts and time-stretches tonal loops in the kit to the target key/BPM. One-shots pass through unchanged; percussive loops are only time-stretched (pitch-shift skipped).
 
 **Preview a kit:** *"Let me hear the full kit together"* — layers all kit samples into a single mixed audio preview for auditioning the full arrangement.
 
@@ -267,7 +280,8 @@ Attach a WAV via the paperclip button, then:
 ## Tips for Presenters
 
 - **Start fresh:** Each workflow assumes a new chat thread (no prior song context) unless noted. Click the new chat button in the sidebar.
-- **Sample IDs:** Replace `[sample_id]` placeholders with actual IDs from your library — every tool result includes sample IDs you can reference.
+- **Reference by number:** Search results are numbered (#1, #2, #3...). Use these in follow-up prompts: "find more like #2", "transform #4 to match my context", "how compatible are #1 and #3?"
+- **Reference by name:** You can also use filenames: "transform warm-pad.wav to match my context". The agent will look it up.
 - **Expand tool calls:** Click the collapsible tool call indicators to show input parameters and raw output. This demonstrates the agent's reasoning and the multi-modal retrieval pipeline.
 - **Audio playback:** Click waveforms to play samples; scrub by clicking along the waveform. Multiple samples can be played in sequence.
 - **Pair verdicts:** The thumbs up/down buttons auto-send a message to the agent — you don't need to type anything after clicking.

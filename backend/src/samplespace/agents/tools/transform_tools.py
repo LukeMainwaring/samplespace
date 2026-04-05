@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.schemas.sample import SampleSchema
+from samplespace.schemas.sample_type import UNPITCHED_TYPES
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
@@ -59,6 +60,12 @@ async def transform_single_sample(
     will_pitch = target_key is not None and sample.key is not None
     will_stretch = target_bpm is not None and sample.bpm is not None
     skipped: list[str] = []
+
+    # Percussive/noise types: skip pitch-shifting (degrades quality), keep BPM stretching
+    if sample.sample_type and sample.sample_type.lower() in UNPITCHED_TYPES:
+        if will_pitch:
+            skipped.append("Pitch-shift skipped — percussive sample type.")
+        will_pitch = False
 
     if target_key and not sample.key:
         skipped.append("Key transformation skipped — sample has no detected key.")

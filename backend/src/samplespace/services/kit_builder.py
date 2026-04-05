@@ -14,7 +14,7 @@ from transformers import ClapModel, ClapProcessor
 from samplespace.models.sample import Sample
 from samplespace.schemas.kit import KitResult, KitSlot, PairwiseEntry
 from samplespace.schemas.sample import SampleSchema
-from samplespace.schemas.sample_type import SAMPLE_TYPES, SampleType
+from samplespace.schemas.sample_type import SAMPLE_TYPES, UNPITCHED_TYPES, SampleType
 from samplespace.schemas.thread import SongContext
 from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
@@ -267,8 +267,10 @@ def _fast_compatibility(sample_a: SampleSchema, sample_b: SampleSchema) -> float
         pair_key = frozenset({sample_a.sample_type.lower(), sample_b.sample_type.lower()})
         scores.append(TYPE_COMPLEMENTARITY.get(pair_key, DEFAULT_TYPE_SCORE))
 
-    # Key compatibility (only for loops with keys)
-    if sample_a.is_loop and sample_b.is_loop and sample_a.key and sample_b.key:
+    # Key compatibility (only for pitched loops with keys)
+    a_pitched = sample_a.sample_type and sample_a.sample_type.lower() not in UNPITCHED_TYPES
+    b_pitched = sample_b.sample_type and sample_b.sample_type.lower() not in UNPITCHED_TYPES
+    if sample_a.is_loop and sample_b.is_loop and sample_a.key and sample_b.key and a_pitched and b_pitched:
         value, _ = music_theory_service.key_compatibility_score(sample_a.key, sample_b.key)
         scores.append(value)
 
