@@ -38,10 +38,10 @@ amplitude_to_db = T.AmplitudeToDB()
 # rates (e.g. 0.9374) produce huge GCD-irreducible ratios that create ~20K-phase kernels,
 # making resample ~2000x slower per sample.
 _SPEED_RATIOS = [
-    (10, 9),  # 0.90x (slower)
-    (20, 19),  # 0.95x
-    (20, 21),  # 1.05x
-    (10, 11),  # 1.10x (faster)
+    (10, 9),  # 0.90x duration (faster playback)
+    (20, 19),  # 0.95x duration
+    (20, 21),  # 1.05x duration
+    (10, 11),  # 1.10x duration (slower playback)
 ]
 
 # Wider ratios approximating ±1-2 semitone pitch shifts. Since the model

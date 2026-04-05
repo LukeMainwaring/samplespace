@@ -203,9 +203,9 @@ def train(
     warmup_epochs: int = 5,
     num_workers: int = 0,
     use_tensorboard: bool = True,
-    label_smoothing: float = 0.1,
+    label_smoothing: float = 0.0,
     balance_classes: bool = True,
-    mixup_alpha: float = 0.0,
+    mixup_alpha: float = 0.2,
 ) -> None:
     device = _get_device()
     logger.info(f"Training on {device}")
@@ -374,9 +374,11 @@ def train(
                     mixed_specs, mixed_labels = _apply_mixup(spectrograms, labels, mixup_alpha, len(SAMPLE_TYPES))
                     logits, _ = model(mixed_specs)
                     cls_loss = _soft_cross_entropy(logits, mixed_labels)
-                    _, embeddings = model(spectrograms)
+                    # Second forward on originals: clean logits for accuracy, embeddings for SupCon
+                    clean_logits, embeddings = model(spectrograms)
                     con_loss = contrastive_loss(embeddings, labels)
                 else:
+                    clean_logits = None
                     logits, embeddings = model(spectrograms)
                     cls_loss = classification_loss(logits, labels)
                     con_loss = contrastive_loss(embeddings, labels)
@@ -399,7 +401,8 @@ def train(
             train_loss_sum += (cls_loss.item() + lambda_embed * con_loss.item()) * labels.size(0)
             train_cls_loss_sum += cls_loss.item() * labels.size(0)
             train_con_loss_sum += con_loss.item() * labels.size(0)
-            train_correct += (logits.argmax(dim=1) == labels).sum().item()
+            acc_logits = clean_logits if clean_logits is not None else logits
+            train_correct += (acc_logits.argmax(dim=1) == labels).sum().item()
             train_total += labels.size(0)
             batch_start = time.monotonic()
 
@@ -585,9 +588,14 @@ def main() -> None:
     parser.add_argument("--warmup-epochs", type=int, default=5, help="Linear LR warmup epochs")
     parser.add_argument("--num-workers", type=int, default=0, help="DataLoader worker processes (0 = main thread)")
     parser.add_argument("--no-tensorboard", action="store_true", help="Disable TensorBoard logging")
-    parser.add_argument("--label-smoothing", type=float, default=0.1, help="Label smoothing factor (0 = disabled)")
+    parser.add_argument(
+        "--label-smoothing",
+        type=float,
+        default=0.0,
+        help="Label smoothing factor (0 = disabled, only applies when mixup is off)",
+    )
     parser.add_argument("--no-balance", action="store_true", help="Disable class-weighted sampling")
-    parser.add_argument("--mixup-alpha", type=float, default=0.0, help="Mixup alpha (0 = disabled, try 0.2)")
+    parser.add_argument("--mixup-alpha", type=float, default=0.2, help="Mixup alpha (0 = disabled)")
     args = parser.parse_args()
 
     train(
