@@ -26,7 +26,7 @@ Python/FastAPI conventions for the samplespace backend.
 ## Data Patterns
 
 - pgvector stores CLAP (512-dim) and CNN (128-dim) embeddings as separate columns on the `samples` table
-- Audio files stored on disk in `data/samples/`; DB stores metadata + embedding vectors
+- Audio files stored on disk in `backend/data/samples/`; DB stores metadata + embedding vectors
 - Agent streams responses via Pydantic AI's streaming interface, proxied through a Vercel AI SDK-compatible SSE endpoint
 - RAG-style retrieval is agentic: the agent calls tools on demand (CLAP search, CNN similarity, key compatibility)
 - Agent tools in `agents/tools/`, registered via `register_*_tools()` functions

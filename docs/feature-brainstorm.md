@@ -47,7 +47,7 @@ Logistic regression via scikit-learn. Deliberately simple:
 
 ### Training Trigger
 
-Retrain when: `verdict_count >= 15 AND verdict_count % 5 == 0` (every 5th verdict after the initial 15). Store the trained model as a pickled sklearn object in `data/models/preference_model.pkl`. Keep previous versions for drift comparison.
+Retrain when: `verdict_count >= 15 AND verdict_count % 5 == 0` (every 5th verdict after the initial 15). Store the trained model as a pickled sklearn object in `backend/data/models/preference_model.pkl`. Keep previous versions for drift comparison.
 
 ### Implementation
 

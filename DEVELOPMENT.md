@@ -151,15 +151,16 @@ Audio files live in your local sample library directory (configured via `SAMPLE_
 ```bash
 uv run --directory backend train-cnn
 uv run --directory backend train-cnn --epochs 50 --batch-size 32 --grad-accum 2
+uv run --directory backend train-cnn --mixup-alpha 0 --label-smoothing 0.1  # disable mixup, use label smoothing instead
 uv run --directory backend train-cnn --help  # all options
 ```
 
-Model checkpoints are saved to `data/checkpoints/` (gitignored). TensorBoard logs go to `data/runs/` (gitignored). Defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch linear warmup, early stopping (patience 15), mixed precision on CUDA.
+Model checkpoints are saved to `backend/data/checkpoints/` (gitignored). TensorBoard logs go to `backend/data/runs/` (gitignored). Defaults: 100 epochs, batch size 64, mixup (alpha 0.2), class-weighted sampling, cosine annealing with 5-epoch linear warmup, early stopping (patience 15), mixed precision on CUDA. Key flags: `--mixup-alpha` (0 to disable), `--label-smoothing` (only applies when mixup is off), `--no-balance` (disable class-weighted sampling).
 
 Monitor training:
 
 ```bash
-uv run --directory backend tensorboard --logdir data/runs/
+uv run --directory backend tensorboard --logdir backend/data/runs/
 ```
 
 ### Preference Model
@@ -171,7 +172,7 @@ The preference model learns pairing taste from pair verdicts. It trains automati
 uv run --directory backend train-preferences
 ```
 
-Model artifacts are saved to `data/models/` (gitignored): `preference_model.joblib` (sklearn pipeline) and `preference_meta.json` (version, accuracy, feature importances). The model is a `Pipeline(StandardScaler, LogisticRegression)` trained on 10-dimensional feature vectors (4 pair scores + 6 relational audio features).
+Model artifacts are saved to `backend/data/models/` (gitignored): `preference_model.joblib` (sklearn pipeline) and `preference_meta.json` (version, accuracy, feature importances). The model is a `Pipeline(StandardScaler, LogisticRegression)` trained on 10-dimensional feature vectors (4 pair scores + 6 relational audio features).
 
 ### CLAP Model
 

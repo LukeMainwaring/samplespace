@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from transformers import ClapModel, ClapProcessor
 
 from samplespace.core.config import get_settings
+from samplespace.core.paths import UPLOADS_DIR
 from samplespace.models.sample import Sample
 from samplespace.services import embedding as embedding_service
 from samplespace.services import sample as sample_service
@@ -56,12 +57,11 @@ async def process_upload(
         tmp_path = Path(tmp.name)
 
     try:
-        upload_dir = Path(settings.UPLOAD_DIR)
-        upload_dir.mkdir(parents=True, exist_ok=True)
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
         file_uuid = str(uuid.uuid4())
         relative_path = f"{file_uuid}.wav"
-        permanent_path = upload_dir / relative_path
+        permanent_path = UPLOADS_DIR / relative_path
         shutil.move(str(tmp_path), str(permanent_path))
     finally:
         # Clean up temp file if move failed (move removes source on success)

@@ -6,13 +6,13 @@ from pathlib import Path
 
 import torch
 
+from samplespace.core.paths import CHECKPOINTS_DIR
 from samplespace.ml.dataset import _load_and_preprocess
 from samplespace.ml.model import SampleCNN
 from samplespace.schemas.sample_type import SAMPLE_TYPES
 
 logger = logging.getLogger(__name__)
 
-CHECKPOINTS_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "checkpoints"
 DEFAULT_CHECKPOINT = CHECKPOINTS_DIR / "sample_cnn_best.pt"
 
 

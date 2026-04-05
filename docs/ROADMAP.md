@@ -28,13 +28,18 @@ Record a short (~15s) GIF for the README showing the core loop: ask a question i
 
 ### Data Augmentation
 
-Next steps:
+Complete:
 
-- **Re-enable time stretch first** — cheaper than pitch shift (single STFT pass vs STFT + resample), teaches tempo invariance which matters more for this use case. Benchmark per-epoch time with `num_workers=0` to see if it's tolerable (~3-4 min/epoch estimated)
-- **Offline precomputation** — a CLI script that generates pitch-shifted/time-stretched waveform variants as `.pt` files, loaded at training time instead of computed live. One-time cost (~10-20 min), ~1.7 GB disk for 2,000 samples x ~4 variants each. Avoids the STFT-in-worker deadlock entirely
-- **DataLoader parallelization** — `num_workers > 0` works on macOS only with cheap augmentations (no `torch.stft`). On CUDA/Linux, `num_workers=4` with all augmentations should work. Could also explore `torch.utils.data.DataLoader` with `prefetch_factor` tuning
-- **Mixup augmentation** — blend two spectrograms from the same class to create synthetic training examples (operates on spectrograms, so no STFT issue)
-- **Polarity inversion** — trivially flip waveform sign (free, teaches phase invariance)
+- **Speed perturbation** — ±5-10% via `torchaudio.functional.resample` with pre-defined small integer ratios (avoids the GCD kernel explosion of continuous rates). Always on during training.
+- **Pitch perturbation** — ±1-2 semitones via resample with small integer ratios. Replaces the old `pitch_shift` (STFT + phase vocoder) which was too slow for live augmentation. The fixed-length spectrogram absorbs the duration change, leaving only the frequency shift.
+- **Polarity inversion** — flip waveform sign (free, teaches phase invariance). Always on.
+- **Mixup augmentation** — cross-class spectrogram blending with soft labels (default alpha 0.2). Uses a double forward pass: mixed spectrograms for CE loss, originals for SupCon.
+- **Class-weighted sampling** — `WeightedRandomSampler` ensures equal class exposure per epoch. On by default.
+
+Remaining:
+
+- **DataLoader parallelization** — `num_workers > 0` with `forkserver` is now safe since all augmentations use fast resample (no `torch.stft`). Worth benchmarking on CUDA/Linux with `num_workers=4` and `prefetch_factor` tuning.
+- **Offline precomputation** — less urgent now that live augmentation is fast (~17s/epoch for 944 samples). Could still be useful at >5,000 samples if data loading becomes the bottleneck again.
 
 ### Dataset Scaling
 

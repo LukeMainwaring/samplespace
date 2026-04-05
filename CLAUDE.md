@@ -50,7 +50,7 @@ FastAPI Python backend using async patterns throughout.
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns, PairVerdict, Thread)
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
 -   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, kit building, spectrogram generation, preference model training/prediction, shared candidate search utilities)
--   **`src/samplespace/ml/`**: PyTorch CNN (4 residual blocks, SE attention, 1→64→128→256→512 channels, 2-layer projection head) -- model definition (`model.py`), torchaudio dataset with waveform + spectrogram augmentation (`dataset.py`), training script with SupCon + cross-entropy loss, cosine annealing, mixed precision, TensorBoard logging (`train.py`), inference wrapper with batch support (`predict.py`)
+-   **`src/samplespace/ml/`**: PyTorch CNN (4 residual blocks, SE attention, 1→64→128→256→512 channels, 2-layer projection head) -- model definition (`model.py`), torchaudio dataset with waveform augmentation (polarity inversion, speed/pitch perturbation via fast resample, noise, EQ) and spectrogram augmentation (time/freq masking, gain) (`dataset.py`), training script with SupCon + cross-entropy loss, mixup, class-weighted sampling, cosine annealing, mixed precision, TensorBoard logging (`train.py`), inference wrapper with batch support (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
 -   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client, CLAP models, CNN model)
@@ -109,7 +109,7 @@ Key patterns:
     - `build_kit()` -- assembles a multi-sample kit via greedy pairwise optimization (CLAP retrieval per type, fast inline scoring, CNN diversity penalty) and returns a `kit` code fence
 5. Agent streams response back as SSE (Vercel AI SDK format)
 6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `sample-results` code fences render as playable sample cards; `pair-verdict` code fences render as interactive side-by-side audio players with mixed preview, verdict buttons, and "Next Pair" for rapid sessions; `kit` code fences render as kit cards with per-slot playback and compatibility scores
-7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
+7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `backend/data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
 
 ## Additional Instructions
 
@@ -122,4 +122,4 @@ Key patterns:
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`) -- use `uv run --directory backend seed-samples` to populate the database.
 -   CLAP model is ~600MB, loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.
--   CNN training defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `data/runs/`.
+-   CNN training defaults: 100 epochs, batch size 64, mixup (alpha 0.2), class-weighted sampling, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `backend/data/runs/`.

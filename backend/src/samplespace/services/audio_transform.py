@@ -8,7 +8,7 @@ from pathlib import Path
 import librosa
 import soundfile as sf
 
-from samplespace.core.config import get_settings
+from samplespace.core.paths import TRANSFORMS_DIR
 from samplespace.services import music_theory as music_theory_service
 
 logger = logging.getLogger(__name__)
@@ -30,8 +30,7 @@ def _get_cache_path(sample_id: str, target_key: str | None, target_bpm: int | No
 
     Raises ValueError if the resolved path escapes the cache directory.
     """
-    settings = get_settings()
-    cache_dir = Path(settings.TRANSFORM_CACHE_DIR).resolve()
+    cache_dir = TRANSFORMS_DIR.resolve()
 
     parts = [_sanitize_for_filename(sample_id)]
     if target_key:

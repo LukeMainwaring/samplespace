@@ -13,7 +13,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np
 
-from samplespace.core.config import get_settings
+from samplespace.core.paths import SPECTROGRAMS_DIR
 from samplespace.ml.dataset import DURATION_SEC, HOP_LENGTH, N_FFT, N_MELS, SAMPLE_RATE
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ _generation_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
 
 def _get_spectrogram_dir() -> Path:
-    return Path(get_settings().SAMPLES_DIR).parent / "spectrograms"
+    return SPECTROGRAMS_DIR
 
 
 def _get_cache_path(sample_id: str, mode: str) -> Path:
