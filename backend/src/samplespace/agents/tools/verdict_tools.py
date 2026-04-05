@@ -151,7 +151,9 @@ async def _find_candidates_by_clap(
     genre = song_ctx.genre if song_ctx else None
 
     query = build_clap_query(candidate_type, vibe=vibe, genre=genre, song_context=song_ctx)
-    query_embedding = embedding_service.embed_text(query, ctx.deps.clap_model, ctx.deps.clap_processor)
+    query_embedding = await asyncio.to_thread(
+        embedding_service.embed_text, query, ctx.deps.clap_model, ctx.deps.clap_processor
+    )
 
     results = await sample_service.search_by_text(
         ctx.deps.db,

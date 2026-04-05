@@ -44,7 +44,7 @@ After making frontend code changes, run `pnpm -C frontend format` to fix formatt
 
 FastAPI Python backend using async patterns throughout.
 
--   **`src/samplespace/app.py`**: FastAPI application entry point with CORS middleware and lifespan handler (CLAP model loading)
+-   **`src/samplespace/app.py`**: FastAPI application entry point with CORS middleware and lifespan handler (CLAP + CNN model loading)
 -   **`src/samplespace/routers/`**: API routes by domain (samples, agent, health)
 -   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, song context management, upload similarity, pair presentation, verdict recording, kit building, and preference learning; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`, `pair_tools.py`, `transform_tools.py`, `upload_tools.py`, `verdict_tools.py`, `kit_tools.py`, `preference_tools.py`, `formatting.py`)
 -   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns, PairVerdict, Thread)
@@ -53,7 +53,7 @@ FastAPI Python backend using async patterns throughout.
 -   **`src/samplespace/ml/`**: PyTorch CNN (4 residual blocks, SE attention, 1→64→128→256→512 channels, 2-layer projection head) -- model definition (`model.py`), torchaudio dataset with waveform + spectrogram augmentation (`dataset.py`), training script with SupCon + cross-entropy loss, cosine annealing, mixed precision, TensorBoard logging (`train.py`), inference wrapper with batch support (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
--   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client)
+-   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client, CLAP models, CNN model)
 
 See `.claude/rules/backend/code-conventions.md` for code style and conventions.
 
@@ -121,5 +121,5 @@ Key patterns:
 -   Do not worry about running the pytest commands yet. I have not implemented unit tests and likely will not for a while.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`) -- use `uv run --directory backend seed-samples` to populate the database.
--   CLAP model is ~600MB, loaded at startup via lifespan. Mock in tests.
+-   CLAP model is ~600MB, loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.
 -   CNN training defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `data/runs/`.

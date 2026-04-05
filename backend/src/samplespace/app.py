@@ -46,6 +46,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.clap_model = clap_model
     app.state.clap_processor = clap_processor
 
+    from samplespace.ml.predict import DEFAULT_CHECKPOINT, load_model
+
+    if DEFAULT_CHECKPOINT.exists():
+        app.state.cnn_model = load_model()
+    else:
+        logger.warning("CNN checkpoint not found — find_similar_samples tool will be unavailable")
+        app.state.cnn_model = None
+
     yield
     logger.info("Shutting down SampleSpace backend...")
 

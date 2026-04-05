@@ -154,7 +154,7 @@ async def search_samples(
     if not body.query:
         raise HTTPException(status_code=400, detail="Query is required for search")
 
-    query_embedding = embedding_service.embed_text(body.query, clap.model, clap.processor)
+    query_embedding = await asyncio.to_thread(embedding_service.embed_text, body.query, clap.model, clap.processor)
 
     return await sample_service.search_by_text(
         db,
