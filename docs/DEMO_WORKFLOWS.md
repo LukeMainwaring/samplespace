@@ -95,7 +95,7 @@ After searching for samples:
 
 > "That pad sounds great but it's in the wrong key. Transform #4 to match my song context."
 
-The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch.
+The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch. Percussive types (kick, snare, hihat, clap, cymbal, percussion, drum, fx) skip pitch-shifting — only BPM time-stretching is applied — since pitch-shifting degrades transient-heavy content.
 
 **What to watch for:**
 
@@ -149,9 +149,9 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 > "Transform the kit to match my song context"
 
 - Agent calls `transform_kit` with the slots from step 4, resolving targets from song context (A minor, 85 BPM)
-- Kit block re-renders with transformed audio URLs — each loop is pitch-shifted and/or time-stretched
+- Kit block re-renders with transformed audio URLs — tonal loops are pitch-shifted and/or time-stretched; percussive loops (drums, hihats, etc.) are only time-stretched (pitch-shifting is skipped to preserve transient quality)
 - Response lists per-slot transforms (e.g., "bass: D minor → A minor (-5 semitones), 90 → 85 BPM")
-- One-shots are included as-is (no transform needed)
+- One-shots are included as-is (no transform needed); percussive loops note "Pitch-shift skipped — percussive sample type."
 
 **Step 6 — Preview the full kit:**
 
@@ -269,9 +269,9 @@ Attach a WAV via the paperclip button, then:
 
 **Context-aware search:** *"I'm in G major at 140 BPM. Find me an uplifting lead"* — sets song context then searches with vibe enrichment, all in one turn.
 
-**Transform by reference:** *"Transform #2 to match my song context"* — pitch-shifts and/or time-stretches the sample to the target key/BPM. Listen to the result inline.
+**Transform by reference:** *"Transform #2 to match my song context"* — pitch-shifts and/or time-stretches the sample to the target key/BPM. Percussive types skip pitch-shifting (only BPM-stretched). Listen to the result inline.
 
-**Transform a kit:** *"Transform the kit to match my song context"* — pitch-shifts and time-stretches all loops in the kit to the target key/BPM. One-shots pass through unchanged.
+**Transform a kit:** *"Transform the kit to match my song context"* — pitch-shifts and time-stretches tonal loops in the kit to the target key/BPM. One-shots pass through unchanged; percussive loops are only time-stretched (pitch-shift skipped).
 
 **Preview a kit:** *"Let me hear the full kit together"* — layers all kit samples into a single mixed audio preview for auditioning the full arrangement.
 
