@@ -11,7 +11,7 @@ import librosa
 import numpy as np
 import soundfile as sf
 
-from samplespace.core.config import get_settings
+from samplespace.core.paths import TRANSFORMS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,7 @@ _SR = 44100
 
 
 def _preview_cache_dir() -> Path:
-    settings = get_settings()
-    return Path(settings.TRANSFORM_CACHE_DIR).resolve() / "kit_previews"
+    return TRANSFORMS_DIR.resolve() / "kit_previews"
 
 
 def _cache_path_for_id(preview_id: str) -> Path:

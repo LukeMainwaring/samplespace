@@ -17,12 +17,12 @@ node_modules/
 out/
 
 # Data & models
-data/samples/
-data/checkpoints/
-data/models/
-data/transforms/
-data/runs/
-data/spectrograms/
+backend/data/samples/
+backend/data/checkpoints/
+backend/data/models/
+backend/data/transforms/
+backend/data/runs/
+backend/data/spectrograms/
 *.h5
 *.pt
 *.pth

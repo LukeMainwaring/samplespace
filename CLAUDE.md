@@ -109,7 +109,7 @@ Key patterns:
     - `build_kit()` -- assembles a multi-sample kit via greedy pairwise optimization (CLAP retrieval per type, fast inline scoring, CNN diversity penalty) and returns a `kit` code fence
 5. Agent streams response back as SSE (Vercel AI SDK format)
 6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `sample-results` code fences render as playable sample cards; `pair-verdict` code fences render as interactive side-by-side audio players with mixed preview, verdict buttons, and "Next Pair" for rapid sessions; `kit` code fences render as kit cards with per-slot playback and compatibility scores
-7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
+7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `backend/data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
 
 ## Additional Instructions
 
@@ -122,4 +122,4 @@ Key patterns:
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`) -- use `uv run --directory backend seed-samples` to populate the database.
 -   CLAP model is ~600MB, loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.
--   CNN training defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `data/runs/`.
+-   CNN training defaults: 100 epochs, batch size 64, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `backend/data/runs/`.

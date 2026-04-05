@@ -33,13 +33,12 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      SAMPLES_DIR: /app/data/samples
       SAMPLE_LIBRARY_DIR: ${SAMPLE_LIBRARY_DIR:+/app/sample-library}
     env_file:
       - .env
     volumes:
       - ./backend/src:/app/src
-      - ./data:/app/data
+      - ./backend/data:/app/data
       - ${SAMPLE_LIBRARY_DIR:-/dev/null}:/app/sample-library:ro
     depends_on:
       postgres:

@@ -17,7 +17,7 @@ flowchart TD
         G --> H["Build 10-dim feature vectors\n4 pair scores + 6 audio features"]
         H --> I["Train sklearn Pipeline\nStandardScaler + LogisticRegression"]
         I --> J[Evaluate via stratified k-fold CV]
-        J --> K["Save to data/models/\npreference_model.joblib\npreference_meta.json"]
+        J --> K["Save to backend/data/models/\npreference_model.joblib\npreference_meta.json"]
     end
 
     subgraph Output ["Integration Points"]

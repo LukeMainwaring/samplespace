@@ -33,6 +33,28 @@ mel_transform = T.MelSpectrogram(
 )
 amplitude_to_db = T.AmplitudeToDB()
 
+# Pre-defined speed ratios as (orig_freq, new_freq) for torchaudio.functional.resample.
+# Using small integer ratios keeps the resampling kernel tiny and fast. Continuous random
+# rates (e.g. 0.9374) produce huge GCD-irreducible ratios that create ~20K-phase kernels,
+# making resample ~2000x slower per sample.
+_SPEED_RATIOS = [
+    (10, 9),  # 0.90x (slower)
+    (20, 19),  # 0.95x
+    (20, 21),  # 1.05x
+    (10, 11),  # 1.10x (faster)
+]
+
+# Wider ratios approximating ±1-2 semitone pitch shifts. Since the model
+# operates on fixed-length spectrograms (pad/trim absorbs the duration change),
+# a simple resample shifts the frequency content equivalently to pitch_shift
+# but without the expensive STFT + phase vocoder.
+_PITCH_RATIOS = [
+    (16, 17),  # 0.94x  (~-1 semitone)
+    (8, 9),  # 0.89x  (~-2 semitones)
+    (17, 16),  # 1.06x  (~+1 semitone)
+    (9, 8),  # 1.13x  (~+2 semitones)
+]
+
 
 def _load_and_preprocess(file_path: str) -> torch.Tensor:
     data, sr = sf.read(file_path, dtype="float32", always_2d=True)
@@ -114,13 +136,13 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
     both subsets share the parent dataset's augment flag).
 
     Augmentation pipeline (training only):
-        1. Waveform-level: Gaussian noise injection (10-30 dB SNR), random EQ (±6 dB),
-           random crop (for samples longer than DURATION_SEC)
+        1. Waveform-level: polarity inversion, speed perturbation (±5-10%),
+           pitch perturbation (±1-2 semitones), Gaussian noise injection (10-30 dB SNR),
+           random EQ (±6 dB), random crop
         2. Spectrogram-level: time masking, frequency masking, random gain (±5 dB)
 
-    Note: pitch shift and time stretch augmentations are available but disabled by default
-    (``expensive_augment=False``) — they use torch.stft which deadlocks in multiprocessing
-    worker processes on macOS. Enable for CUDA training or precompute offline.
+    Speed and pitch perturbations use ``torchaudio.functional.resample`` with pre-defined
+    small integer ratios for fast execution (avoids the GCD explosion of continuous rates).
     """
 
     def __init__(
@@ -129,10 +151,8 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
         augment: bool = False,
         *,
         samples: list[tuple[Path, int]] | None = None,
-        expensive_augment: bool = False,
     ) -> None:
         self.augment = augment
-        self.expensive_augment = expensive_augment
         self._cache: dict[int, torch.Tensor] = {}
 
         if samples is not None:
@@ -168,17 +188,19 @@ class SampleDataset(Dataset[tuple[torch.Tensor, int]]):
 
     def _apply_waveform_augmentation(self, waveform: torch.Tensor) -> torch.Tensor:
         """Apply random waveform-level augmentations before mel conversion."""
-        # Pitch shift and time stretch use torch.stft which deadlocks in macOS
-        # multiprocessing workers. Gated behind expensive_augment flag.
-        if self.expensive_augment:
-            if torch.rand(1).item() > 0.5:
-                semitones = int((torch.rand(1).item() - 0.5) * 4)  # ±2 semitones
-                if semitones != 0:
-                    waveform = F.pitch_shift(waveform, SAMPLE_RATE, n_steps=semitones)
+        # Polarity inversion — acoustically identical, teaches phase invariance
+        if torch.rand(1).item() > 0.5:
+            waveform = -waveform
 
-            if torch.rand(1).item() > 0.5:
-                rate = 0.9 + torch.rand(1).item() * 0.2  # 0.9-1.1x
-                waveform = F.speed(waveform, SAMPLE_RATE, factor=rate)[0]
+        # Speed perturbation (0.9x-1.1x) via resample with small integer ratios
+        if torch.rand(1).item() > 0.5:
+            orig, new = _SPEED_RATIOS[int(torch.randint(0, len(_SPEED_RATIOS), (1,)))]
+            waveform = F.resample(waveform, orig_freq=orig, new_freq=new)
+
+        # Pitch perturbation (±1-2 semitones) via resample with small integer ratios
+        if torch.rand(1).item() > 0.5:
+            orig, new = _PITCH_RATIOS[int(torch.randint(0, len(_PITCH_RATIOS), (1,)))]
+            waveform = F.resample(waveform, orig_freq=orig, new_freq=new)
 
         # Gaussian noise injection (10-30 dB SNR), skip near-silent signals
         if torch.rand(1).item() > 0.5:

@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.core.config import get_settings
+from samplespace.core.paths import SAMPLES_DIR, UPLOADS_DIR
 from samplespace.models.sample import Sample
 from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema, SimilarSampleSchema
 from samplespace.services.audio_analysis import analyze_and_classify
@@ -118,13 +119,12 @@ def find_audio_file(sample: Sample) -> Path | None:
         return None
 
     if sample.source == "upload":
-        candidate = Path(settings.UPLOAD_DIR) / sample.relative_path
+        candidate = UPLOADS_DIR / sample.relative_path
         return candidate if candidate.exists() else None
 
-    samples_dir = Path(settings.SAMPLES_DIR)
-    candidate = samples_dir / sample.relative_path
+    candidate = SAMPLES_DIR / sample.relative_path
     if candidate.exists():
         return candidate
 
-    matches = list(samples_dir.rglob(sample.filename))
+    matches = list(SAMPLES_DIR.rglob(sample.filename))
     return matches[0] if matches else None

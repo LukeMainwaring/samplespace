@@ -97,6 +97,12 @@ samplespace/
 │   │   ├── routers/                # REST + SSE streaming endpoints
 │   │   ├── models/                 # SQLAlchemy (Sample, Thread, PairVerdict)
 │   │   └── migrations/             # Alembic
+│   ├── data/
+│   │   ├── uploads/                # Uploaded reference tracks (gitignored)
+│   │   ├── samples/                # Audio files (gitignored)
+│   │   ├── spectrograms/           # Cached spectrogram PNGs (gitignored)
+│   │   ├── models/                 # Preference model artifacts (gitignored)
+│   │   └── checkpoints/            # CNN model checkpoints (gitignored)
 │   ├── scripts/                    # Shell scripts (migrations, Docker helpers)
 │   └── tests/
 ├── frontend/
@@ -117,12 +123,6 @@ samplespace/
 │   │   ├── chat-actions-provider.tsx # React context for threading sendMessage to nested renderers
 │   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block, kit-block, sample-card, sample-results-block)
 │   └── api/generated/              # Auto-generated TypeScript client
-├── data/
-│   ├── uploads/                    # Uploaded reference tracks (gitignored)
-│   ├── samples/                    # Audio files (gitignored)
-│   ├── spectrograms/               # Cached spectrogram PNGs (gitignored)
-│   ├── models/                     # Preference model artifacts (gitignored)
-│   └── checkpoints/                # CNN model checkpoints (gitignored)
 └── docker-compose.yml
 ```
 

@@ -6,7 +6,6 @@ Trains a logistic regression on 10-dimensional feature vectors (4 pair scores +
 
 import logging
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 import joblib
@@ -18,6 +17,7 @@ from sklearn.preprocessing import StandardScaler
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from samplespace.core.paths import MODELS_DIR
 from samplespace.models.pair_verdict import PairVerdict
 from samplespace.schemas.preference import PreferenceExplanation, PreferenceMeta
 
@@ -102,9 +102,8 @@ MIN_VERDICTS = 15
 MIN_PER_CLASS = 3
 RETRAIN_INTERVAL = 5
 
-_DATA_DIR = Path(__file__).parent.parent.parent.parent.parent / "data" / "models"
-MODEL_PATH = _DATA_DIR / "preference_model.joblib"
-META_PATH = _DATA_DIR / "preference_meta.json"
+MODEL_PATH = MODELS_DIR / "preference_model.joblib"
+META_PATH = MODELS_DIR / "preference_meta.json"
 
 # --------------------------------------------------------------------------- #
 # In-memory cache (single-process dev server)
@@ -257,7 +256,7 @@ async def train(db: AsyncSession) -> PreferenceMeta | None:
     )
 
     # Save to disk
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipeline, MODEL_PATH)
     META_PATH.write_text(meta.model_dump_json(indent=2))
 
