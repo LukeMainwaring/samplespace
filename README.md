@@ -74,7 +74,7 @@ graph TB
 samplespace/
 ├── backend/
 │   ├── src/samplespace/
-│   │   ├── app.py                  # FastAPI app + lifespan (CLAP model loading)
+│   │   ├── app.py                  # FastAPI app + lifespan (CLAP + CNN model loading)
 │   │   ├── agents/
 │   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic context/rules
 │   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)

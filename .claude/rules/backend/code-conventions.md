@@ -21,7 +21,7 @@ Python/FastAPI conventions for the samplespace backend.
 - Use `BackgroundTasks` for blocking, secondary work in routes
 - Prefer Pydantic models over raw dicts for request/response schemas
 - ML inference code lives in `ml/`; keep it separate from `services/`. Services call into `ml/` for predictions.
-- CLAP model loaded once via FastAPI lifespan handler; accessed via dependency injection. Never import directly in routes.
+- CLAP and CNN models loaded once via FastAPI lifespan handler; accessed via dependency injection. Never import directly in routes.
 
 ## Data Patterns
 
