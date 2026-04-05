@@ -16,6 +16,7 @@ from starlette.responses import Response
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.sample_agent import sample_agent
 from samplespace.dependencies.clap import get_clap_models
+from samplespace.dependencies.cnn import get_cnn_model
 from samplespace.dependencies.db import AsyncPostgresSessionDep
 from samplespace.models.message import Message
 from samplespace.models.thread import Thread
@@ -52,6 +53,7 @@ async def stream_chat(
         db=db,
         clap_model=clap.model,
         clap_processor=clap.processor,
+        cnn_model=get_cnn_model(request),
         thread_id=thread_id,
         song_context=existing_context,
     )
