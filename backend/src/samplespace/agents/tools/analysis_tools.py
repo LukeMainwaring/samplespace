@@ -5,6 +5,7 @@ from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
+from samplespace.services import embedding as embedding_service
 from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 
@@ -100,8 +101,6 @@ async def suggest_complement(
         if source is None:
             return f"Sample {sample_id} not found."
 
-        from samplespace.services.embedding import embed_text
-
         query = f"complement for {source.sample_type or 'sample'}"
         if desired_type:
             query = f"{desired_type} that complements {source.sample_type or 'sample'}"
@@ -109,7 +108,9 @@ async def suggest_complement(
         if ctx.deps.song_context and ctx.deps.song_context.vibe:
             query = f"{query}, {ctx.deps.song_context.vibe}"
 
-        query_embedding = await asyncio.to_thread(embed_text, query, ctx.deps.clap_model, ctx.deps.clap_processor)
+        query_embedding = await asyncio.to_thread(
+            embedding_service.embed_text, query, ctx.deps.clap_model, ctx.deps.clap_processor
+        )
 
         results = await sample_service.search_by_text(
             ctx.deps.db,
