@@ -237,6 +237,8 @@ async def record_verdict(
             pair_score=score.overall,
             pair_score_detail=score.model_dump(),
         )
+        # Commit so the background task's separate session can see the verdict
+        await ctx.deps.db.commit()
 
         task = asyncio.create_task(_extract_features_background(verdict.id, sample_a_id, sample_b_id))
         _background_tasks.add(task)

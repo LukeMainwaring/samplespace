@@ -1,10 +1,14 @@
 """Preference learning tools for the sample assistant agent."""
 
+import logging
+
 from pydantic_ai import RunContext
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.models.pair_verdict import PairVerdict
 from samplespace.services import preference as preference_service
+
+logger = logging.getLogger(__name__)
 
 
 async def show_preferences(ctx: RunContext[AgentDeps]) -> str:
@@ -17,21 +21,33 @@ async def show_preferences(ctx: RunContext[AgentDeps]) -> str:
     or how their feedback is being used.
     """
     explanation = preference_service.explain()
-    if explanation is None:
-        total = await PairVerdict.count_all(ctx.deps.db)
-        needed = preference_service.MIN_VERDICTS
-        remaining = max(0, needed - total)
-        if remaining > 0:
-            return (
-                f"Not enough feedback yet to learn preferences. "
-                f"You have **{total}** verdict{'s' if total != 1 else ''} — "
-                f"need at least **{needed}** with both approvals and rejections "
-                f"({remaining} more to go). Keep evaluating pairs!"
-            )
+    if explanation is not None:
+        return explanation.summary
+
+    total = await PairVerdict.count_all(ctx.deps.db)
+    needed = preference_service.MIN_VERDICTS
+    remaining = max(0, needed - total)
+    if remaining > 0:
         return (
-            f"You have **{total}** verdicts, but the model hasn't been trained yet. "
-            f"This may mean feature extraction is still in progress or there aren't enough "
-            f"of both approvals and rejections (need at least {preference_service.MIN_PER_CLASS} of each)."
+            f"Not enough feedback yet to learn preferences. "
+            f"You have **{total}** verdict{'s' if total != 1 else ''} — "
+            f"need at least **{needed}** with both approvals and rejections "
+            f"({remaining} more to go). Keep evaluating pairs!"
         )
 
-    return explanation.summary
+    # Enough verdicts exist but no model — attempt training now
+    # (training may have been skipped at a checkpoint if features weren't ready)
+    logger.info(f"No preference model found with {total} verdicts — attempting training now")
+    meta = await preference_service.train(ctx.deps.db)
+    if meta is not None:
+        explanation = preference_service.explain()
+        if explanation is not None:
+            return explanation.summary
+
+    # Training failed — give a specific reason
+    feature_complete = await PairVerdict.count_with_features(ctx.deps.db)
+    return (
+        f"You have **{total}** verdicts, but only **{feature_complete}** have completed "
+        f"feature extraction (need at least **{needed}**). "
+        f"Try evaluating a few more pairs to give background processing time to catch up."
+    )
