@@ -91,10 +91,10 @@ export function KitBlock({ code, isIncomplete }: KitBlockProps) {
     <div className="my-3 space-y-3">
       <div className="flex items-center gap-2">
         <ScoreBadge score={payload.overall_score} label="Kit score" />
-        {pills.map((pill) => (
+        {pills.map((pill, i) => (
           <span
             className="rounded-full border border-border bg-background px-2 py-0.5 text-muted-foreground text-xs"
-            key={pill}
+            key={`${pill}-${i}`}
           >
             {pill}
           </span>

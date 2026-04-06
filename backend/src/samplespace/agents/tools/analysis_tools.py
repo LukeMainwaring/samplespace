@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -85,7 +85,7 @@ async def suggest_complement(
     ctx: RunContext[AgentDeps],
     sample_id: str,
     desired_type: str | None = None,
-) -> str:
+) -> str | ToolReturn:
     """Suggest samples that complement a given sample based on key compatibility and type.
 
     Use this tool when the user wants to build a kit or find samples that work

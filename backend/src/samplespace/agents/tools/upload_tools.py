@@ -1,6 +1,6 @@
 import logging
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -10,7 +10,7 @@ from samplespace.schemas.sample import SampleSchema
 logger = logging.getLogger(__name__)
 
 
-async def find_similar_to_upload(ctx: RunContext[AgentDeps], sample_id: str) -> str:
+async def find_similar_to_upload(ctx: RunContext[AgentDeps], sample_id: str) -> str | ToolReturn:
     """Find library samples similar to an uploaded reference track using CLAP embeddings.
 
     Use this tool when the user has uploaded a WAV file (a song, snippet, or reference

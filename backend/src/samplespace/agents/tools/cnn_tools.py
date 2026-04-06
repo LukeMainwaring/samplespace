@@ -1,6 +1,6 @@
 import logging
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -9,7 +9,7 @@ from samplespace.services import sample as sample_service
 logger = logging.getLogger(__name__)
 
 
-async def find_similar_samples(ctx: RunContext[AgentDeps], sample_id: str) -> str:
+async def find_similar_samples(ctx: RunContext[AgentDeps], sample_id: str) -> str | ToolReturn:
     """Find samples that sound similar to a given sample using CNN embeddings.
 
     Use this tool when the user has a specific sample and wants to find others

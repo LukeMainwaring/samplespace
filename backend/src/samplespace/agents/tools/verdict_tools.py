@@ -4,10 +4,10 @@ Handles presenting sample pairs for evaluation and recording user verdicts.
 """
 
 import asyncio
-import json
 import logging
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
+from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import sample_to_payload
@@ -36,7 +36,7 @@ async def present_pair(
     sample_id: str | None = None,
     anchor_type: str | None = None,
     candidate_type: str | None = None,
-) -> str:
+) -> str | ToolReturn:
     """Present a sample pair for the user to evaluate.
 
     Finds a complementary candidate for the given (or random) anchor sample,
@@ -278,7 +278,7 @@ def _format_pair_verdict(
     *,
     target_key: str | None = None,
     target_bpm: int | None = None,
-) -> str:
+) -> ToolReturn:
     payload: dict[str, object] = {
         "sample_a": sample_to_payload(sample_a),
         "sample_b": sample_to_payload(sample_b),
@@ -287,5 +287,12 @@ def _format_pair_verdict(
     }
     if target_key or target_bpm:
         payload["song_context"] = {"key": target_key, "bpm": target_bpm}
-    json_str = json.dumps(payload, indent=2)
-    return f"Here's a pair to evaluate — listen to both and let me know if they work together:\n\n```pair-verdict\n{json_str}\n```"
+    intro = (
+        "Here's a pair to evaluate — listen to both and let me know if they work together:\n"
+        f"- Sample A: {sample_a.id} ({sample_a.filename})\n"
+        f"- Sample B: {sample_b.id} ({sample_b.filename})"
+    )
+    return ToolReturn(
+        return_value=intro,
+        metadata=DataChunk(type="data-pair-verdict", data=payload),
+    )

@@ -16,6 +16,8 @@ from samplespace.core.paths import TRANSFORMS_DIR
 logger = logging.getLogger(__name__)
 
 _SR = 44100
+# Crossfade duration at loop/tile boundaries to prevent clicks (in samples)
+_CROSSFADE_SAMPLES = int(0.01 * _SR)  # 10ms
 
 
 def _preview_cache_dir() -> Path:
@@ -48,12 +50,37 @@ def _to_stereo(y: np.ndarray) -> np.ndarray:
 
 
 def _tile_to_length(y: np.ndarray, target_len: int) -> np.ndarray:
-    """Tile (loop) a stereo array along the sample axis to fill target length."""
+    """Tile (loop) a stereo array to fill target length with crossfade at seams.
+
+    A short cosine crossfade at each loop boundary prevents clicks from
+    discontinuities where the waveform doesn't end at a zero crossing.
+    """
     n_samples = y.shape[1]
     if n_samples >= target_len:
         return y[:, :target_len]
-    repeats = (target_len // n_samples) + 1
-    return np.tile(y, (1, repeats))[:, :target_len]
+
+    cf = min(_CROSSFADE_SAMPLES, n_samples // 4)
+    result = np.zeros((y.shape[0], target_len), dtype=y.dtype)
+    pos = 0
+
+    while pos < target_len:
+        remaining = target_len - pos
+        chunk_len = min(n_samples, remaining)
+        chunk = y[:, :chunk_len]
+
+        if pos > 0 and cf > 0 and chunk_len > cf:
+            # Crossfade: blend the end of the previous iteration with the
+            # start of this one using a cosine curve for a smooth transition
+            fade = np.cos(np.linspace(0, np.pi / 2, cf)) ** 2
+            result[:, pos : pos + cf] *= fade
+            result[:, pos : pos + cf] += chunk[:, :cf] * (1 - fade)
+            result[:, pos + cf : pos + chunk_len] = chunk[:, cf:]
+        else:
+            result[:, pos : pos + chunk_len] = chunk
+
+        pos += chunk_len
+
+    return result
 
 
 def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
@@ -78,9 +105,11 @@ def mix_audio(file_paths: list[Path]) -> tuple[str, Path]:
     max_len = max(a.shape[1] for a in arrays)
     tiled = [_tile_to_length(a, max_len) for a in arrays]
 
-    mixed: np.ndarray = np.sum(tiled, axis=0) / len(tiled)
+    # Sum all layers then normalize the mix as a whole.
+    # Using summation (not averaging) preserves transient punch;
+    # the peak normalization handles final level.
+    mixed: np.ndarray = np.sum(tiled, axis=0)
 
-    # Normalize to prevent clipping
     peak = float(np.max(np.abs(mixed)))
     if peak > 0:
         mixed = mixed * (0.9 / peak)
