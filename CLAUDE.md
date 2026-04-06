@@ -71,7 +71,8 @@ Next.js 16 with App Router.
 -   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe) as pills
 -   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters; split-pane layout driven by `selectedSampleId` — when a sample is selected, the list compresses to the left and a detail panel appears on the right
 -   **`components/sample-detail-panel.tsx`**: Splice-style inline detail panel showing full metadata, waveform, mel spectrogram (full/CNN toggle), and CNN-similar samples with similarity percentages; manages its own playback state independently from the sample list
--   **`components/candidate-samples.tsx`**: Upload page for reference tracks with CLAP similarity search
+-   **`components/candidate-samples.tsx`**: Upload panel for reference tracks with playback, metadata editing, and delete functionality
+-   **`components/sample-metadata-dialog.tsx`**: Post-upload dialog for correcting auto-detected key, BPM, and loop/one-shot classification
 -   **`components/preview-attachment.tsx`**: File attachment chip with loading/complete states for chat input
 -   **`components/elements/sample-card.tsx`**: Shared sample card component (filename, metadata pills, WaveformViz) used by pair-verdict-block, kit-block, and sample-results-block
 -   **`components/elements/sample-results-block.tsx`**: Renders `sample-results` code fences as a vertical list of playable SampleCards (used by all search/similarity tools)
@@ -102,14 +103,16 @@ Key patterns:
     - `analyze_sample()` -- full metadata retrieval (key, BPM, duration, type)
     - `suggest_complement()` -- combines CLAP search + key/BPM filtering (uses song context as fallback)
     - `set_song_context()` -- persists key/BPM/genre/vibe to thread for context-aware searches
+    - `find_upload()` -- searches uploaded samples by filename (case-insensitive substring match)
     - `find_similar_to_upload()` -- CLAP audio-to-audio search using an uploaded sample's embedding (excludes other uploads)
+    - `set_context_from_upload()` -- sets song context (key/BPM) from an uploaded sample's detected metadata, with optional genre/vibe
     - `present_pair()` -- finds a complementary candidate via CLAP search (with song context) or CNN similarity, supports random anchors for rapid pairing, and returns a `pair-verdict` code fence with mixed preview
     - `record_verdict()` -- persists user's thumbs up/down verdict, fires background relational feature extraction, and triggers preference model retraining when threshold is met
     - `show_preferences()` -- surfaces learned feature importances as natural-language explanations
     - `build_kit()` -- assembles a multi-sample kit via greedy pairwise optimization (CLAP retrieval per type, fast inline scoring, CNN diversity penalty) and returns a `kit` code fence
 5. Agent streams response back as SSE (Vercel AI SDK format)
 6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `sample-results` code fences render as playable sample cards; `pair-verdict` code fences render as interactive side-by-side audio players with mixed preview, verdict buttons, and "Next Pair" for rapid sessions; `kit` code fences render as kit cards with per-slot playback and compatibility scores
-7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `backend/data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → user references ID in chat → agent calls `find_similar_to_upload`
+7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `backend/data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → post-upload dialog lets user correct key/BPM/loop classification → in chat, agent calls `find_upload` to locate by name, `set_context_from_upload` to set song context, `find_similar_to_upload` for library matches. Uploads can be updated (`PATCH /samples/{id}`) or deleted (`DELETE /samples/{id}`) — delete cascades to pair verdicts and cleans up disk artifacts.
 
 ## Additional Instructions
 
