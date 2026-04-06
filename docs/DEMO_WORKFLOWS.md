@@ -95,7 +95,7 @@ After searching for samples:
 
 > "That pad sounds great but it's in the wrong key. Transform #4 to match my song context."
 
-The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch. Percussive types (kick, snare, hihat, clap, cymbal, percussion, drum, fx) skip pitch-shifting — only BPM time-stretching is applied — since pitch-shifting degrades transient-heavy content.
+The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch via [Rubber Band](https://breakfastquay.com/rubberband/) R3 (the highest-quality engine, invoked directly as a subprocess). Percussive types (kick, snare, hihat, clap, cymbal, percussion, drum, fx) skip pitch-shifting — only BPM time-stretching is applied — since pitch-shifting degrades transient-heavy content.
 
 **What to watch for:**
 
@@ -149,8 +149,8 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 
 > "Let me hear the full kit together"
 
-- Agent calls `preview_kit` with the transformed slots
-- Audio block renders with a single mixed preview — all samples layered together
+- Agent calls `preview_kit` — it automatically resolves transformed audio from the song context (no URL threading needed; the preview function looks up cached transforms directly)
+- Audio block renders with a single mixed preview — all samples layered together with crossfade at loop boundaries
 - Click to play the full kit as one track
 
 **What to watch for across the session:** Song context persists through all 5 steps without repetition. Refresh the page mid-session — the context badge reappears because it's stored in the thread's JSONB column, not the browser session.

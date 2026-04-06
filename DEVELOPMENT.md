@@ -9,16 +9,28 @@ This project uses:
 -   **[Ruff]** - Fast Python linter and formatter
 -   **[mypy]** - Static type checker
 -   **[pre-commit]** - Git hook framework for automated code quality checks
+-   **[Rubber Band]** - Audio pitch-shifting and time-stretching (R3 engine via CLI)
 
 [uv]: https://docs.astral.sh/uv/
 [Docker]: https://docs.docker.com/get-docker/
 [Ruff]: https://github.com/astral-sh/ruff
 [mypy]: https://mypy-lang.org/
 [pre-commit]: https://pre-commit.com/
+[Rubber Band]: https://breakfastquay.com/rubberband/
 
 ## Setup
 
-Install dependencies:
+Install system dependencies:
+
+```bash
+# macOS
+brew install rubberband
+
+# Linux (Debian/Ubuntu)
+apt install rubberband-cli
+```
+
+Install Python dependencies:
 
 ```bash
 uv sync --directory backend
