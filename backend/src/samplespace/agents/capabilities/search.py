@@ -7,7 +7,7 @@ from pydantic_ai.toolsets import FunctionToolset
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.clap_tools import search_by_description
 from samplespace.agents.tools.cnn_tools import find_similar_samples
-from samplespace.agents.tools.upload_tools import find_similar_to_upload
+from samplespace.agents.tools.upload_tools import find_similar_to_upload, find_upload, set_context_from_upload
 
 _CNN_TOOLS = frozenset({find_similar_samples.__name__})
 
@@ -19,6 +19,8 @@ class SearchCapability(AbstractCapability[AgentDeps]):
         ts.tool(search_by_description)
         ts.tool(find_similar_samples)
         ts.tool(find_similar_to_upload)
+        ts.tool(find_upload)
+        ts.tool(set_context_from_upload)
         return ts
 
     async def prepare_tools(

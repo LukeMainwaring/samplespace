@@ -96,6 +96,11 @@ class Sample(Base):
         return samples, total
 
     @classmethod
+    async def get_by_source(cls, db: AsyncSession, source: str) -> Sequence[Sample]:
+        result = await db.execute(select(cls).where(cls.source == source).order_by(cls.created_at.desc()))
+        return result.scalars().all()
+
+    @classmethod
     async def get_random(
         cls,
         db: AsyncSession,
