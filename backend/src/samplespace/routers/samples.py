@@ -20,7 +20,6 @@ from samplespace.schemas.sample import (
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import embedding as embedding_service
 from samplespace.services import kit_preview as kit_preview_service
-from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 from samplespace.services import spectrogram as spectrogram_service
 from samplespace.services import upload as upload_service
@@ -93,36 +92,16 @@ async def _transform_for_preview(
     target_bpm: int | None,
 ) -> Path:
     """Transform a sample to the target key/bpm, returning the (cached) file path."""
-    sample_key = sample.key
-    sample_bpm = sample.bpm
-    sample_id = sample.id
-
-    actual_target_key: str | None = None
-    if target_key and sample_key:
-        actual_target_key = music_theory_service.compute_target_key(sample_key, target_key)
-        if actual_target_key == sample_key:
-            actual_target_key = None
-
-    effective_bpm = target_bpm if target_bpm and sample_bpm and sample_bpm != target_bpm else None
-
-    if actual_target_key is None and effective_bpm is None:
-        return audio_path
-
-    cached = audio_transform_service.get_cached_transform(sample_id, actual_target_key, effective_bpm)
-    if cached:
-        return cached
-
-    result = await asyncio.to_thread(
-        audio_transform_service.transform_sample,
+    resolved, _ = await asyncio.to_thread(
+        audio_transform_service.resolve_transform,
         audio_path,
-        sample_id,
-        source_key=sample_key if actual_target_key else None,
-        target_key=actual_target_key,
-        source_bpm=sample_bpm if effective_bpm else None,
-        target_bpm=effective_bpm,
-        sample_type=sample.sample_type,
+        sample.id,
+        sample_key=sample.key,
+        sample_bpm=sample.bpm,
+        target_key=target_key,
+        target_bpm=target_bpm,
     )
-    return result
+    return resolved
 
 
 @samples_router.get("/")

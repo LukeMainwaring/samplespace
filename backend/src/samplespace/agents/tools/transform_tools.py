@@ -125,7 +125,6 @@ async def transform_single_sample(
         target_key=actual_target_key if will_pitch else None,
         source_bpm=sample.bpm if not bpm_matches else None,
         target_bpm=target_bpm if not bpm_matches else None,
-        sample_type=sample.sample_type,
     )
 
     # Build transformed audio URL

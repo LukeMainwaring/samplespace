@@ -53,7 +53,6 @@ def transform_sample(
     target_key: str | None,
     source_bpm: int | None,
     target_bpm: int | None,
-    sample_type: str | None = None,
 ) -> Path:
     """Pitch-shift and/or time-stretch an audio file using Rubber Band R3.
 
@@ -94,7 +93,7 @@ def transform_sample(
     try:
         os.close(fd)
         cmd += [str(source_path), tmp_path]
-        result = subprocess.run(cmd, capture_output=True)
+        result = subprocess.run(cmd, capture_output=True, timeout=60)
         if result.returncode != 0:
             raise RuntimeError(f"rubberband failed: {result.stderr.decode()}")
         os.rename(tmp_path, cache_path)
@@ -105,3 +104,46 @@ def transform_sample(
 
     logger.info(f"Cached transform: {cache_path.name}")
     return cache_path
+
+
+def resolve_transform(
+    audio_path: Path,
+    sample_id: str,
+    *,
+    sample_key: str | None,
+    sample_bpm: int | None,
+    target_key: str | None,
+    target_bpm: int | None,
+) -> tuple[Path, bool]:
+    """Resolve the best available audio for a sample given a target key/BPM.
+
+    Returns (path, was_transformed). Uses a cached transform if available,
+    otherwise transforms on the spot. Returns the original path unchanged
+    if no transform is needed.
+
+    This is CPU-bound — call via asyncio.to_thread() from async contexts.
+    """
+    actual_target_key: str | None = None
+    if target_key and sample_key:
+        actual_target_key = music_theory_service.compute_target_key(sample_key, target_key)
+        if actual_target_key == sample_key:
+            actual_target_key = None
+
+    effective_bpm = target_bpm if target_bpm and sample_bpm and sample_bpm != target_bpm else None
+
+    if actual_target_key is None and effective_bpm is None:
+        return audio_path, False
+
+    cached = get_cached_transform(sample_id, actual_target_key, effective_bpm)
+    if cached:
+        return cached, True
+
+    result = transform_sample(
+        audio_path,
+        sample_id,
+        source_key=sample_key if actual_target_key else None,
+        target_key=actual_target_key,
+        source_bpm=sample_bpm if effective_bpm else None,
+        target_bpm=effective_bpm,
+    )
+    return result, True

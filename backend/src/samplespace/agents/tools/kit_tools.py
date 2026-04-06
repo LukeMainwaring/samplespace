@@ -8,12 +8,10 @@ from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import sample_to_payload
 from samplespace.agents.tools.transform_tools import transform_single_sample
-from samplespace.models.sample import Sample
 from samplespace.schemas.kit import KitResult
 from samplespace.services import audio_transform as audio_transform_service
 from samplespace.services import kit_builder as kit_builder_service
 from samplespace.services import kit_preview as kit_preview_service
-from samplespace.services import music_theory as music_theory_service
 from samplespace.services import sample as sample_service
 
 logger = logging.getLogger(__name__)
@@ -177,46 +175,6 @@ async def preview_kit(
         return "An error occurred while generating the kit preview."
 
 
-async def _resolve_transform(
-    audio_path: Path,
-    sample: Sample,
-    target_key: str | None,
-    target_bpm: int | None,
-) -> Path:
-    """Return the cached transform if one exists, otherwise the original path.
-
-    Uses the same key-resolution logic as the pair preview router so that
-    kit previews automatically pick up transforms created by transform_kit.
-    """
-    actual_target_key: str | None = None
-    if target_key and sample.key:
-        actual_target_key = music_theory_service.compute_target_key(sample.key, target_key)
-        if actual_target_key == sample.key:
-            actual_target_key = None
-
-    effective_bpm = target_bpm if target_bpm and sample.bpm and sample.bpm != target_bpm else None
-
-    if actual_target_key is None and effective_bpm is None:
-        return audio_path
-
-    cached = audio_transform_service.get_cached_transform(sample.id, actual_target_key, effective_bpm)
-    if cached:
-        return cached
-
-    # No cached transform — run it now
-    result = await asyncio.to_thread(
-        audio_transform_service.transform_sample,
-        audio_path,
-        sample.id,
-        source_key=sample.key if actual_target_key else None,
-        target_key=actual_target_key,
-        source_bpm=sample.bpm if effective_bpm else None,
-        target_bpm=effective_bpm,
-        sample_type=sample.sample_type,
-    )
-    return result
-
-
 async def _preview_kit(
     ctx: RunContext[AgentDeps],
     slots: list[dict[str, str]],
@@ -232,8 +190,8 @@ async def _preview_kit(
 
     for slot in slots:
         slot_sample = slot.get("sample")
-        sample_data: dict[str, str] = slot_sample if isinstance(slot_sample, dict) else {}
-        sample_id = sample_data.get("id", "") or slot.get("sample_id", "")
+        sample_data: dict[str, object] = slot_sample if isinstance(slot_sample, dict) else {}
+        sample_id = str(sample_data.get("id", "") or slot.get("sample_id", ""))
 
         raw_sample = await sample_service.get_sample_by_id(ctx.deps.db, sample_id)
         if raw_sample is None:
@@ -245,8 +203,16 @@ async def _preview_kit(
 
         # Use the transformed version if one exists for this song context
         if (target_key or target_bpm) and raw_sample.is_loop:
-            transformed = await _resolve_transform(audio_path, raw_sample, target_key, target_bpm)
-            file_paths.append(transformed)
+            resolved, _ = await asyncio.to_thread(
+                audio_transform_service.resolve_transform,
+                audio_path,
+                raw_sample.id,
+                sample_key=raw_sample.key,
+                sample_bpm=raw_sample.bpm,
+                target_key=target_key,
+                target_bpm=target_bpm,
+            )
+            file_paths.append(resolved)
         else:
             file_paths.append(audio_path)
 
@@ -258,7 +224,6 @@ async def _preview_kit(
     audio_url = f"/api/samples/kit-preview/{preview_id}"
 
     payload: dict[str, object] = {"audio_url": audio_url}
-    song_ctx = ctx.deps.song_context
     if song_ctx:
         if song_ctx.key:
             payload["target_key"] = song_ctx.key

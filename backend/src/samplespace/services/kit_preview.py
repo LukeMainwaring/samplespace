@@ -61,16 +61,16 @@ def _tile_to_length(y: np.ndarray, target_len: int) -> np.ndarray:
 
     cf = min(_CROSSFADE_SAMPLES, n_samples // 4)
     result = np.zeros((y.shape[0], target_len), dtype=y.dtype)
+    # Advance by (n_samples - cf) so consecutive tiles overlap by cf samples,
+    # creating a real crossfade region instead of fading in from silence.
+    stride = max(n_samples - cf, 1)
     pos = 0
 
     while pos < target_len:
-        remaining = target_len - pos
-        chunk_len = min(n_samples, remaining)
+        chunk_len = min(n_samples, target_len - pos)
         chunk = y[:, :chunk_len]
 
         if pos > 0 and cf > 0 and chunk_len > cf:
-            # Crossfade: blend the end of the previous iteration with the
-            # start of this one using a cosine curve for a smooth transition
             fade = np.cos(np.linspace(0, np.pi / 2, cf)) ** 2
             result[:, pos : pos + cf] *= fade
             result[:, pos : pos + cf] += chunk[:, :cf] * (1 - fade)
@@ -78,7 +78,7 @@ def _tile_to_length(y: np.ndarray, target_len: int) -> np.ndarray:
         else:
             result[:, pos : pos + chunk_len] = chunk
 
-        pos += chunk_len
+        pos += stride if chunk_len == n_samples else chunk_len
 
     return result
 
