@@ -115,7 +115,9 @@ const PurePreviewMessage = ({
                 message.role === "user" &&
                 part.text.startsWith("[PAIR_VERDICT]")
               ) {
-                const isApproved = part.text.includes("Works |");
+                const isApproved = part.text.startsWith(
+                  "[PAIR_VERDICT] Works |",
+                );
                 return (
                   <div key={key} className="flex justify-end">
                     <div

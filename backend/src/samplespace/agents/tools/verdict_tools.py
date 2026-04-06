@@ -59,20 +59,20 @@ async def present_pair(
                  pairing sessions. Omit if unspecified.
     """
     try:
+        # Compute recent sample IDs once — used for both anchor and candidate exclusion
+        recent_ids: set[str] = set()
+        if ctx.deps.thread_id:
+            recent_ids = set(await PairVerdict.get_recent_sample_ids(ctx.deps.db, ctx.deps.thread_id))
+
         if sample_id:
             anchor = await Sample.get(ctx.deps.db, sample_id)
             if anchor is None:
                 return f"Sample {sample_id} not found."
         else:
-            anchor = await _pick_random_anchor(ctx, anchor_type, is_loop=is_loop)
+            anchor = await _pick_random_anchor(ctx, anchor_type, is_loop=is_loop, exclude_ids=recent_ids)
             if anchor is None:
                 return f"No {anchor_type or 'library'} samples found to use as anchor."
             sample_id = anchor.id
-
-        # Exclude recently evaluated samples from candidates (same as anchors)
-        recent_ids: set[str] = set()
-        if ctx.deps.thread_id:
-            recent_ids = set(await PairVerdict.get_recent_sample_ids(ctx.deps.db, ctx.deps.thread_id))
 
         candidates = await _find_candidates(ctx, sample_id, candidate_type, is_loop=is_loop, exclude_ids=recent_ids)
 
@@ -118,6 +118,7 @@ async def _pick_random_anchor(
     anchor_type: str | None,
     *,
     is_loop: bool | None = None,
+    exclude_ids: set[str] | None = None,
 ) -> Sample | None:
     """Pick a random anchor sample, avoiding recently evaluated samples."""
     resolved_type: str | None = None
@@ -127,11 +128,9 @@ async def _pick_random_anchor(
         except ValueError:
             pass
 
-    exclude_ids: list[str] = []
-    if ctx.deps.thread_id:
-        exclude_ids = list(await PairVerdict.get_recent_sample_ids(ctx.deps.db, ctx.deps.thread_id))
-
-    return await Sample.get_random(ctx.deps.db, sample_type=resolved_type, is_loop=is_loop, exclude_ids=exclude_ids)
+    return await Sample.get_random(
+        ctx.deps.db, sample_type=resolved_type, is_loop=is_loop, exclude_ids=list(exclude_ids or [])
+    )
 
 
 async def _find_candidates(
@@ -151,7 +150,7 @@ async def _find_candidates(
     """
     if candidate_type:
         return await _find_candidates_by_clap(ctx, sample_id, candidate_type, is_loop=is_loop, exclude_ids=exclude_ids)
-    return await _find_candidates_by_cnn(ctx, sample_id)
+    return await _find_candidates_by_cnn(ctx, sample_id, exclude_ids=exclude_ids)
 
 
 async def _find_candidates_by_clap(
@@ -198,10 +197,16 @@ async def _find_candidates_by_clap(
 async def _find_candidates_by_cnn(
     ctx: RunContext[AgentDeps],
     sample_id: str,
+    *,
+    exclude_ids: set[str] | None = None,
 ) -> list[SampleSchema]:
     """CNN similarity — used when no specific type is requested."""
-    similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=_CANDIDATE_LIMIT)
-    return [r.sample for r in similar_results]
+    fetch_limit = _CANDIDATE_LIMIT + len(exclude_ids) if exclude_ids else _CANDIDATE_LIMIT
+    similar_results = await sample_service.find_similar_by_cnn(ctx.deps.db, sample_id=sample_id, limit=fetch_limit)
+    candidates = [r.sample for r in similar_results]
+    if exclude_ids:
+        candidates = [c for c in candidates if c.id not in exclude_ids]
+    return candidates[:_CANDIDATE_LIMIT]
 
 
 async def record_verdict(
