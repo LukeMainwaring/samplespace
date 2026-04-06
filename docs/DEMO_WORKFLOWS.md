@@ -6,7 +6,7 @@ Prompts and workflows that showcase what SampleSpace can do that general-purpose
 
 ## The Best Single Demo
 
-> "I'm producing a funky tech house track in A minor at 126 BPM. Build me a kit with a drum loop, bass, and pad."
+> "I'm producing a disco tech house track in A minor at 124 BPM. Build me a kit with a drum loop, bass, and pad."
 
 This one prompt triggers the full system. The agent calls `set_song_context` to persist key/BPM/genre/vibe, then `build_kit` to run CLAP retrieval for each sample type (enriched with "funky" vibe), greedy pairwise optimization with CNN diversity penalties, and multi-dimensional compatibility scoring — all rendered as an interactive kit card.
 
