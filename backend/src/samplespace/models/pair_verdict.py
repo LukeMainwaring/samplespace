@@ -100,6 +100,11 @@ class PairVerdict(Base):
         return result.scalar_one()
 
     @classmethod
+    async def count_with_features(cls, db: AsyncSession) -> int:
+        result = await db.execute(select(func.count()).select_from(cls).where(cls.pair_features.isnot(None)))
+        return result.scalar_one()
+
+    @classmethod
     async def get_recent_sample_ids(cls, db: AsyncSession, thread_id: str) -> Sequence[str]:
         """Return all sample IDs that appeared in this thread's verdicts (both sides)."""
         stmt_a = select(cls.sample_a_id).where(cls.thread_id == thread_id)

@@ -52,6 +52,7 @@ def sample_to_payload(
         "id": sample.id,
         "filename": sample.filename,
         "audio_url": audio_url or f"/api/samples/{sample.id}/audio",
+        "is_loop": sample.is_loop,
     }
     if index is not None:
         payload["index"] = index

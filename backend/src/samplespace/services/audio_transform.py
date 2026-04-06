@@ -86,6 +86,10 @@ def transform_sample(
             # -T is tempo ratio (speed multiplier): -T 1.3 = 1.3x faster
             cmd += ["-T", str(rate)]
 
+    # No transform arguments were added — return source as-is
+    if cmd == ["rubberband", "--fine"]:
+        return source_path
+
     cache_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Atomic write: rubberband writes to temp file, then rename

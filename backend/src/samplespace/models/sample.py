@@ -106,11 +106,14 @@ class Sample(Base):
         db: AsyncSession,
         *,
         sample_type: str | None = None,
+        is_loop: bool | None = None,
         exclude_ids: Sequence[str] = (),
     ) -> Sample | None:
         stmt = select(cls).where(cls.source != "upload")
         if sample_type is not None:
             stmt = stmt.where(cls.sample_type == sample_type)
+        if is_loop is not None:
+            stmt = stmt.where(cls.is_loop == is_loop)
         if exclude_ids:
             stmt = stmt.where(cls.id.notin_(exclude_ids))
         stmt = stmt.order_by(func.random()).limit(1)

@@ -3,6 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { type DataUIPart, isDataUIPart, isToolUIPart } from "ai";
 import equal from "fast-deep-equal";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import Image from "next/image";
 import { memo } from "react";
 import type { ChatMessage, CustomUIDataTypes } from "@/lib/types";
@@ -109,6 +110,34 @@ const PurePreviewMessage = ({
           {message.parts?.map((part, index) => {
             const key = `message-${message.id}-part-${index}`;
             if (part.type === "text") {
+              // Render verdict messages as compact pills
+              if (
+                message.role === "user" &&
+                part.text.startsWith("[PAIR_VERDICT]")
+              ) {
+                const isApproved = part.text.startsWith(
+                  "[PAIR_VERDICT] Works |",
+                );
+                return (
+                  <div key={key} className="flex justify-end">
+                    <div
+                      className={cn(
+                        "flex w-fit items-center gap-1.5 rounded-2xl px-3 py-1.5 text-xs font-medium",
+                        isApproved
+                          ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                          : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
+                      )}
+                    >
+                      {isApproved ? (
+                        <ThumbsUp size={12} />
+                      ) : (
+                        <ThumbsDown size={12} />
+                      )}
+                      {isApproved ? "Works" : "Doesn't work"}
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div key={key}>
                   <MessageContent
