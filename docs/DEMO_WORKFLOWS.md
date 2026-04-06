@@ -218,30 +218,50 @@ After 15+ verdicts (mix of approvals and rejections):
 
 ### Reference Track Workflow
 
-Start from your own music and work outward.
+Upload your own music, set the song context from it, find complementary samples, and preview them together.
 
-**Step 1 — Upload and analyze:**
-Attach a WAV via the paperclip button, then:
+**Step 1 — Upload a reference track:**
+Upload a WAV via the **Candidate Samples** panel on the right side. A metadata dialog appears after upload — optionally correct the auto-detected key, BPM, and loop/one-shot classification, then save or skip.
 
-> "What can you tell me about this track?"
+**Step 2 — Find the upload in chat:**
 
-- Agent calls `analyze_sample` on the uploaded sample
-- Response shows detected key, BPM, duration, and type classification
+> "Find my southern twang house upload"
 
-**Step 2 — Find library matches:**
+- Agent calls `find_upload` — searches uploaded samples by filename
+- A playable sample card renders inline with key, BPM, and waveform visualization
 
-> "Find samples in the library that sound like my upload"
+**Step 3 — Set song context from the upload:**
 
-- Agent calls `find_similar_to_upload`
-- Results ranked by CLAP audio-to-audio cosine similarity
+> "Set the song context from this track. Genre is 'house', vibe is 'southern rock'"
 
-**Step 3 — Set context and build:**
+- Agent calls `set_context_from_upload` with the upload's ID, plus the user-provided genre and vibe
+- Key and BPM are extracted from the upload's detected metadata; genre and vibe come from the user
+- Song context badge appears in the chat header with pills for key, BPM, genre, and vibe
 
-> "Set my song context to match this reference track and build me a full kit"
+**Step 4 — Find complementary samples:**
 
-- Agent calls `set_song_context` with the reference track's detected key/BPM
-- Then `build_kit` to assemble a kit informed by the reference
-- Song context badge updates, kit block renders
+> "Find me a bass loop that goes well with this reference track"
+
+- Agent calls `search_by_description` — CLAP search enriched with song context vibe
+- Results render as numbered, playable sample cards
+- Expand the tool call to see the vibe-enriched query
+
+**Step 5 — Preview a pair together:**
+
+> "Preview bass loop #6 with my reference track"
+
+- Agent calls `present_pair` — side-by-side sample cards with a "Play Together" mixed preview
+- Compatibility score displayed between the cards
+
+**Step 6 — Transform and combine:**
+
+> "Transpose and time-match it to fit the track context, then present the pair together so I can hear it combined"
+
+- Agent calls `match_to_context` to pitch-shift and time-stretch the bass loop to the song context key/BPM
+- Then calls `preview_kit` to layer the transformed bass with the reference track
+- A combined audio preview renders inline — click to hear both samples together
+
+**What to watch for across the session:** The song context badge persists through all steps. Each tool call shows a spinner → checkmark. Expand any tool call to see raw input/output JSON. The workflow flows naturally from upload → context → search → preview → transform without the user needing to manage IDs or metadata manually.
 
 ---
 
