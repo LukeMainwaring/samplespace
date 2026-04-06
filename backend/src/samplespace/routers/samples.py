@@ -15,6 +15,7 @@ from samplespace.schemas.sample import (
     SampleListResponse,
     SampleSchema,
     SampleSearchRequest,
+    SampleUpdateSchema,
     SimilarSampleSchema,
 )
 from samplespace.services import audio_transform as audio_transform_service
@@ -111,6 +112,25 @@ async def list_samples(
 ) -> SampleListResponse:
     """List all samples with pagination and optional filters."""
     return await sample_service.get_samples(db, params=params)
+
+
+@samples_router.patch("/{sample_id}")
+async def update_sample(
+    sample_id: str,
+    body: SampleUpdateSchema,
+    db: AsyncPostgresSessionDep,
+) -> SampleSchema:
+    """Update metadata for an uploaded sample."""
+    return await sample_service.update_sample(db, sample_id, body)
+
+
+@samples_router.delete("/{sample_id}", status_code=204)
+async def delete_sample(
+    sample_id: str,
+    db: AsyncPostgresSessionDep,
+) -> None:
+    """Delete an uploaded sample and its associated data."""
+    await sample_service.delete_sample(db, sample_id)
 
 
 @samples_router.post("/upload")

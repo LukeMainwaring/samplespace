@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import HTTPException
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Float, String, cast, func, select, text
+from sqlalchemy import Boolean, DateTime, Float, String, cast, delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +44,27 @@ class Sample(Base):
     async def get(cls, db: AsyncSession, sample_id: str) -> Sample | None:
         result = await db.execute(select(cls).where(cls.id == sample_id))
         return result.scalar_one_or_none()
+
+    @classmethod
+    async def update(
+        cls,
+        db: AsyncSession,
+        sample_id: str,
+        **kwargs: object,
+    ) -> Sample | None:
+        sample = await cls.get(db, sample_id)
+        if sample is None:
+            return None
+        for key, value in kwargs.items():
+            setattr(sample, key, value)
+        await db.flush()
+        return sample
+
+    @classmethod
+    async def delete_by_id(cls, db: AsyncSession, sample_id: str) -> bool:
+        cursor = await db.execute(delete(cls).where(cls.id == sample_id))
+        await db.flush()
+        return (cursor.rowcount or 0) > 0  # type: ignore[attr-defined]
 
     @classmethod
     async def get_all(

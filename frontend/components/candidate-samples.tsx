@@ -1,13 +1,30 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Pause, Play, Upload } from "lucide-react";
+import { Loader2, Pause, Play, Trash2, Upload } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { listSamplesOptions } from "@/api/generated/@tanstack/react-query.gen";
 import type { SampleSchema } from "@/api/generated/types.gen";
-import { useUploadSample } from "@/api/hooks/uploads";
+import { useDeleteSample, useUploadSample } from "@/api/hooks/uploads";
+import { SampleMetadataDialog } from "@/components/sample-metadata-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { WaveformViz } from "@/components/waveform-viz";
 import { BACKEND_URL, MAX_UPLOAD_SIZE_MB } from "@/lib/constants";
 
@@ -16,14 +33,16 @@ function CandidateCard({
   isPlaying,
   onTogglePlay,
   onPlaybackEnd,
+  onDelete,
 }: {
   sample: SampleSchema;
   isPlaying: boolean;
   onTogglePlay: (sample: SampleSchema) => void;
   onPlaybackEnd: () => void;
+  onDelete: (sample: SampleSchema) => void;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-2 text-sm">
+    <div className="group rounded-lg border bg-card p-2 text-sm">
       <div className="flex items-center gap-2">
         <Button
           className="size-8 shrink-0 rounded-full"
@@ -63,6 +82,41 @@ function CandidateCard({
             )}
           </div>
         </div>
+
+        <AlertDialog>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="size-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  variant="ghost"
+                  size="icon"
+                >
+                  <Trash2 size={12} className="text-muted-foreground" />
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p className="text-xs">Delete sample</p>
+            </TooltipContent>
+          </Tooltip>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete sample?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove{" "}
+                <span className="font-medium">{sample.filename}</span> and any
+                associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onDelete(sample)}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {isPlaying && (
@@ -82,6 +136,7 @@ function CandidateCard({
 export function CandidateSamples() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [editingSample, setEditingSample] = useState<SampleSchema | null>(null);
 
   const { data, isLoading } = useQuery(
     listSamplesOptions({
@@ -90,6 +145,7 @@ export function CandidateSamples() {
   );
 
   const uploadMutation = useUploadSample();
+  const deleteMutation = useDeleteSample();
 
   const samples = data?.samples ?? [];
 
@@ -114,9 +170,8 @@ export function CandidateSamples() {
         { body: { file } },
         {
           onSuccess: (data) => {
-            toast.success(
-              `Uploaded ${data.filename} — ${data.sample_type ?? "unknown type"}, ${data.duration?.toFixed(1) ?? "?"}s`,
-            );
+            toast.success(`Uploaded ${data.filename}`);
+            setEditingSample(data);
           },
           onError: (error) => {
             const detail = error.response?.data?.detail ?? "Upload failed";
@@ -126,6 +181,24 @@ export function CandidateSamples() {
       );
     },
     [uploadMutation],
+  );
+
+  const handleDelete = useCallback(
+    (sample: SampleSchema) => {
+      deleteMutation.mutate(
+        { path: { sample_id: sample.id } },
+        {
+          onSuccess: () => {
+            toast.success(`Deleted ${sample.filename}`);
+            if (playingId === sample.id) setPlayingId(null);
+          },
+          onError: () => {
+            toast.error("Failed to delete sample");
+          },
+        },
+      );
+    },
+    [deleteMutation, playingId],
   );
 
   const handleTogglePlay = useCallback((sample: SampleSchema) => {
@@ -188,6 +261,7 @@ export function CandidateSamples() {
               <CandidateCard
                 isPlaying={playingId === sample.id}
                 key={sample.id}
+                onDelete={handleDelete}
                 onPlaybackEnd={handlePlaybackEnd}
                 onTogglePlay={handleTogglePlay}
                 sample={sample}
@@ -196,6 +270,14 @@ export function CandidateSamples() {
           </div>
         )}
       </div>
+
+      <SampleMetadataDialog
+        sample={editingSample}
+        open={editingSample !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingSample(null);
+        }}
+      />
     </div>
   );
 }

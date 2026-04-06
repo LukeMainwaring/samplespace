@@ -22,6 +22,13 @@ class ListSamplesParams(SampleFilterParams, PaginationParams):
     pass
 
 
+class SampleUpdateSchema(BaseSchema):
+    key: str | None = None
+    bpm: int | None = None
+    is_loop: bool | None = None
+    sample_type: SampleType | None = None
+
+
 class SampleSchema(BaseSchema):
     id: str
     filename: str
