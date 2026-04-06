@@ -95,7 +95,7 @@ After searching for samples:
 
 > "That pad sounds great but it's in the wrong key. Transform #4 to match my song context."
 
-The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch. Percussive types (kick, snare, hihat, clap, cymbal, percussion, drum, fx) skip pitch-shifting — only BPM time-stretching is applied — since pitch-shifting degrades transient-heavy content.
+The agent resolves the target key/BPM from the persisted song context, computes the semitone delta via circle-of-fifths logic, handles cross-mode transformations (major↔minor via relative keys), and runs pitch-shift/time-stretch via [Rubber Band](https://breakfastquay.com/rubberband/) R3 (the highest-quality engine, invoked directly as a subprocess). Percussive types (kick, snare, hihat, clap, cymbal, percussion, drum, fx) skip pitch-shifting — only BPM time-stretching is applied — since pitch-shifting degrades transient-heavy content.
 
 **What to watch for:**
 
@@ -115,53 +115,45 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 
 **Step 1 — Set the vibe:**
 
-> "I'm working on a lo-fi hip hop beat in A minor at 85 BPM, warm and dusty vibes"
+> "I'm working on a hip hop house beat in D minor at 120 BPM, warm and dusty vibes"
 
-- Agent calls `set_song_context` with key=A minor, bpm=85, genre=lo-fi hip hop, vibe=warm and dusty
+- Agent calls `set_song_context` with key=D minor, bpm=120, genre=hip hop house, vibe=warm and dusty
 - Song context badge appears in the header with 4 pills
 
 **Step 2 — Context-enriched search:**
 
-> "Find me a mellow bass loop"
+> "Find me a groovy bass loop"
 
 - Agent calls `search_by_description` — expand the tool call to see the query enriched with "warm and dusty" vibe automatically
 - Results are influenced by the persisted vibe context
 - Each result is numbered (#1, #2, #3...) for easy reference
 
-**Step 3 — Analyze and check compatibility:**
+**Step 3 — Build a kit:**
 
-> "What key is #1 in? Will it work with a pad in C major?"
-
-- Agent resolves #1 from the search results, then calls `analyze_sample` and `check_key_compatibility`
-- Two sequential tool calls, each with spinner → checkmark
-- Key compatibility explains the circle-of-fifths distance and whether the keys are relative major/minor pairs
-
-**Step 4 — Build a kit:**
-
-> "Build me a kit — kick, snare, hihat, and a vinyl crackle texture"
+> "Build me a kit with bass loop #10, a drum loop, and a guitar loop"
 
 - Agent calls `build_kit` with the song context from step 1 automatically applied
 - Kit block renders with slots, compatibility scores, and genre/vibe badges
 - Song context badge still visible in header from step 1
 
-**Step 5 — Transform the kit:**
+**Step 4 — Transform the kit:**
 
 > "Transform the kit to match my song context"
 
-- Agent calls `transform_kit` with the slots from step 4, resolving targets from song context (A minor, 85 BPM)
+- Agent calls `transform_kit` with the slots from step 3, resolving targets from song context (D minor, 120 BPM)
 - Kit block re-renders with transformed audio URLs — tonal loops are pitch-shifted and/or time-stretched; percussive loops (drums, hihats, etc.) are only time-stretched (pitch-shifting is skipped to preserve transient quality)
 - Response lists per-slot transforms (e.g., "bass: D minor → A minor (-5 semitones), 90 → 85 BPM")
 - One-shots are included as-is (no transform needed); percussive loops note "Pitch-shift skipped — percussive sample type."
 
-**Step 6 — Preview the full kit:**
+**Step 5 — Preview the full kit:**
 
 > "Let me hear the full kit together"
 
-- Agent calls `preview_kit` with the transformed slots
-- Audio block renders with a single mixed preview — all samples layered together
+- Agent calls `preview_kit` — it automatically resolves transformed audio from the song context (no URL threading needed; the preview function looks up cached transforms directly)
+- Audio block renders with a single mixed preview — all samples layered together with crossfade at loop boundaries
 - Click to play the full kit as one track
 
-**What to watch for across the session:** Song context persists through all 6 steps without repetition. Refresh the page mid-session — the context badge reappears because it's stored in the thread's JSONB column, not the browser session.
+**What to watch for across the session:** Song context persists through all 5 steps without repetition. Refresh the page mid-session — the context badge reappears because it's stored in the thread's JSONB column, not the browser session.
 
 **Tip:** `match_to_context` is also available for transforming individual samples outside of a kit workflow.
 
@@ -256,6 +248,8 @@ Attach a WAV via the paperclip button, then:
 ## Quick Demos
 
 **Semantic search:** *"Find a shimmering, crystalline hi-hat"* — CLAP text-to-audio search. Watch the spinner and results list.
+
+**Analyze and check compatibility:** After a search, ask *"What key is #1 in? Will it work with a pad in C major?"* — agent resolves #1 from the results, calls `analyze_sample` then `check_key_compatibility`. Two sequential tool calls, each with spinner → checkmark. Key compatibility explains circle-of-fifths distance and relative major/minor relationships.
 
 **Key compatibility:** *"Are D minor and F major compatible?"* — circle-of-fifths check. Response explains they're relative major/minor pairs (highly compatible, score 0.95).
 

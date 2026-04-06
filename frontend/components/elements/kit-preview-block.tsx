@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { WaveformViz } from "@/components/waveform-viz";
 import { BACKEND_URL } from "@/lib/constants";
 
-interface KitPreviewPayload {
+export interface KitPreviewPayload {
   audio_url: string;
   target_key?: string;
   target_bpm?: number;

@@ -1,4 +1,5 @@
-import json
+from pydantic_ai import ToolReturn
+from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 
 from samplespace.schemas.sample import SampleSchema
 
@@ -8,17 +9,37 @@ def format_sample_results(
     header: str,
     *,
     annotations: dict[str, str] | None = None,
-) -> str:
-    """Format a list of sample results as a playable sample-results code fence."""
+) -> ToolReturn:
+    """Build a ToolReturn with a DataChunk for the frontend to render as sample cards."""
     samples: list[dict[str, object]] = []
+    summary_lines: list[str] = [header]
     for i, s in enumerate(results, start=1):
         payload = sample_to_payload(s, index=i)
         if annotations and s.id in annotations:
             payload["annotation"] = annotations[s.id]
         samples.append(payload)
+        summary_lines.append(_sample_summary_line(s, index=i))
 
-    json_str = json.dumps({"samples": samples}, indent=2)
-    return f"{header}\n\n```sample-results\n{json_str}\n```"
+    return ToolReturn(
+        return_value="\n".join(summary_lines),
+        metadata=DataChunk(type="data-sample-results", data={"samples": samples}),
+    )
+
+
+def _sample_summary_line(sample: SampleSchema, *, index: int) -> str:
+    """One-line summary with ID for LLM follow-up calls."""
+    parts = [f"{index}. {sample.id} — {sample.filename}"]
+    meta: list[str] = []
+    if sample.sample_type:
+        meta.append(sample.sample_type)
+    if sample.is_loop:
+        if sample.key:
+            meta.append(sample.key)
+        if sample.bpm and sample.bpm > 0:
+            meta.append(f"{sample.bpm} BPM")
+    if meta:
+        parts.append(f"({', '.join(meta)})")
+    return " ".join(parts)
 
 
 def sample_to_payload(

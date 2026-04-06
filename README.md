@@ -65,6 +65,7 @@ graph TB
 | Embeddings | CLAP (`laion/clap-htsat-unfused`) 512-dim, Custom CNN 128-dim |
 | Database | PostgreSQL + pgvector |
 | Audio Analysis | librosa (key/BPM detection), music21 |
+| Audio Transform | [Rubber Band](https://breakfastquay.com/rubberband/) R3 (pitch-shift/time-stretch via CLI) |
 | DevOps | Docker Compose, GitHub Actions CI |
 | Code Quality | Ruff, mypy (strict), pre-commit, Biome/Ultracite |
 
@@ -90,8 +91,10 @@ samplespace/
 │   │   │   ├── sample.py           # CRUD + pgvector search
 │   │   │   ├── pair_features.py    # Relational audio features for sample pairs (6 librosa metrics)
 │   │   │   ├── preference.py       # Preference model training, prediction, and explainability
+│   │   │   ├── audio_transform.py   # Pitch-shift/time-stretch via Rubber Band R3 CLI (with disk caching)
 │   │   │   ├── candidate_search.py # Shared CLAP query building + context-aware reranking
 │   │   │   ├── kit_builder.py      # Greedy kit assembly (CLAP retrieval + pairwise optimization)
+│   │   │   ├── kit_preview.py      # Multi-sample mixing with crossfade tiling and peak normalization
 │   │   │   ├── spectrogram.py      # Mel spectrogram PNG generation with disk caching (full + CNN view)
 │   │   │   └── upload.py           # WAV upload pipeline (validate, store, analyze, embed)
 │   │   ├── routers/                # REST + SSE streaming endpoints
@@ -100,6 +103,7 @@ samplespace/
 │   ├── data/
 │   │   ├── uploads/                # Uploaded reference tracks (gitignored)
 │   │   ├── samples/                # Audio files (gitignored)
+│   │   ├── transforms/             # Cached pitch-shifted/time-stretched audio (gitignored)
 │   │   ├── spectrograms/           # Cached spectrogram PNGs (gitignored)
 │   │   ├── models/                 # Preference model artifacts (gitignored)
 │   │   └── checkpoints/            # CNN model checkpoints (gitignored)
@@ -134,6 +138,7 @@ samplespace/
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - [pnpm](https://pnpm.io/) (Node package manager)
 - [Node.js](https://nodejs.org/) 20+
+- [Rubber Band](https://breakfastquay.com/rubberband/) (`brew install rubberband` on macOS, `apt install rubberband-cli` on Linux) — for audio pitch-shift/time-stretch
 - OpenAI API key
 
 ### Quick Start
@@ -144,6 +149,9 @@ git clone https://github.com/your-username/samplespace.git
 cd samplespace
 cp .env.sample .env
 # Edit .env with your OPENAI_API_KEY
+
+# System dependencies (audio transforms)
+brew install rubberband  # macOS (or: apt install rubberband-cli on Linux)
 
 # Start PostgreSQL
 docker compose up -d
@@ -192,11 +200,18 @@ Audio File (.wav)
     ├── CLAP ──→ 512-dim embedding (shared text-audio space)
     │              Uses audio_model + audio_projection independently
     │
-    └── CNN ──→ 128-dim embedding + category prediction
-                 4 residual conv blocks (SE attention, 1→64→128→256→512 channels)
-                 Global avg pool → 2-layer projection head (SimCLR-style)
-                 Combined loss: cross-entropy (with mixup) + supervised contrastive (SupCon)
-                 Augmentation: polarity inversion, speed/pitch perturbation (fast resample),
-                   noise injection, random EQ, time/freq masking
-                 Trained on mel spectrograms (128 mel bins, 2s fixed length)
+    ├── CNN ──→ 128-dim embedding + category prediction
+    │            4 residual conv blocks (SE attention, 1→64→128→256→512 channels)
+    │            Global avg pool → 2-layer projection head (SimCLR-style)
+    │            Combined loss: cross-entropy (with mixup) + supervised contrastive (SupCon)
+    │            Augmentation: polarity inversion, speed/pitch perturbation (fast resample),
+    │              noise injection, random EQ, time/freq masking
+    │            Trained on mel spectrograms (128 mel bins, 2s fixed length)
+    │
+    └── Rubber Band R3 ──→ Pitch-shifted / time-stretched audio (cached WAV)
+                 Direct CLI subprocess: source.wav → rubberband --fine → output.wav
+                 Single-pass pitch + time when both are needed
+                 No intermediate numpy processing — preserves original level relationships
+                 Kit preview: samples mixed via summation + peak normalization
+                   with crossfade tiling at loop boundaries (10ms cosine)
 ```

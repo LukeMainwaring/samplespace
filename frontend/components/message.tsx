@@ -1,18 +1,42 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { isToolUIPart } from "ai";
+import { type DataUIPart, isDataUIPart, isToolUIPart } from "ai";
 import equal from "fast-deep-equal";
 import Image from "next/image";
 import { memo } from "react";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, CustomUIDataTypes } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
+import { AudioBlock } from "./elements/audio-block";
 import { BouncingDots } from "./elements/bouncing-dots";
+import { KitBlock } from "./elements/kit-block";
+import { KitPreviewBlock } from "./elements/kit-preview-block";
 import { MessageContent } from "./elements/message";
+import { PairVerdictBlock } from "./elements/pair-verdict-block";
 import { Response } from "./elements/response";
+import { SampleResultsBlock } from "./elements/sample-results-block";
 import { ToolCall } from "./elements/tool-call";
 import { MessageActions } from "./message-actions";
+
+function DataPartRenderer({ part }: { part: DataUIPart<CustomUIDataTypes> }) {
+  const code =
+    typeof part.data === "string" ? part.data : JSON.stringify(part.data);
+  switch (part.type) {
+    case "data-sample-results":
+      return <SampleResultsBlock code={code} isIncomplete={false} />;
+    case "data-kit":
+      return <KitBlock code={code} isIncomplete={false} />;
+    case "data-kit-preview":
+      return <KitPreviewBlock code={code} isIncomplete={false} />;
+    case "data-audio":
+      return <AudioBlock code={code} isIncomplete={false} />;
+    case "data-pair-verdict":
+      return <PairVerdictBlock code={code} isIncomplete={false} />;
+    default:
+      return null;
+  }
+}
 
 const AssistantAvatar = ({ isLoading }: { isLoading?: boolean }) => (
   <div
@@ -48,7 +72,8 @@ const PurePreviewMessage = ({
     (p) => p.type === "text" && p.text?.trim(),
   );
   const hasToolParts = message.parts?.some((p) => isToolUIPart(p));
-  const hasVisibleContent = hasTextParts || hasToolParts;
+  const hasDataParts = message.parts?.some((p) => isDataUIPart(p));
+  const hasVisibleContent = hasTextParts || hasToolParts || hasDataParts;
 
   return (
     <div
@@ -102,11 +127,14 @@ const PurePreviewMessage = ({
             if (isToolUIPart(part)) {
               return (
                 <ToolCall
-                  isStreaming={isLoading && !hasTextParts}
+                  isStreaming={isLoading && !hasTextParts && !hasDataParts}
                   key={key}
                   part={part}
                 />
               );
+            }
+            if (isDataUIPart(part)) {
+              return <DataPartRenderer key={key} part={part} />;
             }
             return null;
           })}

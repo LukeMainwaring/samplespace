@@ -8,7 +8,7 @@ interface SampleResultPayload extends SamplePayload {
   annotation?: string;
 }
 
-interface SampleResultsPayload {
+export interface SampleResultsPayload {
   samples: SampleResultPayload[];
 }
 

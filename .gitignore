@@ -18,6 +18,7 @@ out/
 
 # Data & models
 backend/data/samples/
+backend/data/uploads/
 backend/data/checkpoints/
 backend/data/models/
 backend/data/transforms/

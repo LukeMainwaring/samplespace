@@ -3,7 +3,8 @@ import logging
 from dataclasses import dataclass, field
 from urllib.parse import quote
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
+from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.agents.deps import AgentDeps
@@ -158,7 +159,7 @@ async def match_to_context(
     sample_id: str,
     target_key: str | None = None,
     target_bpm: int | None = None,
-) -> str:
+) -> str | ToolReturn:
     """Pitch-shift and/or time-stretch a sample to match a target key and BPM.
 
     Use this when a sample is a good sonic fit but needs to be transposed or
@@ -184,7 +185,7 @@ async def _match_to_context(
     sample_id: str,
     target_key: str | None,
     target_bpm: int | None,
-) -> str:
+) -> str | ToolReturn:
     # Resolve targets from song context if not explicitly provided
     song_ctx = ctx.deps.song_context
     if target_key is None and song_ctx:
@@ -220,7 +221,7 @@ async def _match_to_context(
     return _format_match_result(result)
 
 
-def _format_match_result(result: TransformResult) -> str:
+def _format_match_result(result: TransformResult) -> ToolReturn:
     parts: list[str] = []
 
     # Description of what was done
@@ -229,22 +230,17 @@ def _format_match_result(result: TransformResult) -> str:
     else:
         parts.append(f"Processed **{result.sample.filename}** (no audible change needed).")
 
-    # Audio player code fence
-    parts.append("")
-    parts.append("```audio")
-    parts.append(result.audio_url)
-    parts.append("```")
-
     # Warnings and notes
     if abs(result.n_steps) > 5:
-        parts.append("")
         parts.append(
             f"**Note:** This is a large pitch shift ({result.n_steps:+d} semitones) — listen carefully for artifacts."
         )
 
     if result.skipped_reasons:
-        parts.append("")
         for note in result.skipped_reasons:
             parts.append(f"*{note}*")
 
-    return "\n".join(parts)
+    return ToolReturn(
+        return_value="\n\n".join(parts),
+        metadata=DataChunk(type="data-audio", data=result.audio_url),
+    )

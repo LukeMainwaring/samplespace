@@ -17,7 +17,7 @@ import { BACKEND_URL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { SampleCard, type SamplePayload } from "./sample-card";
 
-interface PairVerdictPayload {
+export interface PairVerdictPayload {
   sample_a: SamplePayload;
   sample_b: SamplePayload;
   pair_score: number;

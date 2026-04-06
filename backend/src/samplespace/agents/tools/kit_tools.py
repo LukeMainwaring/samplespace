@@ -1,10 +1,9 @@
 import asyncio
-import json
 import logging
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
+from pydantic_ai.ui.vercel_ai.response_types import DataChunk
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import sample_to_payload
@@ -24,7 +23,7 @@ async def build_kit(
     genre: str | None = None,
     types: list[str] | None = None,
     replacements: dict[str, str] | None = None,
-) -> str:
+) -> str | ToolReturn:
     """Assemble a multi-sample kit optimized for pairwise compatibility.
 
     Builds a complete kit (e.g., kick + snare + hihat + bass + pad) by
@@ -76,7 +75,7 @@ async def transform_kit(
     slots: list[dict[str, str]],
     target_key: str | None = None,
     target_bpm: int | None = None,
-) -> str:
+) -> str | ToolReturn:
     """Transform all samples in a kit to match a target key and BPM.
 
     Pitch-shifts and time-stretches each sample to align with the target.
@@ -101,7 +100,7 @@ async def _transform_kit(
     slots: list[dict[str, str]],
     target_key: str | None,
     target_bpm: int | None,
-) -> str:
+) -> str | ToolReturn:
     # Resolve targets from song context
     song_ctx = ctx.deps.song_context
     if target_key is None and song_ctx:
@@ -137,12 +136,11 @@ async def _transform_kit(
     if not transformed_slots:
         return "No samples could be transformed."
 
-    # Build kit code fence (omit scores — they'd be stale after transform)
+    # Build kit payload (omit scores — they'd be stale after transform)
     payload: dict[str, object] = {
         "slots": transformed_slots,
         "pairwise_scores": [],
     }
-    json_str = json.dumps(payload, indent=2)
 
     # Build summary
     summary_lines = [f"- {note}" for note in transform_notes]
@@ -150,22 +148,24 @@ async def _transform_kit(
     target_desc = " / ".join(p for p in [target_key, f"{target_bpm} BPM" if target_bpm else None] if p)
     intro = f"Transformed kit to match **{target_desc}**:\n\n{summary}"
 
-    return f"{intro}\n\n```kit\n{json_str}\n```"
+    return ToolReturn(
+        return_value=intro,
+        metadata=DataChunk(type="data-kit", data=payload),
+    )
 
 
 async def preview_kit(
     ctx: RunContext[AgentDeps],
     slots: list[dict[str, str]],
-) -> str:
+) -> str | ToolReturn:
     """Mix all kit samples into a single layered audio preview.
 
     Layers all samples on top of each other (padded to the longest duration)
     so the user can hear the full kit playing together as one track.
 
     Args:
-        slots: List of kit slots, each with "sample_id" and optionally
-               "audio_url" (for transformed samples). Pass the slots from
-               the most recent build_kit or transform_kit result.
+        slots: List of kit slots, each with "type" and "sample_id" keys.
+               Pass the slots from the most recent build_kit or transform_kit result.
     """
     try:
         return await _preview_kit(ctx, slots)
@@ -177,33 +177,44 @@ async def preview_kit(
 async def _preview_kit(
     ctx: RunContext[AgentDeps],
     slots: list[dict[str, str]],
-) -> str:
+) -> str | ToolReturn:
     file_paths: list[Path] = []
 
+    # Use song context to automatically pick up cached transforms —
+    # the agent can't pass transformed audio URLs because ToolReturn
+    # metadata goes to the frontend, not back to the LLM.
+    song_ctx = ctx.deps.song_context
+    target_key = song_ctx.key if song_ctx else None
+    target_bpm = song_ctx.bpm if song_ctx else None
+
     for slot in slots:
-        sample_id = slot.get("sample_id", "")
-        audio_url = slot.get("audio_url", "")
+        # The LLM passes {"type": ..., "sample_id": ...}, but the DataChunk
+        # payload nests the ID inside {"sample": {"id": ...}}. Handle both.
+        slot_sample = slot.get("sample")
+        sample_data: dict[str, object] = slot_sample if isinstance(slot_sample, dict) else {}
+        sample_id = str(sample_data.get("id", "") or slot.get("sample_id", ""))
 
-        # Check if this is a transformed sample URL
-        if "/audio/transformed" in audio_url:
-            # Parse key/bpm from the URL query params
-            parsed = urlparse(audio_url)
-            params = parse_qs(parsed.query)
-            t_key = params.get("key", [None])[0]
-            t_bpm_str = params.get("bpm", [None])[0]
-            t_bpm = int(t_bpm_str) if t_bpm_str else None
-
-            cached = audio_transform_service.get_cached_transform(sample_id, t_key, t_bpm)
-            if cached:
-                file_paths.append(cached)
-                continue
-
-        # Fall back to original audio file
         raw_sample = await sample_service.get_sample_by_id(ctx.deps.db, sample_id)
         if raw_sample is None:
             continue
+
         audio_path = sample_service.find_audio_file(raw_sample)
-        if audio_path:
+        if audio_path is None:
+            continue
+
+        # Use the transformed version if one exists for this song context
+        if (target_key or target_bpm) and raw_sample.is_loop:
+            resolved, _ = await asyncio.to_thread(
+                audio_transform_service.resolve_transform,
+                audio_path,
+                raw_sample.id,
+                sample_key=raw_sample.key,
+                sample_bpm=raw_sample.bpm,
+                target_key=target_key,
+                target_bpm=target_bpm,
+            )
+            file_paths.append(resolved)
+        else:
             file_paths.append(audio_path)
 
     if not file_paths:
@@ -214,18 +225,19 @@ async def _preview_kit(
     audio_url = f"/api/samples/kit-preview/{preview_id}"
 
     payload: dict[str, object] = {"audio_url": audio_url}
-    song_ctx = ctx.deps.song_context
     if song_ctx:
         if song_ctx.key:
             payload["target_key"] = song_ctx.key
         if song_ctx.bpm:
             payload["target_bpm"] = song_ctx.bpm
 
-    json_str = json.dumps(payload)
-    return f"Here's the full kit layered together:\n\n```kit-preview\n{json_str}\n```"
+    return ToolReturn(
+        return_value="Here's the full kit layered together:",
+        metadata=DataChunk(type="data-kit-preview", data=payload),
+    )
 
 
-def _format_kit_result(kit: KitResult) -> str:
+def _format_kit_result(kit: KitResult) -> ToolReturn:
     payload: dict[str, object] = {
         "slots": [
             {
@@ -254,13 +266,17 @@ def _format_kit_result(kit: KitResult) -> str:
     if kit.skipped_types:
         payload["skipped_types"] = kit.skipped_types
 
-    json_str = json.dumps(payload, indent=2)
-
-    # Build intro text
+    # Build intro text with slot IDs for LLM follow-up calls
     type_list = ", ".join(slot.requested_type for slot in kit.slots)
-    intro = f"Here's a {len(kit.slots)}-sample kit ({type_list}) with {kit.overall_score:.2f} overall compatibility:"
+    lines = [f"Here's a {len(kit.slots)}-sample kit ({type_list}) with {kit.overall_score:.2f} overall compatibility:"]
 
     if kit.skipped_types:
-        intro += f"\n\n*Could not find samples for: {', '.join(kit.skipped_types)}.*"
+        lines.append(f"*Could not find samples for: {', '.join(kit.skipped_types)}.*")
 
-    return f"{intro}\n\n```kit\n{json_str}\n```"
+    for slot in kit.slots:
+        lines.append(f"- {slot.requested_type}: {slot.sample.id} ({slot.sample.filename})")
+
+    return ToolReturn(
+        return_value="\n".join(lines),
+        metadata=DataChunk(type="data-kit", data=payload),
+    )

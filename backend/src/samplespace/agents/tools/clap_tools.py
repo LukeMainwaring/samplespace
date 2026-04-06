@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from pydantic_ai import RunContext
+from pydantic_ai import RunContext, ToolReturn
 
 from samplespace.agents.deps import AgentDeps
 from samplespace.agents.tools.formatting import format_sample_results
@@ -11,7 +11,7 @@ from samplespace.services import sample as sample_service
 logger = logging.getLogger(__name__)
 
 
-async def search_by_description(ctx: RunContext[AgentDeps], query: str) -> str:
+async def search_by_description(ctx: RunContext[AgentDeps], query: str) -> str | ToolReturn:
     """Search for audio samples by natural language description.
 
     Use this tool when the user describes the sound they're looking for, e.g.,
