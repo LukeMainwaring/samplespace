@@ -129,10 +129,9 @@ async def update_sample(
 
     fields = updates.model_dump(exclude_unset=True)
     if fields:
-        updated = await Sample.update(db, sample_id, **fields)
-        if updated is None:
-            raise SampleNotFound()
-        sample = updated
+        for attr, value in fields.items():
+            setattr(sample, attr, value)
+        await db.flush()
 
     return SampleSchema.model_validate(sample)
 
@@ -144,10 +143,11 @@ async def delete_sample(db: AsyncSession, sample_id: str) -> None:
     if sample.source != "upload":
         raise HTTPException(status_code=403, detail="Only uploaded samples can be deleted")
 
-    # Clean up related verdicts
+    # Delete DB rows first so if commit fails, disk artifacts remain (harmless)
     await PairVerdict.delete_by_sample(db, sample_id)
+    await Sample.delete_by_id(db, sample_id)
 
-    # Clean up disk artifacts
+    # Clean up disk artifacts after DB changes are flushed
     audio_path = UPLOADS_DIR / sample.relative_path
     audio_path.unlink(missing_ok=True)
 
@@ -157,7 +157,6 @@ async def delete_sample(db: AsyncSession, sample_id: str) -> None:
     for transform_file in TRANSFORMS_DIR.glob(f"{sample_id}_*"):
         transform_file.unlink(missing_ok=True)
 
-    await Sample.delete_by_id(db, sample_id)
     logger.info(f"Deleted sample {sample_id}: {sample.filename}")
 
 

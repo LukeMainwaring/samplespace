@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { SampleSchema } from "@/api/generated/types.gen";
+import type {
+  SampleSchema,
+  SampleUpdateSchema,
+} from "@/api/generated/types.gen";
 import { useUpdateSample } from "@/api/hooks/uploads";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,12 +45,13 @@ export function SampleMetadataDialog({
   const handleSave = useCallback(() => {
     if (!sample) return;
 
-    const body: Record<string, unknown> = {};
+    const body: Partial<SampleUpdateSchema> = {};
     const trimmedKey = key.trim();
     if (trimmedKey !== (sample.key ?? "")) {
       body.key = trimmedKey || null;
     }
-    const parsedBpm = bpm ? parseInt(bpm, 10) : null;
+    const parsed = parseInt(bpm, 10);
+    const parsedBpm = bpm && !Number.isNaN(parsed) ? parsed : null;
     const originalBpm =
       sample.bpm != null && sample.bpm > 0 ? sample.bpm : null;
     if (parsedBpm !== originalBpm) {
@@ -65,7 +69,7 @@ export function SampleMetadataDialog({
     updateMutation.mutate(
       {
         path: { sample_id: sample.id },
-        body: body as Parameters<typeof updateMutation.mutate>[0]["body"],
+        body,
       },
       {
         onSuccess: () => {

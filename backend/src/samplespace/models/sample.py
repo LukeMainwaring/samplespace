@@ -55,8 +55,8 @@ class Sample(Base):
         sample = await cls.get(db, sample_id)
         if sample is None:
             return None
-        for key, value in kwargs.items():
-            setattr(sample, key, value)
+        for attr, value in kwargs.items():
+            setattr(sample, attr, value)
         await db.flush()
         return sample
 

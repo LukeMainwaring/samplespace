@@ -1146,7 +1146,8 @@
           "key": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 20
               },
               {
                 "type": "null"
@@ -1157,7 +1158,9 @@
           "bpm": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 300,
+                "minimum": 1
               },
               {
                 "type": "null"

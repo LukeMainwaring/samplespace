@@ -23,8 +23,8 @@ class ListSamplesParams(SampleFilterParams, PaginationParams):
 
 
 class SampleUpdateSchema(BaseSchema):
-    key: str | None = None
-    bpm: int | None = None
+    key: str | None = Field(None, max_length=20)
+    bpm: int | None = Field(None, ge=1, le=300)
     is_loop: bool | None = None
     sample_type: SampleType | None = None
 
