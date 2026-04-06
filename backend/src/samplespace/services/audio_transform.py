@@ -95,7 +95,7 @@ def transform_sample(
         cmd += [str(source_path), tmp_path]
         result = subprocess.run(cmd, capture_output=True, timeout=60)
         if result.returncode != 0:
-            raise RuntimeError(f"rubberband failed: {result.stderr.decode()}")
+            raise RuntimeError(f"rubberband failed: {result.stderr.decode(errors='replace')}")
         os.rename(tmp_path, cache_path)
     except BaseException:
         with contextlib.suppress(OSError):

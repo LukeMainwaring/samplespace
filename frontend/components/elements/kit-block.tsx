@@ -11,7 +11,7 @@ interface KitSlotPayload {
   compatibility_score: number;
 }
 
-interface KitPayload {
+export interface KitPayload {
   slots: KitSlotPayload[];
   overall_score: number;
   pairwise_scores: Array<{

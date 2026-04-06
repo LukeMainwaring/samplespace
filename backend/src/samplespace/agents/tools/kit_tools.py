@@ -164,9 +164,8 @@ async def preview_kit(
     so the user can hear the full kit playing together as one track.
 
     Args:
-        slots: List of kit slots, each with "sample_id" and optionally
-               "audio_url" (for transformed samples). Pass the slots from
-               the most recent build_kit or transform_kit result.
+        slots: List of kit slots, each with "type" and "sample_id" keys.
+               Pass the slots from the most recent build_kit or transform_kit result.
     """
     try:
         return await _preview_kit(ctx, slots)
@@ -189,6 +188,8 @@ async def _preview_kit(
     target_bpm = song_ctx.bpm if song_ctx else None
 
     for slot in slots:
+        # The LLM passes {"type": ..., "sample_id": ...}, but the DataChunk
+        # payload nests the ID inside {"sample": {"id": ...}}. Handle both.
         slot_sample = slot.get("sample")
         sample_data: dict[str, object] = slot_sample if isinstance(slot_sample, dict) else {}
         sample_id = str(sample_data.get("id", "") or slot.get("sample_id", ""))
