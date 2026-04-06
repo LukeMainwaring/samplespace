@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.13-slim-bookworm AS app
 
 # Install system dependencies for librosa (libsndfile)
-RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 rubberband-cli && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

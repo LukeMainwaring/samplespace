@@ -120,6 +120,7 @@ async def _transform_for_preview(
         target_key=actual_target_key,
         source_bpm=sample_bpm if effective_bpm else None,
         target_bpm=effective_bpm,
+        sample_type=sample.sample_type,
     )
     return result
 
