@@ -275,6 +275,134 @@
         }
       }
     },
+    "/api/samples/{sample_id}": {
+      "patch": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Update Sample",
+        "description": "Update metadata for an uploaded sample.",
+        "operationId": "updateSample",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleUpdateSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Delete Sample",
+        "description": "Delete an uploaded sample and its associated data.",
+        "operationId": "deleteSample",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Sample",
+        "description": "Get a single sample by ID.",
+        "operationId": "getSample",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/samples/upload": {
       "post": {
         "tags": [
@@ -346,49 +474,6 @@
                   },
                   "type": "array",
                   "title": "Response Searchsamples"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/samples/{sample_id}": {
-      "get": {
-        "tags": [
-          "samples"
-        ],
-        "summary": "Get Sample",
-        "description": "Get a single sample by ID.",
-        "operationId": "getSample",
-        "parameters": [
-          {
-            "name": "sample_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Sample Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SampleSchema"
                 }
               }
             }
@@ -1055,6 +1140,58 @@
           "vocal"
         ],
         "title": "SampleType"
+      },
+      "SampleUpdateSchema": {
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "bpm": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 300,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bpm"
+          },
+          "is_loop": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Loop"
+          },
+          "sample_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SampleType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "SampleUpdateSchema"
       },
       "SimilarSampleSchema": {
         "properties": {

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import HTTPException
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Float, String, cast, func, select, text
+from sqlalchemy import Boolean, DateTime, Float, String, cast, delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -46,6 +46,27 @@ class Sample(Base):
         return result.scalar_one_or_none()
 
     @classmethod
+    async def update(
+        cls,
+        db: AsyncSession,
+        sample_id: str,
+        **kwargs: object,
+    ) -> Sample | None:
+        sample = await cls.get(db, sample_id)
+        if sample is None:
+            return None
+        for attr, value in kwargs.items():
+            setattr(sample, attr, value)
+        await db.flush()
+        return sample
+
+    @classmethod
+    async def delete_by_id(cls, db: AsyncSession, sample_id: str) -> bool:
+        cursor = await db.execute(delete(cls).where(cls.id == sample_id))
+        await db.flush()
+        return (cursor.rowcount or 0) > 0  # type: ignore[attr-defined]
+
+    @classmethod
     async def get_all(
         cls,
         db: AsyncSession,
@@ -73,6 +94,11 @@ class Sample(Base):
         samples = result.scalars().all()
 
         return samples, total
+
+    @classmethod
+    async def get_by_source(cls, db: AsyncSession, source: str) -> Sequence[Sample]:
+        result = await db.execute(select(cls).where(cls.source == source).order_by(cls.created_at.desc()))
+        return result.scalars().all()
 
     @classmethod
     async def get_random(

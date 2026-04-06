@@ -2,12 +2,20 @@ import logging
 import uuid
 from pathlib import Path
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from samplespace.core.config import get_settings
-from samplespace.core.paths import SAMPLES_DIR, UPLOADS_DIR
-from samplespace.models.sample import Sample
-from samplespace.schemas.sample import ListSamplesParams, SampleListResponse, SampleSchema, SimilarSampleSchema
+from samplespace.core.paths import SAMPLES_DIR, SPECTROGRAMS_DIR, TRANSFORMS_DIR, UPLOADS_DIR
+from samplespace.models.pair_verdict import PairVerdict
+from samplespace.models.sample import Sample, SampleNotFound
+from samplespace.schemas.sample import (
+    ListSamplesParams,
+    SampleListResponse,
+    SampleSchema,
+    SampleUpdateSchema,
+    SimilarSampleSchema,
+)
 from samplespace.services.audio_analysis import analyze_and_classify
 
 logger = logging.getLogger(__name__)
@@ -106,6 +114,50 @@ async def find_similar_by_cnn(
     )
 
     return [SimilarSampleSchema(sample=SampleSchema.model_validate(s), distance=d) for s, d in results]
+
+
+async def update_sample(
+    db: AsyncSession,
+    sample_id: str,
+    updates: SampleUpdateSchema,
+) -> SampleSchema:
+    sample = await Sample.get(db, sample_id)
+    if sample is None:
+        raise SampleNotFound()
+    if sample.source != "upload":
+        raise HTTPException(status_code=403, detail="Only uploaded samples can be updated")
+
+    fields = updates.model_dump(exclude_unset=True)
+    if fields:
+        for attr, value in fields.items():
+            setattr(sample, attr, value)
+        await db.flush()
+
+    return SampleSchema.model_validate(sample)
+
+
+async def delete_sample(db: AsyncSession, sample_id: str) -> None:
+    sample = await Sample.get(db, sample_id)
+    if sample is None:
+        raise SampleNotFound()
+    if sample.source != "upload":
+        raise HTTPException(status_code=403, detail="Only uploaded samples can be deleted")
+
+    # Delete DB rows first so if commit fails, disk artifacts remain (harmless)
+    await PairVerdict.delete_by_sample(db, sample_id)
+    await Sample.delete_by_id(db, sample_id)
+
+    # Clean up disk artifacts after DB changes are flushed
+    audio_path = UPLOADS_DIR / sample.relative_path
+    audio_path.unlink(missing_ok=True)
+
+    for mode in ("full", "cnn"):
+        (SPECTROGRAMS_DIR / f"{sample_id}_{mode}.png").unlink(missing_ok=True)
+
+    for transform_file in TRANSFORMS_DIR.glob(f"{sample_id}_*"):
+        transform_file.unlink(missing_ok=True)
+
+    logger.info(f"Deleted sample {sample_id}: {sample.filename}")
 
 
 def find_audio_file(sample: Sample) -> Path | None:

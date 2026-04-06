@@ -41,7 +41,7 @@ graph TB
 3. **CLAP search** encodes the text query into a 512-dim embedding (enriched with song context vibe), then finds nearest audio embeddings via pgvector cosine similarity
 4. **CNN similarity** uses a custom-trained dual-head CNN to find spectrally similar samples via 128-dim embeddings
 5. **Music theory tools** check key compatibility (circle of fifths) and suggest complementary samples, using song context key/BPM as fallback defaults
-6. **Sample upload** lets users upload WAV files (songs, snippets) as reference tracks. The system analyzes metadata, generates CLAP embeddings, and the agent finds similar library samples via audio-to-audio cosine similarity
+6. **Sample upload** lets users upload WAV files (songs, snippets) as reference tracks. A post-upload dialog lets users correct auto-detected key, BPM, and loop/one-shot classification. The agent can find uploads by name (`find_upload`), set song context from their metadata (`set_context_from_upload`), and find similar library samples via audio-to-audio cosine similarity. Uploads can also be deleted from the candidate samples panel.
 7. **Pair feedback** lets users evaluate sample pairs — the agent presents plausible pairs with side-by-side playback and a "Play Together" mixed preview (aligned to song context key/BPM), collects thumbs up/down verdicts, and computes relational audio features in the background. Rapid pairing mode with random anchors and a "Next Pair" button enables fast verdict collection.
 8. **Preference learning** trains a logistic regression on 10-dimensional feature vectors (4 pair scores + 6 relational audio features) from accumulated verdicts. Auto-retrains every 5th verdict after 15 verdicts. Learned preferences are injected into the agent's system prompt and surfaced via the `show_preferences` tool as natural-language explanations.
 9. **Kit builder** assembles a complete multi-sample kit (e.g., kick + snare + hihat + bass + pad) using a greedy algorithm that maximizes pairwise compatibility. Per-type CLAP search retrieves candidates, fast inline scoring selects samples, and CNN diversity penalties prevent spectral redundancy. Key compatibility scoring is skipped for unpitched/percussive types (drums, percussion, fx, etc.) — all rendered as an interactive kit card with per-slot playback
@@ -79,7 +79,7 @@ samplespace/
 │   │   ├── agents/
 │   │   │   ├── sample_agent.py     # Pydantic AI agent + system prompt + dynamic context/rules
 │   │   │   ├── deps.py             # AgentDeps (db, CLAP, CNN, song context)
-│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload, verdicts, kit, preferences
+│   │   │   └── tools/              # CLAP, CNN, analysis, context, pairs, transform, upload (find, similar, set context), verdicts, kit, preferences
 │   │   ├── ml/
 │   │   │   ├── model.py            # Dual-head CNN (512-ch backbone + 2-layer projection → 128-dim embedding)
 │   │   │   ├── dataset.py          # torchaudio mel spectrogram dataset with augmentation (polarity, speed/pitch perturbation, noise, EQ, spectral masking)
@@ -122,7 +122,8 @@ samplespace/
 │   │   ├── song-context-badge.tsx  # Read-only song context display (key/BPM/genre/vibe)
 │   │   ├── sample-browser.tsx      # Sample grid with filters; split-pane layout with inline detail panel
 │   │   ├── sample-detail-panel.tsx # Splice-style detail view (metadata, waveform, spectrogram, similar samples)
-│   │   ├── candidate-samples.tsx   # Upload page for reference tracks with CLAP similarity search
+│   │   ├── candidate-samples.tsx   # Upload panel for reference tracks with playback, metadata editing, and delete
+│   │   ├── sample-metadata-dialog.tsx # Post-upload dialog for correcting auto-detected key/BPM/loop
 │   │   ├── preview-attachment.tsx  # File attachment chip (loading/complete states)
 │   │   ├── chat-actions-provider.tsx # React context for threading sendMessage to nested renderers
 │   │   └── elements/              # Shared UI primitives (tool-call, response, audio-block, pair-verdict-block, kit-block, sample-card, sample-results-block)

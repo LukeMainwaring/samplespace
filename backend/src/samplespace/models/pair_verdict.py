@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func, select
+from sqlalchemy import DateTime, ForeignKey, Index, String, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -30,6 +30,12 @@ class PairVerdict(Base):
         Index("ix_pair_verdicts_pair", "sample_a_id", "sample_b_id"),
         Index("ix_pair_verdicts_thread", "thread_id"),
     )
+
+    @classmethod
+    async def delete_by_sample(cls, db: AsyncSession, sample_id: str) -> int:
+        cursor = await db.execute(delete(cls).where(or_(cls.sample_a_id == sample_id, cls.sample_b_id == sample_id)))
+        await db.flush()
+        return cursor.rowcount or 0  # type: ignore[attr-defined]
 
     @classmethod
     async def create(

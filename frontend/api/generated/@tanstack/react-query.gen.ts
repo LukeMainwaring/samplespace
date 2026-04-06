@@ -4,8 +4,8 @@ import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOption
 import type { AxiosError } from 'axios';
 
 import { client } from '../client.gen';
-import { dbHealthCheck, deleteThread, getKitPreview, getPairPreview, getSample, getSampleAudio, getSampleSpectrogram, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, uploadSample } from '../sdk.gen';
-import type { DbHealthCheckData, DbHealthCheckResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetKitPreviewData, GetKitPreviewError, GetPairPreviewData, GetPairPreviewError, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSampleSpectrogramData, GetSampleSpectrogramError, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
+import { dbHealthCheck, deleteSample, deleteThread, getKitPreview, getPairPreview, getSample, getSampleAudio, getSampleSpectrogram, getSimilarSamples, getThreadMessages, getTransformedAudio, listSamples, listThreads, type Options, renameThread, searchSamples, streamChat, updateSample, uploadSample } from '../sdk.gen';
+import type { DbHealthCheckData, DbHealthCheckResponse, DeleteSampleData, DeleteSampleError, DeleteSampleResponse, DeleteThreadData, DeleteThreadError, DeleteThreadResponse, GetKitPreviewData, GetKitPreviewError, GetPairPreviewData, GetPairPreviewError, GetSampleAudioData, GetSampleAudioError, GetSampleData, GetSampleError, GetSampleResponse, GetSampleSpectrogramData, GetSampleSpectrogramError, GetSimilarSamplesData, GetSimilarSamplesError, GetSimilarSamplesResponse, GetThreadMessagesData, GetThreadMessagesError, GetThreadMessagesResponse, GetTransformedAudioData, GetTransformedAudioError, ListSamplesData, ListSamplesError, ListSamplesResponse, ListThreadsData, ListThreadsResponse, RenameThreadData, RenameThreadError, RenameThreadResponse, SearchSamplesData, SearchSamplesError, SearchSamplesResponse, StreamChatData, UpdateSampleData, UpdateSampleError, UpdateSampleResponse, UploadSampleData, UploadSampleError, UploadSampleResponse } from '../types.gen';
 
 /**
  * Stream Chat
@@ -204,6 +204,64 @@ export const listSamplesInfiniteOptions = (options?: Options<ListSamplesData>) =
 });
 
 /**
+ * Delete Sample
+ *
+ * Delete an uploaded sample and its associated data.
+ */
+export const deleteSampleMutation = (options?: Partial<Options<DeleteSampleData>>): UseMutationOptions<DeleteSampleResponse, AxiosError<DeleteSampleError>, Options<DeleteSampleData>> => {
+    const mutationOptions: UseMutationOptions<DeleteSampleResponse, AxiosError<DeleteSampleError>, Options<DeleteSampleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteSample({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getSampleQueryKey = (options: Options<GetSampleData>) => createQueryKey('getSample', options);
+
+/**
+ * Get Sample
+ *
+ * Get a single sample by ID.
+ */
+export const getSampleOptions = (options: Options<GetSampleData>) => queryOptions<GetSampleResponse, AxiosError<GetSampleError>, GetSampleResponse, ReturnType<typeof getSampleQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getSample({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getSampleQueryKey(options)
+});
+
+/**
+ * Update Sample
+ *
+ * Update metadata for an uploaded sample.
+ */
+export const updateSampleMutation = (options?: Partial<Options<UpdateSampleData>>): UseMutationOptions<UpdateSampleResponse, AxiosError<UpdateSampleError>, Options<UpdateSampleData>> => {
+    const mutationOptions: UseMutationOptions<UpdateSampleResponse, AxiosError<UpdateSampleError>, Options<UpdateSampleData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateSample({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
  * Upload Sample
  *
  * Upload a WAV file, analyze it, and generate CLAP embeddings.
@@ -240,26 +298,6 @@ export const searchSamplesMutation = (options?: Partial<Options<SearchSamplesDat
     };
     return mutationOptions;
 };
-
-export const getSampleQueryKey = (options: Options<GetSampleData>) => createQueryKey('getSample', options);
-
-/**
- * Get Sample
- *
- * Get a single sample by ID.
- */
-export const getSampleOptions = (options: Options<GetSampleData>) => queryOptions<GetSampleResponse, AxiosError<GetSampleError>, GetSampleResponse, ReturnType<typeof getSampleQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getSample({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getSampleQueryKey(options)
-});
 
 export const getSimilarSamplesQueryKey = (options: Options<GetSimilarSamplesData>) => createQueryKey('getSimilarSamples', options);
 

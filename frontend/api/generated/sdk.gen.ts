@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { DbHealthCheckData, DbHealthCheckResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetKitPreviewData, GetKitPreviewErrors, GetKitPreviewResponses, GetPairPreviewData, GetPairPreviewErrors, GetPairPreviewResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSampleSpectrogramData, GetSampleSpectrogramErrors, GetSampleSpectrogramResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses, UploadSampleData, UploadSampleErrors, UploadSampleResponses } from './types.gen';
+import type { DbHealthCheckData, DbHealthCheckResponses, DeleteSampleData, DeleteSampleErrors, DeleteSampleResponses, DeleteThreadData, DeleteThreadErrors, DeleteThreadResponses, GetKitPreviewData, GetKitPreviewErrors, GetKitPreviewResponses, GetPairPreviewData, GetPairPreviewErrors, GetPairPreviewResponses, GetSampleAudioData, GetSampleAudioErrors, GetSampleAudioResponses, GetSampleData, GetSampleErrors, GetSampleResponses, GetSampleSpectrogramData, GetSampleSpectrogramErrors, GetSampleSpectrogramResponses, GetSimilarSamplesData, GetSimilarSamplesErrors, GetSimilarSamplesResponses, GetThreadMessagesData, GetThreadMessagesErrors, GetThreadMessagesResponses, GetTransformedAudioData, GetTransformedAudioErrors, GetTransformedAudioResponses, ListSamplesData, ListSamplesErrors, ListSamplesResponses, ListThreadsData, ListThreadsResponses, RenameThreadData, RenameThreadErrors, RenameThreadResponses, SearchSamplesData, SearchSamplesErrors, SearchSamplesResponses, StreamChatData, StreamChatResponses, UpdateSampleData, UpdateSampleErrors, UpdateSampleResponses, UploadSampleData, UploadSampleErrors, UploadSampleResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -80,6 +80,39 @@ export const listSamples = <ThrowOnError extends boolean = false>(options?: Opti
 });
 
 /**
+ * Delete Sample
+ *
+ * Delete an uploaded sample and its associated data.
+ */
+export const deleteSample = <ThrowOnError extends boolean = false>(options: Options<DeleteSampleData, ThrowOnError>) => (options.client ?? client).delete<DeleteSampleResponses, DeleteSampleErrors, ThrowOnError>({ url: '/api/samples/{sample_id}', ...options });
+
+/**
+ * Get Sample
+ *
+ * Get a single sample by ID.
+ */
+export const getSample = <ThrowOnError extends boolean = false>(options: Options<GetSampleData, ThrowOnError>) => (options.client ?? client).get<GetSampleResponses, GetSampleErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/samples/{sample_id}',
+    ...options
+});
+
+/**
+ * Update Sample
+ *
+ * Update metadata for an uploaded sample.
+ */
+export const updateSample = <ThrowOnError extends boolean = false>(options: Options<UpdateSampleData, ThrowOnError>) => (options.client ?? client).patch<UpdateSampleResponses, UpdateSampleErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/samples/{sample_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Upload Sample
  *
  * Upload a WAV file, analyze it, and generate CLAP embeddings.
@@ -108,17 +141,6 @@ export const searchSamples = <ThrowOnError extends boolean = false>(options: Opt
         'Content-Type': 'application/json',
         ...options.headers
     }
-});
-
-/**
- * Get Sample
- *
- * Get a single sample by ID.
- */
-export const getSample = <ThrowOnError extends boolean = false>(options: Options<GetSampleData, ThrowOnError>) => (options.client ?? client).get<GetSampleResponses, GetSampleErrors, ThrowOnError>({
-    responseType: 'json',
-    url: '/api/samples/{sample_id}',
-    ...options
 });
 
 /**

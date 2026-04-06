@@ -148,6 +148,25 @@ export type SampleSource = 'library' | 'upload';
 export type SampleType = 'bass' | 'clap' | 'cymbal' | 'drum' | 'fx' | 'guitar' | 'hihat' | 'horn' | 'keys' | 'kick' | 'pad' | 'percussion' | 'snare' | 'strings' | 'synth' | 'vocal';
 
 /**
+ * SampleUpdateSchema
+ */
+export type SampleUpdateSchema = {
+    /**
+     * Key
+     */
+    key?: string | null;
+    /**
+     * Bpm
+     */
+    bpm?: number | null;
+    /**
+     * Is Loop
+     */
+    is_loop?: boolean | null;
+    sample_type?: SampleType | null;
+};
+
+/**
  * SimilarSampleSchema
  */
 export type SimilarSampleSchema = {
@@ -441,6 +460,96 @@ export type ListSamplesResponses = {
 
 export type ListSamplesResponse = ListSamplesResponses[keyof ListSamplesResponses];
 
+export type DeleteSampleData = {
+    body?: never;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: never;
+    url: '/api/samples/{sample_id}';
+};
+
+export type DeleteSampleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteSampleError = DeleteSampleErrors[keyof DeleteSampleErrors];
+
+export type DeleteSampleResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteSampleResponse = DeleteSampleResponses[keyof DeleteSampleResponses];
+
+export type GetSampleData = {
+    body?: never;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: never;
+    url: '/api/samples/{sample_id}';
+};
+
+export type GetSampleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSampleError = GetSampleErrors[keyof GetSampleErrors];
+
+export type GetSampleResponses = {
+    /**
+     * Successful Response
+     */
+    200: SampleSchema;
+};
+
+export type GetSampleResponse = GetSampleResponses[keyof GetSampleResponses];
+
+export type UpdateSampleData = {
+    body: SampleUpdateSchema;
+    path: {
+        /**
+         * Sample Id
+         */
+        sample_id: string;
+    };
+    query?: never;
+    url: '/api/samples/{sample_id}';
+};
+
+export type UpdateSampleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateSampleError = UpdateSampleErrors[keyof UpdateSampleErrors];
+
+export type UpdateSampleResponses = {
+    /**
+     * Successful Response
+     */
+    200: SampleSchema;
+};
+
+export type UpdateSampleResponse = UpdateSampleResponses[keyof UpdateSampleResponses];
+
 export type UploadSampleData = {
     body: BodyUploadSample;
     path?: never;
@@ -492,36 +601,6 @@ export type SearchSamplesResponses = {
 };
 
 export type SearchSamplesResponse = SearchSamplesResponses[keyof SearchSamplesResponses];
-
-export type GetSampleData = {
-    body?: never;
-    path: {
-        /**
-         * Sample Id
-         */
-        sample_id: string;
-    };
-    query?: never;
-    url: '/api/samples/{sample_id}';
-};
-
-export type GetSampleErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetSampleError = GetSampleErrors[keyof GetSampleErrors];
-
-export type GetSampleResponses = {
-    /**
-     * Successful Response
-     */
-    200: SampleSchema;
-};
-
-export type GetSampleResponse = GetSampleResponses[keyof GetSampleResponses];
 
 export type GetSimilarSamplesData = {
     body?: never;
