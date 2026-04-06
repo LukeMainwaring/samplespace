@@ -68,9 +68,10 @@ export const useThreadMessages = (threadId: string) => {
   });
 };
 
-export const useThreadSongContext = (threadId: string) => {
+export const useThreadSongContext = (threadId: string, enabled = true) => {
   return useQuery({
     ...getThreadMessagesOptions({ path: { thread_id: threadId } }),
+    enabled,
     select: (data) => data.song_context ?? null,
     retry: (failureCount, error) => {
       if (error?.response?.status === 404) return false;

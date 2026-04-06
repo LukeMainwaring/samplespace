@@ -32,7 +32,8 @@ export function Chat({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: songContext } = useThreadSongContext(id);
+  const [threadExists, setThreadExists] = useState(initialMessages.length > 0);
+  const { data: songContext } = useThreadSongContext(id, threadExists);
   const { setDataStream } = useDataStream();
 
   const [input, setInput] = useState("");
@@ -88,6 +89,7 @@ export function Chat({
         setDataStream((ds) => (ds ? [...ds, dataPart] : []));
       },
       onFinish: () => {
+        setThreadExists(true);
         queryClient.invalidateQueries({ queryKey: listThreadsQueryKey() });
         queryClient.invalidateQueries({
           queryKey: getThreadMessagesQueryKey({
