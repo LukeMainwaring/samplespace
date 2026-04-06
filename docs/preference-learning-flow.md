@@ -4,9 +4,9 @@ Data flow diagram for SampleSpace's preference learning system — from verdict 
 
 ```mermaid
 flowchart TD
-    subgraph Collection ["Data Collection (existing)"]
-        A["present_pair\n(agent tool)"] -->|user clicks verdict| B["record_verdict\n(agent tool)"]
-        B --> C[PairVerdict created]
+    subgraph Collection ["Data Collection"]
+        A["present_pair\n(agent tool)\nis_loop filtering"] -->|user clicks verdict| B["record_verdict\n(agent tool)"]
+        B --> C["PairVerdict created\n+ committed immediately"]
         C --> D["Background task:\nextract pair features"]
         D --> E["PairVerdict.pair_features\n(6 relational audio features)"]
     end
@@ -22,7 +22,7 @@ flowchart TD
 
     subgraph Output ["Integration Points"]
         K --> L["inject_preferences()\nAgent system prompt enrichment"]
-        K --> M["show_preferences tool\n'What have you learned\nfrom my feedback?'"]
+        K --> M["show_preferences tool\n(trains on the spot\nif model missing)"]
         K -.->|"Stage 5 (future)"| N["Active learning\npresent_pair selects\nmost uncertain candidates"]
         K -.->|"Stage 6 (future)"| O["Preference-aware recs\nKit builder 5th dimension\nPair scoring integration"]
     end

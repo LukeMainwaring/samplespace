@@ -106,12 +106,12 @@ Key patterns:
     - `find_upload()` -- searches uploaded samples by filename (case-insensitive substring match)
     - `find_similar_to_upload()` -- CLAP audio-to-audio search using an uploaded sample's embedding (excludes other uploads)
     - `set_context_from_upload()` -- sets song context (key/BPM) from an uploaded sample's detected metadata, with optional genre/vibe
-    - `present_pair()` -- finds a complementary candidate via CLAP search (with song context) or CNN similarity, supports random anchors for rapid pairing, and returns a `pair-verdict` code fence with mixed preview
-    - `record_verdict()` -- persists user's thumbs up/down verdict, fires background relational feature extraction, and triggers preference model retraining when threshold is met
-    - `show_preferences()` -- surfaces learned feature importances as natural-language explanations
+    - `present_pair()` -- finds a complementary candidate via CLAP search (with song context) or CNN similarity, supports `is_loop` filtering (inferred from user language), random anchors for rapid pairing sessions, excludes recently evaluated samples, and returns a `pair-verdict` code fence with mixed preview and scoring summary
+    - `record_verdict()` -- persists user's thumbs up/down verdict (commits immediately so background task can access it), fires background relational feature extraction, and triggers preference model retraining when threshold is met
+    - `show_preferences()` -- surfaces learned feature importances as natural-language explanations; attempts on-the-spot training if model doesn't exist but enough verdicts are available
     - `build_kit()` -- assembles a multi-sample kit via greedy pairwise optimization (CLAP retrieval per type, fast inline scoring, CNN diversity penalty) and returns a `kit` code fence
 5. Agent streams response back as SSE (Vercel AI SDK format)
-6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `sample-results` code fences render as playable sample cards; `pair-verdict` code fences render as interactive side-by-side audio players with mixed preview, verdict buttons, and "Next Pair" for rapid sessions; `kit` code fences render as kit cards with per-slot playback and compatibility scores
+6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `sample-results` code fences render as playable sample cards; `pair-verdict` code fences render as interactive side-by-side audio players with mixed preview, scoring summary, and verdict buttons (verdicts display as compact pills in the chat); `kit` code fences render as kit cards with per-slot playback and compatibility scores
 7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `backend/data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → post-upload dialog lets user correct key/BPM/loop classification → in chat, agent calls `find_upload` to locate by name, `set_context_from_upload` to set song context, `find_similar_to_upload` for library matches. Uploads can be updated (`PATCH /samples/{id}`) or deleted (`DELETE /samples/{id}`) — delete cascades to pair verdicts and cleans up disk artifacts.
 
 ## Additional Instructions
