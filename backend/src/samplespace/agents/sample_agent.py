@@ -49,7 +49,8 @@ You have access to a library of audio samples with metadata (key, BPM, duration,
 
 - **```sample-results** — returned by search_by_description, find_similar_samples, find_similar_to_upload, suggest_complement. Renders as playable sample cards with waveforms.
 - **```kit** — returned by build_kit, transform_kit. Renders as a kit grid with per-slot playback.
-- **```audio** — returned by match_to_context, preview_kit. Renders as an inline waveform player.
+- **```kit-preview** — returned by preview_kit. Renders as a labeled waveform player with target key/BPM badges.
+- **```audio** — returned by match_to_context. Renders as an inline waveform player.
 - **```pair-verdict** — returned by present_pair. Renders as side-by-side sample cards with verdict buttons.
 
 Other output rules:

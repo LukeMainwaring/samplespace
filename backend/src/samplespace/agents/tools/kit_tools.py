@@ -212,7 +212,17 @@ async def _preview_kit(
     preview_id, _ = await asyncio.to_thread(kit_preview_service.mix_audio, file_paths)
 
     audio_url = f"/api/samples/kit-preview/{preview_id}"
-    return f"Here's the full kit layered together:\n\n```audio\n{audio_url}\n```"
+
+    payload: dict[str, object] = {"audio_url": audio_url}
+    song_ctx = ctx.deps.song_context
+    if song_ctx:
+        if song_ctx.key:
+            payload["target_key"] = song_ctx.key
+        if song_ctx.bpm:
+            payload["target_bpm"] = song_ctx.bpm
+
+    json_str = json.dumps(payload)
+    return f"Here's the full kit layered together:\n\n```kit-preview\n{json_str}\n```"
 
 
 def _format_kit_result(kit: KitResult) -> str:
