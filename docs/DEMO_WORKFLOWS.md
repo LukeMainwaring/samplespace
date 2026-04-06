@@ -72,22 +72,71 @@ The system generates a CLAP embedding for the upload and searches the library in
 - "Finding similar samples..." spinner → checkmark
 - Results ranked by CLAP audio-to-audio similarity, excluding other uploads
 
-### Interactive Pair Evaluation
+### Ad-hoc Pair Evaluation
 
-> "Show me a pair to evaluate — match a kick with a snare"
+A single, targeted evaluation where the user picks a specific sample and asks for a complementary match.
 
-The agent picks a kick from the library, finds snare candidates via CNN similarity (top 15), scores each candidate across key/BPM/type/spectral dimensions, and selects a candidate closest to a 0.6 score — plausible but not obvious, to make the evaluation interesting.
+**Step 1 — Set the vibe:**
+
+> "I'm making a minimalist house song with swaggy vibes in B Minor at 125 BPM"
+
+**Step 2 — Find samples:**
+
+> "Find me punchy, distorted kick one-shots"
+
+**Step 3 — Explore neighbors:**
+
+> "Find more samples that sound like #9"
+
+**Step 4 — Evaluate a pairing:**
+
+> "Show me a pair to evaluate — match kick #5 with a snare one-shot"
+
+- Agent infers `is_loop=False` from "one-shot" and filters candidates accordingly
+- Pair-verdict block renders: two side-by-side sample cards with waveforms and a mixed preview
+- Scoring summary explains why the pair scored the way it did
+- Click **"Works"** (green) or **"Doesn't work"** (red)
+- Verdict is recorded; no automatic next pair (single evaluation)
 
 **What to watch for:**
 
-- Pair-verdict block renders: two side-by-side sample cards, each with filename, metadata pills, and an interactive waveform
-- Compatibility score displayed between the cards (e.g., "0.62/1.0")
-- **"Works"** button (green, thumbs-up) and **"Doesn't work"** button (red, thumbs-down) appear below
-- Clicking a verdict button updates the button state and auto-sends a message to the agent
-- The agent calls `record_verdict`, which persists the verdict and triggers **background feature extraction** — computing 6 relational audio features (spectral overlap, onset alignment, timbral contrast, harmonic consonance, spectral centroid gap, RMS energy ratio)
-- Agent confirms the verdict and reports the running total
+- Compatibility score and scoring summary displayed below the mixed preview
+- Clicking a verdict renders a clean pill in the chat (not raw IDs)
+- The agent calls `record_verdict`, which persists the verdict and triggers **background feature extraction** — computing 6 relational audio features
 
-**The feedback loop:** Verdicts accumulate into learned pairing preferences. After enough data, the system generates `PairRule` entries (e.g., "For kick-pad pairs, prefer spectral_distance > 0.5") that are injected into the agent's system prompt for future sessions.
+### Pairing Session — Rapid Training
+
+A sustained session for fast verdict collection. The agent auto-presents the next pair after each verdict.
+
+**Step 1 — Set the vibe:**
+
+> "I'm making a progressive house song with retro vibes in G Major at 128 BPM"
+
+**Step 2 — Start a session:**
+
+> "Start a pairing session with kick loops and bass loops"
+
+- Agent sets `is_loop=True`, filtering to loops only
+- Random kick anchor selected, bass candidate found via context-aware CLAP search
+- Pair-verdict block renders with side-by-side cards and mixed preview
+
+**Step 3 — Rapid verdicts:**
+
+- Click **"Works"** or **"Doesn't work"** → agent records the verdict and immediately presents the next pair
+- Each pair uses a new random anchor for diverse training data
+- Repeat rapidly to build up verdicts — the preference model auto-trains after 15+
+
+**Step 4 — Check what the system learned:**
+
+After 15+ verdicts (mix of approvals and rejections):
+
+> "What have you learned from my feedback?"
+
+- Agent calls `show_preferences`
+- Response includes a natural-language summary of learned feature importances
+- Example: "You strongly prefer pairs with **distinct timbral character** (importance: 28%) and favor pairs that occupy **different frequency registers** (importance: 19%)"
+- The preference model auto-trains in the background after every 5th verdict (starting at 15)
+- Learned preferences are also injected into the agent's system prompt, so future recommendations are informed by your taste
 
 ### Pitch and Tempo Transformation
 
@@ -159,7 +208,7 @@ A 6-step workflow demonstrating conversational memory and context-awareness acro
 
 ### Sample Curation and Pair Training
 
-A feedback loop: find samples, explore neighbors, evaluate pairs, build system knowledge. Includes rapid pairing mode for fast verdict collection.
+A feedback loop: find samples, explore neighbors, evaluate pairs, build system knowledge. Combines ad-hoc evaluation with rapid pairing sessions.
 
 **Step 1 — Find starting material:**
 
@@ -184,23 +233,22 @@ Navigate to the Sample Library page and click the magnifying glass on one of the
 - Scroll down to "Similar Samples" — these are the CNN's nearest spectral neighbors with similarity percentages
 - Play similar samples inline to audition them without leaving the panel
 
-**Step 4 — Evaluate a pairing:**
+**Step 4 — Ad-hoc evaluation:**
 
-> "Show me a pair to evaluate — match that kick with a snare"
+> "Show me a pair to evaluate — match that kick with a snare one-shot"
 
-- Agent calls `present_pair` with candidate_type=snare
-- Candidates are found via CLAP search enriched with song context (vibe, genre, key, BPM)
-- Pair-verdict block renders with side-by-side cards and verdict buttons
-- **Play Together** button layers both samples for audition as a mix
-- Click "Works" or "Doesn't work"
+- Agent calls `present_pair` with candidate_type=snare, is_loop=False
+- Candidates are filtered to one-shots and found via CLAP search enriched with song context
+- Pair-verdict block renders with side-by-side cards, mixed preview, and scoring summary
+- Click "Works" or "Doesn't work" — verdict renders as a clean pill in the chat
 
-**Step 5 — Rapid pairing mode:**
+**Step 5 — Start a pairing session:**
 
-> "Start a pairing session with kicks and basses"
+> "Start a pairing session with kick loops and bass loops"
 
-- Agent calls `present_pair` with anchor_type=kick, candidate_type=bass (no specific sample ID)
-- A random kick is selected as anchor, bass candidate found via context-aware CLAP search
-- After clicking a verdict, click **Next Pair** to immediately get another pair
+- Agent calls `present_pair` with anchor_type=kick, candidate_type=bass, is_loop=True
+- A random kick loop is selected as anchor, bass loop candidate found via context-aware CLAP search
+- Click a verdict → agent records it and immediately presents the next pair
 - Each pair uses a new random anchor for diverse training data
 - Repeat rapidly to build up verdicts — the preference model auto-trains after 15+
 
@@ -213,8 +261,7 @@ After 15+ verdicts (mix of approvals and rejections):
 - Agent calls `show_preferences`
 - Response includes a natural-language summary of learned feature importances
 - Example: "You strongly prefer pairs with **distinct timbral character** (importance: 28%) and favor pairs that occupy **different frequency registers** (importance: 19%)"
-- The preference model auto-trains in the background after every 5th verdict (starting at 15)
-- Learned preferences are also injected into the agent's system prompt, so future recommendations are informed by your taste
+- Learned preferences are injected into the agent's system prompt, so future recommendations are informed by your taste
 
 ### Reference Track Workflow
 
@@ -298,6 +345,6 @@ Upload a WAV via the **Candidate Samples** panel on the right side. A metadata d
 - **Reference by name:** You can also use filenames: "transform warm-pad.wav to match my context". The agent will look it up.
 - **Expand tool calls:** Click the collapsible tool call indicators to show input parameters and raw output. This demonstrates the agent's reasoning and the multi-modal retrieval pipeline.
 - **Audio playback:** Click waveforms to play samples; scrub by clicking along the waveform. Multiple samples can be played in sequence.
-- **Pair verdicts:** The thumbs up/down buttons auto-send a message to the agent — you don't need to type anything after clicking.
+- **Pair verdicts:** The thumbs up/down buttons auto-send a verdict to the agent — you don't need to type anything. In pairing sessions, the next pair appears automatically after each verdict.
 - **Context persistence:** Refresh the page mid-session to show that song context survives page reloads (persisted in the thread's JSONB column, not browser state).
 - **Dark mode:** Toggle the theme to show the full dark mode experience — waveforms, badges, and kit blocks all adapt.

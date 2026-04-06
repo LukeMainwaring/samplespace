@@ -36,6 +36,7 @@ async def present_pair(
     sample_id: str | None = None,
     anchor_type: str | None = None,
     candidate_type: str | None = None,
+    is_loop: bool | None = None,
 ) -> str | ToolReturn:
     """Present a sample pair for the user to evaluate.
 
@@ -53,6 +54,9 @@ async def present_pair(
         anchor_type: Sample type for random anchor selection (e.g., "kick").
                      Only used when sample_id is omitted.
         candidate_type: Sample type to look for in the candidate (e.g., "snare").
+        is_loop: Filter for loops (True) or one-shots (False). Infer from user
+                 language: "one-shot" → False, "loops" → True. Default True for
+                 pairing sessions. Omit if unspecified.
     """
     try:
         if sample_id:
@@ -60,12 +64,17 @@ async def present_pair(
             if anchor is None:
                 return f"Sample {sample_id} not found."
         else:
-            anchor = await _pick_random_anchor(ctx, anchor_type)
+            anchor = await _pick_random_anchor(ctx, anchor_type, is_loop=is_loop)
             if anchor is None:
                 return f"No {anchor_type or 'library'} samples found to use as anchor."
             sample_id = anchor.id
 
-        candidates = await _find_candidates(ctx, sample_id, candidate_type)
+        # Exclude recently evaluated samples from candidates (same as anchors)
+        recent_ids: set[str] = set()
+        if ctx.deps.thread_id:
+            recent_ids = set(await PairVerdict.get_recent_sample_ids(ctx.deps.db, ctx.deps.thread_id))
+
+        candidates = await _find_candidates(ctx, sample_id, candidate_type, is_loop=is_loop, exclude_ids=recent_ids)
 
         if not candidates:
             if candidate_type:
@@ -107,6 +116,8 @@ async def present_pair(
 async def _pick_random_anchor(
     ctx: RunContext[AgentDeps],
     anchor_type: str | None,
+    *,
+    is_loop: bool | None = None,
 ) -> Sample | None:
     """Pick a random anchor sample, avoiding recently evaluated samples."""
     resolved_type: str | None = None
@@ -120,13 +131,16 @@ async def _pick_random_anchor(
     if ctx.deps.thread_id:
         exclude_ids = list(await PairVerdict.get_recent_sample_ids(ctx.deps.db, ctx.deps.thread_id))
 
-    return await Sample.get_random(ctx.deps.db, sample_type=resolved_type, exclude_ids=exclude_ids)
+    return await Sample.get_random(ctx.deps.db, sample_type=resolved_type, is_loop=is_loop, exclude_ids=exclude_ids)
 
 
 async def _find_candidates(
     ctx: RunContext[AgentDeps],
     sample_id: str,
     candidate_type: str | None,
+    *,
+    is_loop: bool | None = None,
+    exclude_ids: set[str] | None = None,
 ) -> list[SampleSchema]:
     """Find candidate samples for pairing.
 
@@ -136,7 +150,7 @@ async def _find_candidates(
     interesting spectrally-related pairs.
     """
     if candidate_type:
-        return await _find_candidates_by_clap(ctx, sample_id, candidate_type)
+        return await _find_candidates_by_clap(ctx, sample_id, candidate_type, is_loop=is_loop, exclude_ids=exclude_ids)
     return await _find_candidates_by_cnn(ctx, sample_id)
 
 
@@ -144,6 +158,9 @@ async def _find_candidates_by_clap(
     ctx: RunContext[AgentDeps],
     sample_id: str,
     candidate_type: str,
+    *,
+    is_loop: bool | None = None,
+    exclude_ids: set[str] | None = None,
 ) -> list[SampleSchema]:
     """CLAP-based retrieval with song context — used when a specific type is requested."""
     song_ctx = ctx.deps.song_context
@@ -155,19 +172,24 @@ async def _find_candidates_by_clap(
         embedding_service.embed_text, query, ctx.deps.clap_model, ctx.deps.clap_processor
     )
 
+    # Fetch extra to compensate for exclusions
+    fetch_limit = _CANDIDATE_LIMIT + len(exclude_ids) + 1 if exclude_ids else _CANDIDATE_LIMIT
+
     results = await sample_service.search_by_text(
         ctx.deps.db,
         query_embedding=query_embedding,
         sample_type=candidate_type,
+        is_loop=is_loop,
         exclude_source="upload",
-        limit=_CANDIDATE_LIMIT,
+        limit=fetch_limit,
     )
 
     if not results:
         return []
 
-    # Filter out the anchor itself
-    filtered = [r for r in results if r.id != sample_id]
+    # Filter out the anchor and recently evaluated samples
+    skip = {sample_id} | (exclude_ids or set())
+    filtered = [r for r in results if r.id not in skip]
 
     # Rerank with song context BPM/key if available
     return rerank_candidates(filtered, candidate_type, song_ctx, limit=_CANDIDATE_LIMIT)

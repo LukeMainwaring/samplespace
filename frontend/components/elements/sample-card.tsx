@@ -13,6 +13,7 @@ export interface SamplePayload {
   key?: string;
   bpm?: number;
   index?: number;
+  is_loop?: boolean;
 }
 
 interface SampleCardProps {

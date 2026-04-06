@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Layers,
-  Pause,
-  Play,
-  SkipForward,
-  ThumbsDown,
-  ThumbsUp,
-} from "lucide-react";
+import { Layers, Pause, Play, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import { useCallback, useState } from "react";
 import { useChatActions } from "@/components/chat-actions-provider";
@@ -73,18 +66,10 @@ export function PairVerdictBlock({
   const handleVerdict = (approved: boolean) => {
     if (submitted || !chatActions) return;
     const status = approved ? "approved" : "rejected";
+    const label = approved ? "Works" : "Doesn't work";
     setSubmitted(status);
     chatActions.sendMessage(
-      `[PAIR_VERDICT] ${status}: ${payload.sample_a.id} + ${payload.sample_b.id}`,
-    );
-  };
-
-  const handleNextPair = () => {
-    if (!chatActions) return;
-    const anchorType = payload.sample_a.type || "";
-    const candidateType = payload.sample_b.type || "";
-    chatActions.sendMessage(
-      `[NEXT_PAIR] from ${anchorType} to ${candidateType}`,
+      `[PAIR_VERDICT] ${label} | ${payload.sample_a.id} + ${payload.sample_b.id}`,
     );
   };
 
@@ -151,13 +136,13 @@ export function PairVerdictBlock({
         />
       </div>
 
-      <div className="flex items-center justify-between px-1">
-        <span className="text-muted-foreground text-xs">
-          Compatibility: {payload.pair_score}/1.0
-        </span>
+      <div className="space-y-1 px-1">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">
+            Compatibility: {payload.pair_score}/1.0
+          </span>
 
-        {submitted ? (
-          <div className="flex items-center gap-2">
+          {submitted ? (
             <span
               className={`text-xs font-medium ${
                 submitted === "approved"
@@ -167,40 +152,33 @@ export function PairVerdictBlock({
             >
               {submitted === "approved" ? "Approved" : "Rejected"}
             </span>
-            <Button
-              className="text-xs"
-              onClick={handleNextPair}
-              type="button"
-              variant="outline"
-              size="sm"
-            >
-              <SkipForward size={13} />
-              Next pair
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <Button
-              className="border-green-300 text-green-700 text-xs hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30"
-              onClick={() => handleVerdict(true)}
-              type="button"
-              variant="outline"
-              size="sm"
-            >
-              <ThumbsUp size={13} />
-              Works
-            </Button>
-            <Button
-              className="border-red-300 text-red-700 text-xs hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
-              onClick={() => handleVerdict(false)}
-              type="button"
-              variant="outline"
-              size="sm"
-            >
-              <ThumbsDown size={13} />
-              Doesn&apos;t work
-            </Button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                className="border-green-300 text-green-700 text-xs hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/30"
+                onClick={() => handleVerdict(true)}
+                type="button"
+                variant="outline"
+                size="sm"
+              >
+                <ThumbsUp size={13} />
+                Works
+              </Button>
+              <Button
+                className="border-red-300 text-red-700 text-xs hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                onClick={() => handleVerdict(false)}
+                type="button"
+                variant="outline"
+                size="sm"
+              >
+                <ThumbsDown size={13} />
+                Doesn&apos;t work
+              </Button>
+            </div>
+          )}
+        </div>
+        {payload.summary && (
+          <p className="text-muted-foreground text-xs">{payload.summary}</p>
         )}
       </div>
     </div>
