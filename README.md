@@ -1,7 +1,8 @@
 <div align="center">
   <img src="frontend/public/images/samplespace-logo.png" alt="SampleSpace" width="120" />
   <h1>SampleSpace</h1>
-  <p>An AI-powered music sample assistant that combines a custom PyTorch CNN for spectrogram similarity, CLAP embeddings for natural language audio search, and a Pydantic AI agent orchestrating both to answer queries like <em>"find a warm pad in D minor at 120 BPM."</em></p>
+  <p>An AI-powered music production assistant that actually understands your song. Describe the sound in your head, drop in a reference track, or just say what's missing — SampleSpace searches your
+  entire library and finds what fits.</p>
 
   [![CI](https://github.com/LukeMainwaring/samplespace/actions/workflows/ci.yml/badge.svg)](https://github.com/LukeMainwaring/samplespace/actions/workflows/ci.yml)
 </div>
@@ -14,14 +15,14 @@ Music producers spend hours browsing sample libraries by folder name and filenam
 
 ## Features
 
-- **Natural language search** — CLAP text-to-audio embeddings let you search by description ("dark gritty kick", "airy vocal chop") via pgvector cosine similarity
-- **Audio-to-audio similarity** — Custom-trained dual-head CNN (4 residual blocks, SE attention, SupCon + CE loss) finds spectrally similar samples via 128-dim embeddings
-- **Agentic orchestration** — Pydantic AI agent decides which tools to call per query, enabling multi-step reasoning (analyze sample → check key compatibility → search for complement)
+- **Natural language search** — Search by description ("dark gritty kick", "airy vocal chop") — text-to-audio AI maps your words to matching sounds
+- **Audio-to-audio similarity** — A custom-trained neural network finds spectrally similar samples
+- **Agentic orchestration** — An AI agent decides which tools to call per query, enabling multi-step reasoning (analyze sample → check key compatibility → search for complement)
 - **Song context** — Persistent per-thread key/BPM/genre/vibe that enriches searches and survives page refreshes
-- **Pair feedback + preference learning** — Side-by-side sample evaluation with mixed audio preview, thumbs up/down verdicts, and a logistic regression that learns your pairing taste from 10-dimensional feature vectors
-- **Kit builder** — Greedy pairwise optimization assembles multi-sample kits (kick + snare + hihat + bass + pad) with CLAP retrieval, compatibility scoring, and CNN diversity penalties
+- **Pair feedback + preference learning** — Side-by-side sample evaluation with mixed audio preview, thumbs up/down verdicts, and a model that learns your pairing taste over time
+- **Kit builder** — Automatically assembles multi-sample kits (kick + snare + hihat + bass + pad) with compatibility scoring and diversity penalties
 - **Sample upload** — Upload reference tracks with auto-detected key/BPM/loop classification, then find similar library samples via audio-to-audio search
-- **Audio transforms** — Pitch-shift and time-stretch via Rubber Band R3 for "Play Together" mixed previews aligned to song context
+- **Audio transforms** — Pitch-shift and time-stretch for "Play Together" mixed previews aligned to song context
 
 ## Demo Workflows
 
@@ -41,38 +42,6 @@ Agent analyzes the upload's key/BPM, finds CNN-similar library samples, filters 
 > "Let's do a pairing session for loops"
 
 Rapid-fire pair evaluation with random anchors. After 15+ verdicts, the preference model influences candidate selection and the agent explains what it's learned about your taste.
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph Frontend ["Frontend (Next.js 16)"]
-        UI[Chat Panel + Sample Browser]
-        UC[useChat Hook]
-        TQ[TanStack Query]
-    end
-
-    subgraph Backend ["Backend (FastAPI)"]
-        Agent[Pydantic AI Agent]
-        Tools[Agent Tools]
-        CLAP[CLAP Embeddings]
-        CNN[Custom CNN]
-        Analysis[Audio Analysis]
-    end
-
-    subgraph Storage ["Storage"]
-        PG[(PostgreSQL + pgvector)]
-        FS[Audio Files]
-    end
-
-    UI --> UC -->|SSE Stream| Agent
-    UI --> TQ -->|REST| Backend
-    Agent --> Tools
-    Tools --> CLAP -->|Text-to-Audio Search| PG
-    Tools --> CNN -->|Audio-to-Audio Similarity| PG
-    Tools --> Analysis -->|Key/BPM/Duration| FS
-    PG --- FS
-```
 
 ### Why CLAP + CNN + Agent?
 
