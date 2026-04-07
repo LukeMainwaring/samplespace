@@ -7,7 +7,9 @@
   [![CI](https://github.com/LukeMainwaring/samplespace/actions/workflows/ci.yml/badge.svg)](https://github.com/LukeMainwaring/samplespace/actions/workflows/ci.yml)
 </div>
 
-<!-- TODO: demo GIF — see docs/ROADMAP.md -->
+<div align="center">
+  <img src="docs/assets/end-to-end-kit-builder.gif" alt="Samplespace demo — build kit for new song" width="700" />
+</div>
 
 ## Why SampleSpace?
 
@@ -29,17 +31,38 @@ Music producers spend hours browsing sample libraries by folder name and filenam
 These prompts showcase what SampleSpace can do that browsing folders can't.
 
 **Context-aware search:**
-> "I'm making a dark techno track in D minor at 130 BPM — find me a warm pad"
+> "I'm making a dark techno track in D minor at 130 BPM — find me a warm, breathy pad with a slow attack"
+
+<div align="center">
+  <img src="docs/assets/search-by-description.png" alt="Search by description" width="90%" />
+</div>
 
 Sets song context, then searches with CLAP embeddings enriched by the vibe. All subsequent searches inherit the context.
 
-**Multi-step reasoning:**
-> "Find a bass that goes well with this kick" *(after uploading a reference track)*
+**Sample Detail view:**
+<div align="center">
+  <img src="docs/assets/sample-detail-view.png" alt="Sample detail view" width="90%" />
+</div>
 
-Agent analyzes the upload's key/BPM, finds CNN-similar library samples, filters by key compatibility, and ranks by CLAP relevance.
+Sample detail panel with full metadata, interactive waveform, mel spectrogram, and samples ranked by similarity percentage.
+
+**Preview samples with reference track :**
+> "Find my southern twang house upload and a bass loop that goes well with this reference track"
+> ...
+> "Preview bass loop #6 with my reference track"
+
+<div align="center">
+  <img src="docs/assets/reference-track-flow.gif" alt="Samplespace demo — reference track" width="700" />
+</div>
+
+Upload your own music, set the song context from it, find complementary samples, and preview them together.
 
 **Preference-driven pairing:**
-> "Let's do a pairing session for loops"
+> "Start a pairing session with kick loops and bass loops"
+
+<div align="center">
+  <img src="docs/assets/rapid-pairing-session.gif" alt="Samplespace demo — rapid pairing session" width="700" />
+</div>
 
 Rapid-fire pair evaluation with random anchors. After 15+ verdicts, the preference model influences candidate selection and the agent explains what it's learned about your taste.
 
