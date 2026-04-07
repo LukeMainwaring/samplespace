@@ -4,11 +4,11 @@
 
 This project uses:
 
--   **[uv]** - Fast Python package installer and resolver for dependency management
--   **[Docker]** - Container platform for local development and production deployment
--   **[Ruff]** - Fast Python linter and formatter
+-   **[uv]** - Python package installer and resolver
+-   **[Docker]** - PostgreSQL + backend containers
+-   **[Ruff]** - Python linter and formatter
 -   **[mypy]** - Static type checker
--   **[pre-commit]** - Git hook framework for automated code quality checks
+-   **[pre-commit]** - Git hook framework (runs Ruff + mypy automatically on commit)
 -   **[Rubber Band]** - Audio pitch-shifting and time-stretching (R3 engine via CLI)
 
 [uv]: https://docs.astral.sh/uv/
@@ -30,91 +30,39 @@ brew install rubberband
 apt install rubberband-cli
 ```
 
-Install Python dependencies:
+Install Python dependencies and pre-commit hooks:
 
 ```bash
 uv sync --directory backend
-```
-
-Install pre-commit hooks:
-
-```bash
 uv run --directory backend pre-commit install
 ```
 
-## Pre-commit hooks
+## Code Quality
 
-We use [pre-commit] to automatically run linting, formatting, and type checking on all commits.
-
-To manually check all files:
+Pre-commit hooks run Ruff formatting, Ruff linting, and mypy type checking automatically on every commit. To run manually:
 
 ```bash
 uv run --directory backend pre-commit run --all-files
 ```
 
-The hooks will run automatically when you commit. If any checks fail, the commit will be blocked and files will be auto-fixed where possible. Review the changes and commit again.
-
-**Note:** Pre-commit hooks require backend dependencies to be installed first (`uv sync --directory backend`).
-
-## Testing
-
-Run the tests:
+Individual tools:
 
 ```bash
-uv run --directory backend pytest
+uv run --directory backend ruff format .         # format
+uv run --directory backend ruff check --fix .    # lint + autofix
+uv run --directory backend mypy --strict src tests  # type check
 ```
 
-Run specific test markers:
+## Database Migrations
 
 ```bash
-uv run --directory backend pytest -m main
-uv run --directory backend pytest -m additional
-```
-
-[pytest-mark]: https://docs.pytest.org/en/stable/example/markers.html
-
-## Type checking
-
-Type checking with [mypy] runs automatically via pre-commit hooks.
-
-To manually run the type checker:
-
-```bash
-uv run --directory backend mypy --strict src tests
-```
-
-## Formatting and linting
-
-Formatting and linting with [Ruff] runs automatically via pre-commit hooks.
-
-To manually run the formatter and linter:
-
-```bash
-# Format and fix issues
-uv run --directory backend ruff format .
-uv run --directory backend ruff check --fix .
-
-# Check only (no modifications)
-uv run --directory backend ruff format --check .
-uv run --directory backend ruff check .
-```
-
-## Continuous integration
-
-Testing, type checking, and formatting/linting is [checked in CI][ci].
-
-[ci]: .github/workflows/ci.yml
-
-## Database migrations
-
-```bash
-# Create a new migration (generates file in migrations/versions/)
+# Create a new migration
 ./backend/scripts/create-db-revision-docker.sh "<migration_message>"
 
-# Apply all pending migrations
+# Apply pending migrations
 ./backend/scripts/migrate-docker.sh
 
-# Roll back one migration (use with caution -- may cause data loss)
+# Roll back one migration (use with caution)
 ./backend/scripts/downgrade-db-revision-docker.sh
 ```
 
@@ -128,33 +76,29 @@ After modifying backend API endpoints:
 # Ensure backend is running
 docker compose up -d
 
-# Regenerate client (fetches schema, generates types, formats)
+# Regenerate (fetches schema, generates types + hooks, formats)
 pnpm -C frontend generate-client
 ```
 
-This generates:
+Do not manually edit files in `frontend/api/generated/`. Custom hooks in `api/hooks/` wrap the generated code.
 
--   `api/generated/types.gen.ts` - TypeScript types from OpenAPI schemas
--   `api/generated/sdk.gen.ts` - API functions for each endpoint
--   `api/generated/@tanstack/react-query.gen.ts` - TanStack Query hooks
+## Testing
 
-**Do not manually edit files in `frontend/api/generated/`** -- they are overwritten on regeneration.
-
-Custom hooks in `api/hooks/` wrap the generated code with cleaner APIs.
+```bash
+uv run --directory backend pytest
+uv run --directory backend pytest -m main        # main tests only
+uv run --directory backend pytest -m additional   # additional tests only
+```
 
 ## Audio Data
 
-Audio sample files are gitignored. To populate:
+Audio sample files are gitignored. Set `SAMPLE_LIBRARY_DIR` in `.env` to your local sample library, then:
 
 ```bash
-# Seed sample data (set SAMPLE_LIBRARY_DIR in .env to your local sample library)
-uv run --directory backend seed-samples
-
-# Generate CLAP embeddings for all seeded samples
-uv run --directory backend embed-samples
+uv run --directory backend seed-samples       # populate database from library
+uv run --directory backend embed-samples      # generate CLAP embeddings (~2 min)
+uv run --directory backend embed-cnn          # generate CNN embeddings (after training)
 ```
-
-Audio files live in your local sample library directory (configured via `SAMPLE_LIBRARY_DIR`). The database stores metadata (key, BPM, duration, type) and embedding vectors (CLAP 512-dim, CNN 128-dim).
 
 ## ML Development
 
@@ -162,14 +106,10 @@ Audio files live in your local sample library directory (configured via `SAMPLE_
 
 ```bash
 uv run --directory backend train-cnn
-uv run --directory backend train-cnn --epochs 50 --batch-size 32 --grad-accum 2
-uv run --directory backend train-cnn --mixup-alpha 0 --label-smoothing 0.1  # disable mixup, use label smoothing instead
 uv run --directory backend train-cnn --help  # all options
 ```
 
-Model checkpoints are saved to `backend/data/checkpoints/` (gitignored). TensorBoard logs go to `backend/data/runs/` (gitignored). Defaults: 100 epochs, batch size 64, mixup (alpha 0.2), class-weighted sampling, cosine annealing with 5-epoch linear warmup, early stopping (patience 15), mixed precision on CUDA. Key flags: `--mixup-alpha` (0 to disable), `--label-smoothing` (only applies when mixup is off), `--no-balance` (disable class-weighted sampling).
-
-Monitor training:
+Checkpoints saved to `backend/data/checkpoints/`. TensorBoard logs to `backend/data/runs/`:
 
 ```bash
 uv run --directory backend tensorboard --logdir backend/data/runs/
@@ -177,15 +117,14 @@ uv run --directory backend tensorboard --logdir backend/data/runs/
 
 ### Preference Model
 
-The preference model learns pairing taste from pair verdicts. It trains automatically in the background after every 5th verdict (starting at 15 verdicts).
-
 ```bash
-# Manual training
 uv run --directory backend train-preferences
 ```
 
-Model artifacts are saved to `backend/data/models/` (gitignored): `preference_model.joblib` (sklearn pipeline) and `preference_meta.json` (version, accuracy, feature importances). The model is a `Pipeline(StandardScaler, LogisticRegression)` trained on 10-dimensional feature vectors (4 pair scores + 6 relational audio features).
+Artifacts saved to `backend/data/models/`. Auto-retrains in the background every 5th verdict after 15 verdicts.
 
-### CLAP Model
+## Continuous Integration
 
-The CLAP model (`laion/clap-htsat-unfused`) is ~600MB and cached by HuggingFace transformers in `~/.cache/huggingface/`. It is loaded once at startup via the FastAPI lifespan handler. Mock it in tests.
+Testing, type checking, and formatting/linting is [checked in CI][ci].
+
+[ci]: .github/workflows/ci.yml

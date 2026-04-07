@@ -42,18 +42,22 @@ After making frontend code changes, run `pnpm -C frontend format` to fix formatt
 
 ### Backend (`backend/`)
 
-FastAPI Python backend using async patterns throughout.
+FastAPI async backend. Layered as: `routers/` (thin HTTP handlers) → `services/` (business logic) → `models/` (SQLAlchemy with CRUD classmethods).
 
--   **`src/samplespace/app.py`**: FastAPI application entry point with CORS middleware and lifespan handler (CLAP + CNN model loading)
+-   **`src/samplespace/app.py`**: Entry point with CORS middleware and lifespan handler (CLAP + CNN model loading)
 -   **`src/samplespace/routers/`**: API routes by domain (samples, agent, health)
--   **`src/samplespace/agents/`**: Pydantic AI agent -- `sample_agent.py` defines the sample assistant agent with tools for CLAP search, CNN similarity, key compatibility, sample analysis, song context management, upload similarity, pair presentation, verdict recording, kit building, and preference learning; `deps.py` defines shared `AgentDeps` (includes `thread_id` and `song_context`); `tools/` contains agent tools (`clap_tools.py`, `cnn_tools.py`, `analysis_tools.py`, `context_tools.py`, `pair_tools.py`, `transform_tools.py`, `upload_tools.py`, `verdict_tools.py`, `kit_tools.py`, `preference_tools.py`, `formatting.py`)
--   **`src/samplespace/models/`**: SQLAlchemy async models with CRUD classmethods (Sample with pgvector embedding columns, PairVerdict, Thread)
+-   **`src/samplespace/agents/`**: Pydantic AI agent definition and tooling
+    -   `sample_agent.py` — agent definition, system prompt, capability registration
+    -   `deps.py` — shared `AgentDeps` (db, CLAP, CNN, thread_id, song_context)
+    -   `capabilities/` — modular feature sets composed into the agent: search (CLAP/CNN/upload), analysis (key compatibility, metadata), context (song context management + instruction injection), pairing (pair presentation, verdicts, preference learning), production (kit building, transforms, previews)
+    -   `tools/` — individual tool implementations grouped by domain (one file per capability area)
+-   **`src/samplespace/services/`**: Business logic grouped by domain — audio pipeline (analysis, embedding, spectrogram, transforms), search/retrieval (sample CRUD, candidate search), pairing (pair scoring, pair features, preferences), production (kit building, kit preview mixing), and upload processing
+-   **`src/samplespace/models/`**: SQLAlchemy async models (Sample with pgvector embedding columns, PairVerdict, Thread)
+-   **`src/samplespace/ml/`**: Custom dual-head CNN — model architecture, torchaudio dataset with augmentation, training loop (SupCon + CE loss, mixup, cosine annealing), inference wrapper
 -   **`src/samplespace/schemas/`**: Pydantic schemas for API contracts
--   **`src/samplespace/services/`**: Business logic (audio analysis, CLAP embedding generation, sample management, upload processing, pair scoring, pair feature extraction, music theory, audio transformation via Rubber Band R3, kit building, kit preview mixing, spectrogram generation, preference model training/prediction, shared candidate search utilities)
--   **`src/samplespace/ml/`**: PyTorch CNN (4 residual blocks, SE attention, 1→64→128→256→512 channels, 2-layer projection head) -- model definition (`model.py`), torchaudio dataset with waveform augmentation (polarity inversion, speed/pitch perturbation via fast resample, noise, EQ) and spectrogram augmentation (time/freq masking, gain) (`dataset.py`), training script with SupCon + cross-entropy loss, mixup, class-weighted sampling, cosine annealing, mixed precision, TensorBoard logging (`train.py`), inference wrapper with batch support (`predict.py`)
 -   **`src/samplespace/core/config.py`**: Settings via pydantic-settings (reads from `.env`)
--   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
 -   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client, CLAP models, CNN model)
+-   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
 
 See `.claude/rules/backend/code-conventions.md` for code style and conventions.
 
@@ -64,17 +68,15 @@ Next.js 16 with App Router.
 -   **`app/page.tsx`**: Main sample browser page
 -   **`app/api/chat/route.ts`**: Proxy route that forwards chat requests to backend agent
 -   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` useChat hook; fetches and passes song context to header; manages file attachment state for uploads; wraps messages with `ChatActionsProvider` for verdict buttons
--   **`components/messages.tsx`**: Message list container with smart scroll behavior (MutationObserver/ResizeObserver-based auto-scroll, scroll-to-bottom button)
--   **`components/message.tsx`**: Individual message rendering (`PreviewMessage`) and loading state (`RiffingMessage`)
--   **`components/multimodal-input.tsx`**: Chat input with file attachment (paperclip button), local storage persistence, auto-focus, and memoization
--   **`components/greeting.tsx`**: Animated empty state with Framer Motion fade-in
--   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe) as pills
+-   **`components/messages.tsx`**: Message list container with auto-scroll
+-   **`components/message.tsx`**: Individual message rendering and loading state
+-   **`components/multimodal-input.tsx`**: Chat input with file attachment and local storage persistence
+-   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe)
 -   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters; split-pane layout driven by `selectedSampleId` — when a sample is selected, the list compresses to the left and a detail panel appears on the right
 -   **`components/sample-detail-panel.tsx`**: Splice-style inline detail panel showing full metadata, waveform, mel spectrogram (full/CNN toggle), and CNN-similar samples with similarity percentages; manages its own playback state independently from the sample list
 -   **`components/candidate-samples.tsx`**: Upload panel for reference tracks with playback, metadata editing, and delete functionality
 -   **`components/sample-metadata-dialog.tsx`**: Post-upload dialog for correcting auto-detected key, BPM, and loop/one-shot classification
--   **`components/preview-attachment.tsx`**: File attachment chip with loading/complete states for chat input
--   **`components/elements/sample-card.tsx`**: Shared sample card component (filename, metadata pills, WaveformViz) used by pair-verdict-block, kit-block, and sample-results-block
+-   **`components/elements/sample-card.tsx`**: Shared sample card component used by pair-verdict-block, kit-block, and sample-results-block
 -   **`components/elements/sample-results-block.tsx`**: Renders `sample-results` code fences as a vertical list of playable SampleCards (used by all search/similarity tools)
 -   **`components/audio-player.tsx`**: Audio playback controls
 -   **`components/waveform-viz.tsx`**: wavesurfer.js waveform rendering
@@ -83,36 +85,14 @@ Next.js 16 with App Router.
 -   **`api/generated/`**: Auto-generated TypeScript client from OpenAPI (do not edit manually)
 -   **`components/ui/`**: Reusable UI components (shadcn/ui style)
 
-Key patterns:
-
--   No auth currently -- planned for future
--   Uses Vercel AI SDK's `useChat` for streaming chat
--   Backend URL configured via `NEXT_PUBLIC_BACKEND_URL` env var
--   TanStack Query for data fetching with automatic caching/invalidation
--   Generated API client from backend OpenAPI schema -- run `pnpm generate-client` after backend API changes
-
 ### Data Flow
 
-1. Frontend `useChat` sends messages to `/api/chat` route; non-streaming calls use TanStack Query hooks from `api/hooks/`
-2. Route proxies raw request body to backend `POST /agent/chat`
-3. Backend loads thread's `song_context` (if any) and injects it into `AgentDeps`
-4. Pydantic AI agent decides which tools to call:
-    - `search_by_description()` -- CLAP text-to-audio semantic search via pgvector (enriched with song context vibe)
-    - `find_similar_samples()` -- CNN embedding nearest neighbors via pgvector
-    - `check_key_compatibility()` -- circle of fifths / music theory logic
-    - `analyze_sample()` -- full metadata retrieval (key, BPM, duration, type)
-    - `suggest_complement()` -- combines CLAP search + key/BPM filtering (uses song context as fallback)
-    - `set_song_context()` -- persists key/BPM/genre/vibe to thread for context-aware searches
-    - `find_upload()` -- searches uploaded samples by filename (case-insensitive substring match)
-    - `find_similar_to_upload()` -- CLAP audio-to-audio search using an uploaded sample's embedding (excludes other uploads)
-    - `set_context_from_upload()` -- sets song context (key/BPM) from an uploaded sample's detected metadata, with optional genre/vibe
-    - `present_pair()` -- finds a complementary candidate via CLAP search (with song context) or CNN similarity, supports `is_loop` filtering (inferred from user language), random anchors for rapid pairing sessions, excludes recently evaluated samples, and returns a `pair-verdict` code fence with mixed preview and scoring summary
-    - `record_verdict()` -- persists user's thumbs up/down verdict (commits immediately so background task can access it), fires background relational feature extraction, and triggers preference model retraining when threshold is met
-    - `show_preferences()` -- surfaces learned feature importances as natural-language explanations; attempts on-the-spot training if model doesn't exist but enough verdicts are available
-    - `build_kit()` -- assembles a multi-sample kit via greedy pairwise optimization (CLAP retrieval per type, fast inline scoring, CNN diversity penalty) and returns a `kit` code fence
-5. Agent streams response back as SSE (Vercel AI SDK format)
-6. Frontend renders streamed chunks with tool-call transparency; song context badge updates in chat header; `sample-results` code fences render as playable sample cards; `pair-verdict` code fences render as interactive side-by-side audio players with mixed preview, scoring summary, and verdict buttons (verdicts display as compact pills in the chat); `kit` code fences render as kit cards with per-slot playback and compatibility scores
-7. Upload flow: frontend `POST /samples/upload` → backend validates, stores in `backend/data/uploads/`, analyzes, generates CLAP embedding → returns sample metadata + ID → post-upload dialog lets user correct key/BPM/loop classification → in chat, agent calls `find_upload` to locate by name, `set_context_from_upload` to set song context, `find_similar_to_upload` for library matches. Uploads can be updated (`PATCH /samples/{id}`) or deleted (`DELETE /samples/{id}`) — delete cascades to pair verdicts and cleans up disk artifacts.
+1. Frontend `useChat` → `/api/chat` route → proxied to backend `POST /agent/chat`
+2. Backend loads thread's `song_context` and injects into `AgentDeps`
+3. Pydantic AI agent calls tools as needed (CLAP search, CNN similarity, key compatibility, sample analysis, song context, uploads, pair presentation, verdicts, kit building, preferences)
+4. Agent streams SSE response (Vercel AI SDK format)
+5. Frontend renders streamed chunks with tool-call transparency and interactive code fence blocks
+6. Upload flow: `POST /samples/upload` → validate, analyze, embed → post-upload dialog for corrections → agent tools for finding/comparing uploads
 
 ## Additional Instructions
 
@@ -123,7 +103,6 @@ Key patterns:
 -   Do not make any changes until you have 95% confidence that you know what to build -- ask me follow up questions using the AskUserQuestion tool until you have that confidence; but don't ask obvious questions, dig into the hard parts I might not have considered.
 -   Do not worry about running the pytest commands yet. I have not implemented unit tests and likely will not for a while.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
--   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`) -- use `uv run --directory backend seed-samples` to populate the database.
--   Audio transforms (pitch-shift/time-stretch) use the Rubber Band CLI (`rubberband --fine`, R3 engine) via subprocess. Requires `rubberband` on PATH: `brew install rubberband` (macOS) or `apt install rubberband-cli` (Linux). No Python wrapper library needed.
--   CLAP model is ~600MB, loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.
--   CNN training defaults: 100 epochs, batch size 64, mixup (alpha 0.2), class-weighted sampling, cosine annealing with 5-epoch warmup, early stopping (patience 15). Run `uv run --directory backend train-cnn --help` for all options. TensorBoard logs go to `backend/data/runs/`.
+-   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`)
+-   Audio transforms (pitch-shift/time-stretch) use the Rubber Band CLI (`rubberband --fine`, R3 engine) via subprocess
+-   CLAP model is loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.

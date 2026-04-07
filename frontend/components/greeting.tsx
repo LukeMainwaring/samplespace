@@ -35,8 +35,8 @@ export const Greeting = () => {
           initial={{ opacity: 0, y: 10 }}
           transition={{ delay: 0.6 }}
         >
-          Ask me to find samples, check key compatibility, or suggest
-          complementary sounds for your production.
+          Describe your track, upload a reference track or sample, or just tell
+          me what you need — I'll take it from there.
         </motion.p>
       </div>
     </div>
