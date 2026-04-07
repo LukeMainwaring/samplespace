@@ -30,7 +30,7 @@ Music producers spend hours browsing sample libraries by folder name and filenam
 
 These prompts showcase what SampleSpace can do that browsing folders can't.
 
-**Context-aware search:**
+### Context-aware search
 > "I'm making a dark techno track in D minor at 130 BPM — find me a warm, breathy pad with a slow attack"
 
 <div align="center">
@@ -39,14 +39,14 @@ These prompts showcase what SampleSpace can do that browsing folders can't.
 
 Sets song context, then searches with CLAP embeddings enriched by the vibe. All subsequent searches inherit the context.
 
-**Sample Detail view:**
+### Sample detail view
 <div align="center">
   <img src="docs/assets/sample-detail-view.png" alt="Sample detail view" width="90%" />
 </div>
 
 Sample detail panel with full metadata, interactive waveform, mel spectrogram, and samples ranked by similarity percentage.
 
-**Preview samples with reference track :**
+### Preview samples with reference track
 > "Find my southern twang house upload and a bass loop that goes well with this reference track"
 > ...
 > "Preview bass loop #6 with my reference track"
@@ -57,7 +57,7 @@ Sample detail panel with full metadata, interactive waveform, mel spectrogram, a
 
 Upload your own music, set the song context from it, find complementary samples, and preview them together.
 
-**Preference-driven pairing:**
+### Preference-driven pairing
 > "Start a pairing session with kick loops and bass loops"
 
 <div align="center">
