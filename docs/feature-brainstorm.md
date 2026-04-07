@@ -4,7 +4,7 @@ Design document for SampleSpace's human-in-the-loop learning system — the feat
 
 ## Stage 4: Preference Model (complete)
 
-Sklearn `Pipeline(StandardScaler, LogisticRegression)` trained on 10-dimensional feature vectors (4 pair scores + 6 relational audio features). Auto-retrains every 5th verdict after 15. Saved to `backend/data/models/`. `show_preferences` agent tool surfaces learned feature importances as natural-language explanations. Preferences injected into agent system prompt via `inject_preferences()`. Implementation: `services/preference.py`, `agents/tools/preference_tools.py`.
+Sklearn `Pipeline(StandardScaler, LogisticRegression)` trained on 10-dimensional feature vectors (4 pair scores + 6 relational audio features). Auto-retrains every 5th verdict after 15. Saved to `backend/data/models/`. `show_preferences` agent tool surfaces learned feature importances as natural-language explanations. Preferences injected into agent system prompt via `inject_preferences()`. Implementation: `services/preference.py`, `agents/capabilities/pairing.py` (registration + instruction injection), `agents/tools/preference_tools.py` (tool implementations).
 
 ---
 

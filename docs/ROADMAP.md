@@ -10,7 +10,7 @@ Planned features and improvements. See `docs/feature-brainstorm.md` for detailed
 
 ### Preference-Aware Recommendations
 
-Learned preferences feed into kit building (5th scoring dimension), pair scoring (`learned_preference` dimension), and the agent system prompt. Closes the flywheel: verdicts → model → better recommendations → more verdicts.
+Learned preferences feed into kit building (5th scoring dimension) and pair scoring (`learned_preference` dimension). System prompt injection is already implemented via `inject_preferences()`. Closes the flywheel: verdicts → model → better recommendations → more verdicts.
 
 ## Planned
 
@@ -24,7 +24,5 @@ Learned preferences feed into kit building (5th scoring dimension), pair scoring
 
 ## Deferred
 
-- `swap_kit_sample` agent tool — swap a single slot in an existing kit
-- `POST /pairs/verdict` and `POST /pairs/score` REST endpoints — direct API access (currently agent-tool only)
 - Auth system — prerequisite for web-based ingestion and multi-user support
 - Cross-session memory — implicit preference learning from search/workflow patterns (see brainstorm doc)

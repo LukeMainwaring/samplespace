@@ -104,5 +104,5 @@ Next.js 16 with App Router.
 -   Do not worry about running the pytest commands yet. I have not implemented unit tests and likely will not for a while.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`)
--   Audio transforms (pitch-shift/time-stretch) use the Rubber Band CLI (`rubberband --fine`, R3 engine) via subprocess
+-   Audio transforms (pitch-shift/time-stretch) use the Rubber Band CLI (`rubberband --fine`, R3 engine) via subprocess. Requires `rubberband` on PATH (see DEVELOPMENT.md Setup for install).
 -   CLAP model is loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.

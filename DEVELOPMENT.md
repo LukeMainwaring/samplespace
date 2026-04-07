@@ -5,7 +5,7 @@
 This project uses:
 
 -   **[uv]** - Python package installer and resolver
--   **[Docker]** - PostgreSQL + backend containers
+-   **[Docker]** - Containers for PostgreSQL + backend
 -   **[Ruff]** - Python linter and formatter
 -   **[mypy]** - Static type checker
 -   **[pre-commit]** - Git hook framework (runs Ruff + mypy automatically on commit)
@@ -116,6 +116,8 @@ uv run --directory backend tensorboard --logdir backend/data/runs/
 ```
 
 ### Preference Model
+
+Logistic regression on 10-dimensional pair verdict features (4 pair scores + 6 relational audio features).
 
 ```bash
 uv run --directory backend train-preferences
