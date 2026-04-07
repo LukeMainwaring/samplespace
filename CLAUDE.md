@@ -101,7 +101,6 @@ Next.js 16 with App Router.
 -   Assume that Git operations for branches, commits, and pushes will mostly be done manually. If executing a multi-step, comprehensive plan that involves successive commits, ask before making a commit.
 -   All commands in this file are designed to run from the repo root. Do not use `cd <dir> && ...` patterns -- use `--directory` (uv) or `-C` (pnpm) flags instead.
 -   Do not make any changes until you have 95% confidence that you know what to build -- ask me follow up questions using the AskUserQuestion tool until you have that confidence; but don't ask obvious questions, dig into the hard parts I might not have considered.
--   Do not worry about running the pytest commands yet. I have not implemented unit tests and likely will not for a while.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`)
 -   Audio transforms (pitch-shift/time-stretch) use the Rubber Band CLI (`rubberband --fine`, R3 engine) via subprocess. Requires `rubberband` on PATH (see DEVELOPMENT.md Setup for install).

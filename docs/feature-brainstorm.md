@@ -87,7 +87,7 @@ The preference model learns **pairing taste** from explicit feedback. A compleme
 
 1. The preference model already closes the learning loop. Implicit memory is a second system with unclear marginal return.
 2. Attribution is harder — implicit signals are noisy.
-3. The portfolio story is cleaner with one flywheel.
+3. The product story is cleaner with one flywheel.
 
 ### Possible Approaches
 
