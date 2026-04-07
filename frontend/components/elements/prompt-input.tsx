@@ -34,7 +34,7 @@ export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
 export const PromptInputTextarea = ({
   onChange,
   className,
-  placeholder = "Describe the sound you're looking for...",
+  placeholder = "Tell me about your track or the sound you need...",
   minHeight = 48,
   maxHeight = 164,
   disableAutoResize = false,
