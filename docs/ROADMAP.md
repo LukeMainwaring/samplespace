@@ -16,7 +16,6 @@ Learned preferences feed into kit building (5th scoring dimension) and pair scor
 
 - **Confidence-gated automation** — after 30+ verdicts with 70%+ accuracy, auto-approve high-confidence pairings during kit building, only ask about uncertain ones
 - **Web-based sample ingestion** — upload UI for individual samples or bulk import from cloud storage (deferred until auth)
-- **Demo GIF** — ~15s screen recording of core loop for README
 - **DataLoader parallelization** — `num_workers > 0` with `forkserver`, benchmark on CUDA/Linux
 - **CLAP improvements** — fine-tune projection head on sample library (freeze audio backbone), evaluate `laion/larger_clap_music`, LRU cache for repeated text queries
 - **CNN architecture** — attention pooling, multi-resolution spectrograms (multiple FFT windows), pre-trained audio feature extractors (BEATs, AST) as backbone alternatives, SampleCNN-style 1D convolutions on raw waveform
