@@ -8,3 +8,6 @@ __pycache__
 data/
 *.md
 .env*
+.DS_Store
+tests/
+scripts/*-docker.sh
