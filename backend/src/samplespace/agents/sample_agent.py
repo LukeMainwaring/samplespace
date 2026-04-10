@@ -8,7 +8,7 @@ import logging
 
 import logfire
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIResponsesModel
+from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIResponsesModelSettings
 
 from samplespace.agents.capabilities.analysis import AnalysisCapability
 from samplespace.agents.capabilities.context import ContextCapability
@@ -16,6 +16,7 @@ from samplespace.agents.capabilities.pairing import PairingCapability
 from samplespace.agents.capabilities.production import ProductionCapability
 from samplespace.agents.capabilities.search import SearchCapability
 from samplespace.agents.deps import AgentDeps
+from samplespace.agents.hooks import build_sample_agent_hooks
 from samplespace.core.config import get_settings
 
 logfire.configure()
@@ -75,8 +76,19 @@ Samples are either **one-shots** (single hits) or **loops** (repeating patterns)
 
 _model = OpenAIResponsesModel(config.AGENT_MODEL)
 
+# Reasoning is opt-in via AGENT_REASONING_EFFORT env var. The deterministic
+# prepare_tools tests won't catch routing regressions — before committing a
+# change here, run `uv run --directory backend pytest -m eval tests/evals/`
+# (requires OPENAI_API_KEY, costs money).
+_model_settings = (
+    OpenAIResponsesModelSettings(openai_reasoning_effort=config.AGENT_REASONING_EFFORT)
+    if config.AGENT_REASONING_EFFORT is not None
+    else None
+)
+
 sample_agent = Agent(
     model=_model,
+    model_settings=_model_settings,
     deps_type=AgentDeps,
     instructions=SYSTEM_PROMPT,
     capabilities=[
@@ -85,5 +97,6 @@ sample_agent = Agent(
         ContextCapability(),
         PairingCapability(),
         ProductionCapability(),
+        build_sample_agent_hooks(),
     ],
 )
