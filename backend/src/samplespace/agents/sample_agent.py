@@ -76,8 +76,10 @@ Samples are either **one-shots** (single hits) or **loops** (repeating patterns)
 
 _model = OpenAIResponsesModel(config.AGENT_MODEL)
 
-# Reasoning is opt-in via AGENT_REASONING_EFFORT env var. Enable and validate
-# against backend/tests/evals/test_sample_agent_evals.py before committing.
+# Reasoning is opt-in via AGENT_REASONING_EFFORT env var. The deterministic
+# prepare_tools tests won't catch routing regressions — before committing a
+# change here, run `uv run --directory backend pytest -m eval tests/evals/`
+# (requires OPENAI_API_KEY, costs money).
 _model_settings = (
     OpenAIResponsesModelSettings(openai_reasoning_effort=config.AGENT_REASONING_EFFORT)
     if config.AGENT_REASONING_EFFORT is not None

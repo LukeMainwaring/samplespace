@@ -38,8 +38,6 @@ dev = [
 
 [tool.pytest.ini_options]
 markers = [
-    "main: marks tests for main demo examples",
-    "additional: marks tests for additional demo examples",
     "eval: marks tests that call a real LLM (opt-in; run with `pytest -m eval`)",
 ]
 addopts = "-m 'not eval'"

@@ -86,8 +86,6 @@ Do not manually edit files in `frontend/api/generated/`. Custom hooks in `api/ho
 
 ```bash
 uv run --directory backend pytest                 # unit tests (eval suite excluded)
-uv run --directory backend pytest -m main         # main tests only
-uv run --directory backend pytest -m additional   # additional tests only
 uv run --directory backend pytest -m eval         # real-model sample_agent eval suite (opt-in)
 ```
 

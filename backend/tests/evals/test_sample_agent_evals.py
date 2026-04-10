@@ -27,6 +27,7 @@ import asyncio
 from dataclasses import dataclass, field
 
 import pytest
+from pydantic_ai.messages import ToolCallPart
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
@@ -64,7 +65,7 @@ async def _run_sample_agent(inputs: SampleAgentInput) -> SampleAgentOutput:
     tool_calls: list[str] = []
     for msg in result.all_messages():
         for part in getattr(msg, "parts", []):
-            if hasattr(part, "tool_name") and hasattr(part, "args"):
+            if isinstance(part, ToolCallPart):
                 tool_calls.append(part.tool_name)
 
     return SampleAgentOutput(text=str(result.output), tool_calls=tool_calls)
@@ -76,6 +77,10 @@ class ExpectedToolCalled(Evaluator[SampleAgentInput, SampleAgentOutput, None]):
 
     expected_tool: str = ""
 
+    def __post_init__(self) -> None:
+        if not self.expected_tool:
+            raise ValueError("ExpectedToolCalled requires a non-empty expected_tool")
+
     def evaluate(self, ctx: EvaluatorContext[SampleAgentInput, SampleAgentOutput, None]) -> bool:
         return self.expected_tool in ctx.output.tool_calls
 
@@ -86,6 +91,10 @@ class AnyOfToolsCalled(Evaluator[SampleAgentInput, SampleAgentOutput, None]):
 
     candidates: tuple[str, ...] = ()
 
+    def __post_init__(self) -> None:
+        if not self.candidates:
+            raise ValueError("AnyOfToolsCalled requires at least one candidate")
+
     def evaluate(self, ctx: EvaluatorContext[SampleAgentInput, SampleAgentOutput, None]) -> bool:
         return any(c in ctx.output.tool_calls for c in self.candidates)
 
@@ -95,6 +104,10 @@ class NoToolCalled(Evaluator[SampleAgentInput, SampleAgentOutput, None]):
     """Asserts a forbidden tool was *not* called — used for prepare_tools gating."""
 
     forbidden: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.forbidden:
+            raise ValueError("NoToolCalled requires a non-empty forbidden tool name")
 
     def evaluate(self, ctx: EvaluatorContext[SampleAgentInput, SampleAgentOutput, None]) -> bool:
         return self.forbidden not in ctx.output.tool_calls

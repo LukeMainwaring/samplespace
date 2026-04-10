@@ -4,8 +4,8 @@ Most tool bodies already handle anticipated failures (missing sample,
 empty search result, CLAP/CNN inference errors) by returning a
 plain-string error message. This module is the safety net for
 *unanticipated* exceptions — anything that bubbles out of a tool body
-would otherwise crash the Vercel AI SDK stream mid-response.
-``on_tool_execute_error`` intercepts those, logs the traceback, and
+would otherwise crash the Vercel AI SDK stream mid-response. The
+``tool_execute_error`` hook intercepts those, logs the traceback, and
 returns a plain-string recovery payload so the agent can explain the
 failure to the user conversationally.
 """
@@ -38,10 +38,10 @@ async def _recover_tool_error(
     *,
     call: ToolCallPart,
     tool_def: ToolDefinition,
-    args: Any,
+    args: dict[str, Any],
     error: Exception,
 ) -> str:
-    logger.exception(f"Unhandled exception in tool {tool_def.name}: {error!r}")
+    logger.error(f"Unhandled exception in tool {tool_def.name}: {error!r}", exc_info=error)
     return _recovery_message(tool_def.name, error)
 
 
