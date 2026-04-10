@@ -85,10 +85,13 @@ Do not manually edit files in `frontend/api/generated/`. Custom hooks in `api/ho
 ## Testing
 
 ```bash
-uv run --directory backend pytest
-uv run --directory backend pytest -m main        # main tests only
+uv run --directory backend pytest                 # unit tests (eval suite excluded)
+uv run --directory backend pytest -m main         # main tests only
 uv run --directory backend pytest -m additional   # additional tests only
+uv run --directory backend pytest -m eval         # real-model sample_agent eval suite (opt-in)
 ```
+
+The `eval` marker gates tests that call the real OpenAI API via `sample_agent` — the default `pytest` invocation excludes them via `addopts = "-m 'not eval'"`. Use them as a nightly safety net on `main` or manual spot-checks, not on every PR. See `.claude/rules/backend/pydantic-ai.md` and `backend/tests/evals/` for the suite layout.
 
 ## Audio Data
 
