@@ -16,21 +16,21 @@ dependencies = [
   "matplotlib>=3.10.8",
   "pgvector>=0.4.2",
   "psycopg[binary,pool]>=3.3.3",
-  "pydantic-ai>=1.79.0",
-  "pydantic>=2.12.5",
+  "pydantic-ai>=1.82.0",
+  "pydantic>=2.13.1",
   "scikit-learn>=1.8.0",
   "sqlalchemy[asyncio,mypy]>=2.0.49",
   "torch>=2.11.0",
   "torchaudio>=2.11.0",
-  "transformers>=5.5.3",
+  "transformers>=5.5.4",
   "uvicorn>=0.44.0",
 ]
 
 [dependency-groups]
 dev = [
-  "mypy>=1.20.0",
+  "mypy>=1.20.1",
   "pre-commit>=4.5.1",
-  "pydantic-evals>=1.79.0",
+  "pydantic-evals>=1.82.0",
   "pytest>=9.0.3",
   "ruff>=0.15.10",
   "tensorboard>=2.20.0",
