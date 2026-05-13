@@ -8,6 +8,8 @@ When working with this codebase, prioritize readability over cleverness. Ask cla
 
 ## Common Commands
 
+All commands in this file are designed to run from the repo root. Do not use `cd <dir> && ...` patterns -- use `--directory` (uv) or `-C` (pnpm) flags instead.
+
 ### Backend (Python)
 
 ```bash
@@ -59,31 +61,18 @@ FastAPI async backend. Layered as: `routers/` (thin HTTP handlers) → `services
 -   **`src/samplespace/dependencies/`**: FastAPI dependency injection (db sessions, OpenAI client, CLAP models, CNN model)
 -   **`src/samplespace/migrations/`**: Alembic migrations for PostgreSQL + pgvector
 
-See `.claude/rules/backend/code-conventions.md` for code style and conventions.
-
 ### Frontend (`frontend/`)
 
-Next.js 16 with App Router.
+Next.js 16 with App Router; the chat UI lives under the `(chat)` route group.
 
--   **`app/page.tsx`**: Main sample browser page
--   **`app/api/chat/route.ts`**: Proxy route that forwards chat requests to backend agent
--   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` useChat hook; fetches and passes song context to header; manages file attachment state for uploads; wraps messages with `ChatActionsProvider` for verdict buttons
--   **`components/messages.tsx`**: Message list container with auto-scroll
--   **`components/message.tsx`**: Individual message rendering and loading state
--   **`components/multimodal-input.tsx`**: Chat input with file attachment and local storage persistence
--   **`components/song-context-badge.tsx`**: Read-only badge displaying active song context (key/BPM/genre/vibe)
--   **`components/sample-browser.tsx`**: Sample grid with key/BPM/type filters; split-pane layout driven by `selectedSampleId` — when a sample is selected, the list compresses to the left and a detail panel appears on the right
--   **`components/sample-detail-panel.tsx`**: Splice-style inline detail panel showing full metadata, waveform, mel spectrogram (full/CNN toggle), and CNN-similar samples with similarity percentages; manages its own playback state independently from the sample list
--   **`components/candidate-samples.tsx`**: Upload panel for reference tracks with playback, metadata editing, and delete functionality
--   **`components/sample-metadata-dialog.tsx`**: Post-upload dialog for correcting auto-detected key, BPM, and loop/one-shot classification
--   **`components/elements/sample-card.tsx`**: Shared sample card component used by pair-verdict-block, kit-block, and sample-results-block
--   **`components/elements/sample-results-block.tsx`**: Renders `sample-results` code fences as a vertical list of playable SampleCards (used by all search/similarity tools)
--   **`components/audio-player.tsx`**: Audio playback controls
--   **`components/waveform-viz.tsx`**: wavesurfer.js waveform rendering
--   **`api/client.ts`**: Generated client configuration (baseURL from `lib/constants.ts`, credentials)
--   **`api/hooks/`**: Custom TanStack Query hooks wrapping generated client
--   **`api/generated/`**: Auto-generated TypeScript client from OpenAPI (do not edit manually)
--   **`components/ui/`**: Reusable UI components (shadcn/ui style)
+-   **`app/(chat)/page.tsx`**: Main chat page (sample browser is at `app/(chat)/samples/page.tsx`, candidate uploads at `app/(chat)/candidates/page.tsx`)
+-   **`app/(chat)/api/chat/route.ts`**: Thin proxy that forwards chat requests to backend `POST /agent/chat`
+-   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` `useChat` (typed as `ChatMessage` from `lib/types.ts`); fetches song context, manages file attachments, wraps messages in `ChatActionsProvider` so verdict/kit buttons can call `sendMessage` without prop drilling
+-   **`components/message.tsx`**: Per-message renderer; `DataPartRenderer` switches on `part.type === "data-<name>"` to render interactive blocks (sample-results, kit, kit-preview, audio, pair-verdict)
+-   **`components/sample-browser.tsx`** + **`components/sample-detail-panel.tsx`**: Split-pane sample grid + Splice-style detail panel (full metadata, waveform, mel spectrogram, CNN-similar samples) driven by `selectedSampleId`
+-   **`components/elements/`**: Reusable building blocks — `sample-card.tsx` is the shared card; `sample-results-block.tsx` / `kit-block.tsx` / `kit-preview-block.tsx` / `audio-block.tsx` / `pair-verdict-block.tsx` are the data-part renderers; `tool-call.tsx` is the generic tool-call transparency UI
+-   **`api/hooks/`**: Custom TanStack Query hooks wrapping the generated client (`api/generated/` — do not edit by hand)
+-   **`components/ui/`**: shadcn/ui primitives
 
 ### Data Flow
 
@@ -96,12 +85,12 @@ Next.js 16 with App Router.
 
 ## Additional Instructions
 
--   This project uses Pydantic AI. Documentation is available at `docs/pydantic-ai-llms-full.txt`. Read this file when working on agent code or when you need Pydantic AI API reference. Re-download periodically with `curl -o docs/pydantic-ai-llms-full.txt https://ai.pydantic.dev/llms-full.txt`.
--   Vercel AI SDK UI documentation is available at `docs/vercel-ai-sdk-ui.txt`. This project only uses **AI SDK UI** (hooks like `useChat` for chat UI) — it does NOT use AI SDK Core (LLM orchestration is handled by Pydantic AI on the backend). Read this file when working on frontend chat UI, message rendering, `useChat` hook, or streaming integration. Refresh via the Phase 4 block in `.claude/skills/updating-deps/SKILL.md` (sitemap-driven; the old `llms.txt`-anchored one-liner silently truncated to an empty file after Vercel restructured the index).
+-   Editing backend Python? See `.claude/rules/backend/code-conventions.md` first — filenames, typing, FastAPI/SQLAlchemy/Pydantic patterns, `__init__.py` re-export convention.
+-   Editing the Pydantic AI agent or evals? See `.claude/rules/backend/pydantic-ai.md` first — docs are split between the local snapshot and `ai.pydantic.dev`; tool error-handling convention (let exceptions propagate to `hooks._recover_tool_error`).
+-   Editing frontend code? See `.claude/rules/frontend/code-conventions.md` first — `@/` import alias scope, shadcn/ui usage, kebab-case filenames, `cn()` from `@/lib/utils`.
+-   Editing the chat UI or anything `useChat`-adjacent? See `.claude/rules/frontend/vercel-ai-sdk.md` first — pinned UI docs cover the UI surface only; everything else on `ai-sdk.dev`. No AI SDK Core server-side. Interactive blocks render off `data-<name>` parts in `message.tsx`, not tool parts. The current chat surface still uses the pre-v5 API; migration is deferred.
 -   Assume that Git operations for branches, commits, and pushes will mostly be done manually. If executing a multi-step, comprehensive plan that involves successive commits, ask before making a commit.
--   All commands in this file are designed to run from the repo root. Do not use `cd <dir> && ...` patterns -- use `--directory` (uv) or `-C` (pnpm) flags instead.
--   Do not make any changes until you have 95% confidence that you know what to build -- ask me follow up questions using the AskUserQuestion tool until you have that confidence; but don't ask obvious questions, dig into the hard parts I might not have considered.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
--   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`)
+-   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`).
 -   Audio transforms (pitch-shift/time-stretch) use the Rubber Band CLI (`rubberband --fine`, R3 engine) via subprocess. Requires `rubberband` on PATH (see DEVELOPMENT.md Setup for install).
 -   CLAP model is loaded at startup via lifespan. CNN model is also loaded at startup if a checkpoint exists. Mock both in tests.
