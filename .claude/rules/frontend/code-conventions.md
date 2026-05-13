@@ -1,3 +1,12 @@
+---
+paths:
+  - "frontend/components/**/*.{ts,tsx}"
+  - "frontend/app/**/*.{ts,tsx}"
+  - "frontend/hooks/**/*.{ts,tsx}"
+  - "frontend/api/hooks/**/*.{ts,tsx}"
+  - "frontend/lib/**/*.{ts,tsx}"
+---
+
 # Frontend Patterns
 
 TypeScript/Next.js conventions for the samplespace frontend.
