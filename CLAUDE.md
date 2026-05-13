@@ -66,7 +66,7 @@ FastAPI async backend. Layered as: `routers/` (thin HTTP handlers) → `services
 Next.js 16 with App Router; the chat UI lives under the `(chat)` route group.
 
 -   **`app/(chat)/page.tsx`**: Main chat page (sample browser is at `app/(chat)/samples/page.tsx`, candidate uploads at `app/(chat)/candidates/page.tsx`)
--   **`app/(chat)/api/chat/route.ts`**: Thin proxy that forwards chat requests to backend `POST /agent/chat`
+-   **`app/(chat)/api/chat/route.ts`**: Thin proxy that forwards chat requests to backend `POST /api/agent/chat`
 -   **`components/chat.tsx`**: Chat orchestrator using `@ai-sdk/react` `useChat` (typed as `ChatMessage` from `lib/types.ts`); fetches song context, manages file attachments, wraps messages in `ChatActionsProvider` so verdict/kit buttons can call `sendMessage` without prop drilling
 -   **`components/message.tsx`**: Per-message renderer; `DataPartRenderer` switches on `part.type === "data-<name>"` to render interactive blocks (sample-results, kit, kit-preview, audio, pair-verdict)
 -   **`components/sample-browser.tsx`** + **`components/sample-detail-panel.tsx`**: Split-pane sample grid + Splice-style detail panel (full metadata, waveform, mel spectrogram, CNN-similar samples) driven by `selectedSampleId`
@@ -76,7 +76,7 @@ Next.js 16 with App Router; the chat UI lives under the `(chat)` route group.
 
 ### Data Flow
 
-1. Frontend `useChat` → `/api/chat` route → proxied to backend `POST /agent/chat`
+1. Frontend `useChat` → `/api/chat` route → proxied to backend `POST /api/agent/chat`
 2. Backend loads thread's `song_context` and injects into `AgentDeps`
 3. Pydantic AI agent calls tools as needed (CLAP search, CNN similarity, key compatibility, sample analysis, song context, uploads, pair presentation, verdicts, kit building, preferences)
 4. Agent streams SSE response (Vercel AI SDK format)
@@ -88,7 +88,7 @@ Next.js 16 with App Router; the chat UI lives under the `(chat)` route group.
 -   Editing backend Python? See `.claude/rules/backend/code-conventions.md` first — filenames, typing, FastAPI/SQLAlchemy/Pydantic patterns, `__init__.py` re-export convention.
 -   Editing the Pydantic AI agent or evals? See `.claude/rules/backend/pydantic-ai.md` first — docs are split between the local snapshot and `ai.pydantic.dev`; tool error-handling convention (let exceptions propagate to `hooks._recover_tool_error`).
 -   Editing frontend code? See `.claude/rules/frontend/code-conventions.md` first — `@/` import alias scope, shadcn/ui usage, kebab-case filenames, `cn()` from `@/lib/utils`.
--   Editing the chat UI or anything `useChat`-adjacent? See `.claude/rules/frontend/vercel-ai-sdk.md` first — pinned UI docs cover the UI surface only; everything else on `ai-sdk.dev`. No AI SDK Core server-side. Interactive blocks render off `data-<name>` parts in `message.tsx`, not tool parts. The current chat surface still uses the pre-v5 API; migration is deferred.
+-   Editing the chat UI or anything `useChat`-adjacent? See `.claude/rules/frontend/vercel-ai-sdk.md` first — pinned UI docs cover the UI surface only; everything else on `ai-sdk.dev`. No AI SDK Core server-side. `useChat` is on the v5/v6 `DefaultChatTransport` + `sendMessage` shape. Renderable interactive blocks come in on `data-<name>` parts, dispatched in `message.tsx::DataPartRenderer`.
 -   Assume that Git operations for branches, commits, and pushes will mostly be done manually. If executing a multi-step, comprehensive plan that involves successive commits, ask before making a commit.
 -   After modifying backend API endpoints, regenerate the frontend client with `pnpm -C frontend generate-client`. Do not manually edit files in `frontend/api/generated/`.
 -   Audio sample files live in your local sample library (configured via `SAMPLE_LIBRARY_DIR` in `.env`).
